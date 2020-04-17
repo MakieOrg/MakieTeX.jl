@@ -16,27 +16,54 @@ struct TeXDocument
     "The content of the document."
     content::String
 
-    "The handle of the rendered document."
-    handle::Rsvg.RsvgHandle
-
 end
 
-function TeXDocument(math::String)
-    return TeXDocument(
+function Base.convert(::Type{String}, doc::TeXDocument)
+    return """
+    $(doc.requires)
 
-    )
+    \\documentclass[$(doc.class[2])]{$(doc.class[1])}
 
-function implant_math(str)
-    """
-    \\RequirePackage{luatex85}
-    \\documentclass[preview, tightpage]{standalone}
+    $(doc.preamble)
 
-    \\usepackage{amsmath, xcolor}
-    \\pagestyle{empty}
     \\begin{document}
-    \\($str\\)
+
+    $(doc.content)
+
     \\end{document}
     """
+end
+
+struct CachedTeX
+    doc::TeXDocument
+    handle::Rsvg.RsvgHandle
+    raw_dims::Rsvg.RsvgDimensionData
+end
+
+function CachedTeX(doc::TeXDocument)
+    handle = svg2rsvg(dvi2svg(latex2dvi(convert(String, doc))))
+    dims = Rsvg.get_handle_dims(handle)
+    return CachedTeX(
+        doc,
+        handle,
+        dims
+    )
+end
+
+function implant_math(str)
+    return TeXDocument(
+        "\\RequirePackage{luatex85}",
+        """
+        \\usepackage{amsmath, xcolor}
+        \\pagestyle{empty}
+        """,
+        ("standalone", "preview, tightpage"),
+        """
+        \\( \\displaystyle
+            $str
+        \\)
+        """
+    ) |> String
 end
 
 include("rendering.jl")

@@ -34,7 +34,7 @@ function dvi2svg(
     # dvisvgm a DVI file from stdin, and receive a SVG string from
     # stdout.  This greatly simplifies the pipeline, and anyone with
     # a working TeX installation should have these utilities available.
-    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts  --stdin --stdout`, "r+")
+    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts  --stdin --stdout --libgs=/usr/local/Cellar/ghostscript/9.52/lib/libgs.dylib`, "r+")
 
     write(dvisvgm, dvi)
 
@@ -43,21 +43,21 @@ function dvi2svg(
     return read(dvisvgm.out, String) # read the SVG in as a String
 end
 
-function dvi2png(dvi::Vector{UInt8}; dpi = 3000.0)
-
-    # dvisvgm will allow us to convert the DVI file into an SVG which
-    # can be rendered by Rsvg.  In this case, we are able to provide
-    # dvisvgm a DVI file from stdin, and receive a SVG string from
-    # stdout.  This greatly simplifies the pipeline, and anyone with
-    # a working TeX installation should have these utilities available.
-    dvipng = open(`dvipng --bbox=$bbox $options --no-fonts  --stdin --stdout`, "r+")
-
-    write(dvipng, dvi)
-
-    close(dvipng.in)
-
-    return read(dvipng.out, String) # read the SVG in as a String
-end
+# function dvi2png(dvi::Vector{UInt8}; dpi = 3000.0, libgs = nothing)
+#
+#     # dvisvgm will allow us to convert the DVI file into an SVG which
+#     # can be rendered by Rsvg.  In this case, we are able to provide
+#     # dvisvgm a DVI file from stdin, and receive a SVG string from
+#     # stdout.  This greatly simplifies the pipeline, and anyone with
+#     # a working TeX installation should have these utilities available.
+#     dvipng = open(`dvipng --bbox=$bbox $options --no-fonts  --stdin --stdout `, "r+")
+#
+#     write(dvipng, dvi)
+#
+#     close(dvipng.in)
+#
+#     return read(dvipng.out, String) # read the SVG in as a String
+# end
 
 function svg2img(svg::String; dpi = 3000.0)
 
