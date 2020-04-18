@@ -1,7 +1,7 @@
 name = "MakieTeX"
 uuid = "6d554a22-29e7-47bd-aee5-0c5f06619414"
 authors = ["Anshul Singhvi"]
-version = "0.1.0"
+version = "0.0.1"
 
 [deps]
 AbstractPlotting = "537997a7-5e4e-5d89-9595-2241ea00577e"
