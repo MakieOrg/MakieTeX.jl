@@ -5,7 +5,8 @@
         Attributes(
             color = AbstractPlotting.automatic,
             implant = true,
-            dpi = 3000.0
+            dpi = 3000.0,
+            align = (:left, :center)
         )
     )
 end
@@ -53,6 +54,24 @@ function AbstractPlotting.plot!(img::T) where T <: TeXImg
     lift(bbox) do bbox
         x0, y0 = origin(bbox)
         w, h   = widths(bbox)
+
+
+        if halign == :left
+            x0 -= 0
+        elseif halign == :center
+            x0 -= w / 2
+        elseif halign == :right
+            x0 -= w
+        end
+
+        if valign == :top
+            y0 -= h
+        elseif valign == :center
+            y0 -= h / 2
+        elseif valign == :bottom
+            y0 -= 0
+        end
+
         xr[] = LinRange(x0, x0 + w, size(png, 1))
         yr[] = LinRange(y0, y0 + h, size(png, 2))
     end
@@ -79,17 +98,34 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
 
     ctx = screen.context
     tex = img[2][]
+    halign, valign = img.align[]
 
     handle = svg2rsvg(tex.svg)
     dims = tex.raw_dims
 
-    pos = CairoMakie.project_position(scene, origin(img[1][]), img.model[])
-
     surf, rctx = rsvg2recordsurf(handle)
-
     x0, y0, w, h = get_ink_extents(surf)
 
+    pos = CairoMakie.project_position(scene, origin(img[1][]), img.model[])
     scale_factor = CairoMakie.project_scale(scene, widths(bbox), img.model[])
+
+    pos = if halign == :left
+        pos .+ (0, 0)
+    elseif halign == :center
+        pos .+ (scale_factor[1] / w / 2, 0)
+    elseif halign == :right
+        pos .+ (scale_factor[1] / w, 0)
+    end
+
+    pos = if valign == :top
+        pos .- (0, scale_factor[2] / h)
+    elseif valign == :center
+        pos .- (0, scale_factor[2] / h / 2)
+    elseif valign == :bottom
+        pos .- (0, 0)
+    end
+
+
 
     Cairo.save(ctx)
     Cairo.translate(
