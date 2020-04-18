@@ -47,11 +47,13 @@ function AbstractPlotting.plot!(img::T) where T <: TeXImg
     bbox   = img[1]
     texdoc = img[2][]
 
+    halign, valign = lift(first, img.align), lift(last, img.align)
+
     png = rsvg2img(texdoc.handle)
 
     xr, yr = Node{LinRange}(LinRange(0, 1, 10)), Node{LinRange}(LinRange(0, 1, 10))
 
-    lift(bbox) do bbox
+    lift(bbox, halign, valign) do bbox, halign, valign
         x0, y0 = origin(bbox)
         w, h   = widths(bbox)
 
