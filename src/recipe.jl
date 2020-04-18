@@ -76,31 +76,21 @@ end
 function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img::T) where T <: MakieTeX.TeXImg
 
     bbox = AbstractPlotting.boundingbox(img)
-    @show bbox
 
     ctx = screen.context
-
-    pos = origin(img[1][])
-    @show pos
     tex = img[2][]
 
     handle = svg2rsvg(tex.svg)
     dims = tex.raw_dims
 
-    pos = CairoMakie.project_position(scene, pos, img.model[])
-    @show pos
-    @show dims
+    pos = CairoMakie.project_position(scene, origin(img[1][]), img.model[])
 
     surf, rctx = rsvg2recordsurf(handle)
 
-
     x0, y0, w, h = get_ink_extents(surf)
-
-    @show (x0, y0, w, h)
 
     scale_factor = CairoMakie.project_scale(scene, widths(bbox), img.model[])
 
-    @show scale_factor
     Cairo.save(ctx)
     Cairo.translate(
         ctx,
