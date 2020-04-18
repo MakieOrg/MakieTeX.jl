@@ -15,6 +15,24 @@ struct TeXDocument
 
 end
 
+function TeXDocument(
+            math::LaTeXString;
+            requires = raw"\RequirePackage{luatex85}",
+            preamble = raw"""
+                        \usepackage{amsmath, xcolor}
+                        \pagestyle{empty}
+                        """,
+            class = "standalone",
+            classoptions = "preview, tightpage, 12pt"
+        )
+        return TeXDocument(
+            requires,
+            preamble,
+            (class, classoptions),
+            math
+        )
+end
+
 function Base.convert(::Type{String}, doc::TeXDocument)
     return """
     $(doc.requires)
@@ -69,7 +87,7 @@ function implant_math(str)
         \\usepackage{amsmath, xcolor}
         \\pagestyle{empty}
         """,
-        ("standalone", "preview, tightpage"),
+        ("standalone", "preview, tightpage, 12pt"),
         """
         \\( \\displaystyle
             $str
@@ -85,7 +103,7 @@ function implant_text(str)
         \\usepackage{amsmath, xcolor}
         \\pagestyle{empty}
         """,
-        ("standalone", "preview, tightpage"),
+        ("standalone", "preview, tightpage, 12pt"),
         str
     )
 end
