@@ -13,6 +13,8 @@ function default_attributes(::Type{LTeX}, scene)
         height = Auto(),
         width = Auto(),
         alignmode = Inside(),
+        valign = :center,
+        halign = :center,
     )
 end
 
@@ -25,7 +27,7 @@ function LTeX(parent::Scene; bbox = nothing, kwargs...)
 
     @extract attrs (tex, visible, padding)
 
-    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, Node(:left), Node(:bottom), attrs.alignmode; suggestedbbox = bbox)
+    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, attrs.halign, attrs.valign, attrs.alignmode; suggestedbbox = bbox)
 
     textpos = Node(Point2f0(0, 0))
 
