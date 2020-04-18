@@ -1,9 +1,19 @@
 mutable struct LTeX <: MakieLayout.LObject
     parent::Scene
     layoutobservables::MakieLayout.LayoutObservables
-    cached_tex::CachedTeX
     plot::TeXImg
     attributes::Attributes
+end
+
+function default_attributes(::Type{LTeX}, scene)
+    Attributes(
+        tex = "α = βδ → \frac{ϵ_0}{4πμ_{air}}",
+        visible = true,
+        padding = (0f0, 0f0, 0f0, 0f0),
+        height = Auto(),
+        width = Auto(),
+        alignmode = Inside(),
+    )
 end
 
 function LTeX(parent::Scene, tex; kwargs...)
@@ -15,25 +25,24 @@ function LTeX(parent::Scene; bbox = nothing, kwargs...)
 
     @extract attrs (tex, visible, padding)
 
-    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height,
-        halign, valign, attrs.alignmode; suggestedbbox = bbox)
+    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, Node(:left), Node(:bottom), attrs.alignmode; suggestedbbox = bbox)
 
     textpos = Node(Point2f0(0, 0))
 
     cached_tex = @lift CachedTeX($tex)
 
-    t = teximg!(parent, textpos, tex; visible = visible, raw = true)[end]
+    t = teximg!(parent, textpos, cached_tex; visible = visible, raw = true)[end]
 
-    onany(text, padding) do text, padding
-        autowidth = cached_tex.dims.width + padding[1] + padding[2]
-        autoheight = cached_tex.dims.height + padding[3] + padding[4]
+    onany(cached_tex, padding) do cached_tex, padding
+        autowidth = cached_tex.raw_dims.width + padding[1] + padding[2]
+        autoheight = cached_tex.raw_dims.height + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)
     end
 
     onany(layoutobservables.computedbbox, padding) do bbox, padding
 
-        tw = cached_tex.dims.width
-        th = cached_tex.dims.height
+        tw = cached_tex[].raw_dims.width
+        th = cached_tex[].raw_dims.height
 
         box = bbox.origin[1]
         boy = bbox.origin[2]
