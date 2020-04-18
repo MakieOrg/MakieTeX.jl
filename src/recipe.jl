@@ -10,16 +10,23 @@
     )
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::RT, x::AbstractString) where RT <: Rect2D
+function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::T, x::AbstractString) where T <: Rect2D
     println("as")
     return (bbox, CachedTeX(implant_math(x)))
 end
 
+function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, pos::T, x::AbstractString) where T <: Point2
+    println("sa")
+    doc = CachedTeX(implant_math(x))
+    dims = doc.raw_dims
+    return (Rect(pos..., dims.width, dims.height), CachedTeX(implant_math(x)))
+end
+
 function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::RT, x::LaTeXString) where RT <: Rect2D
     if first(x) == "\$" && last(x) == "\$"
-        return (bbox, implant_math(x))
+        return (bbox, CachedTeX(implant_math(x)))
     else
-        return (bbox, implant_text(x))
+        return (bbox, CachedTeX(implant_text(x)))
     end
 end
 
@@ -29,6 +36,7 @@ function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::RT, doc::Te
 end
 
 function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, pos::Point2, doc::CachedTeX)
+    println("hi")
     dims = doc.raw_dims
     return (Rect(pos..., dims.width, dims.height), doc)
 end
