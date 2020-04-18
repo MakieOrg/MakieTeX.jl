@@ -54,6 +54,14 @@ function CachedTeX(str::String)
     return CachedTeX(implant_math(str))
 end
 
+function CachedTeX(str::LaTeXString)
+    return if first(x) == "\$" && last(x) == "\$"
+        CachedTeX(implant_math(x))
+    else
+        CachedTeX(implant_text(x))
+    end
+end
+
 function implant_math(str)
     return TeXDocument(
         "\\RequirePackage{luatex85}",
