@@ -16,7 +16,7 @@ struct TeXDocument
 end
 
 function TeXDocument(
-            math::LaTeXString;
+            math::AbstractString;
             requires = raw"\RequirePackage{luatex85}",
             preamble = raw"""
                         \usepackage{amsmath, xcolor}

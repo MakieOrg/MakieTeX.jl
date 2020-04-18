@@ -1,7 +1,10 @@
-function latex2dvi(
+const DVISVGM_PATH = Ref(readchomp(`which dvisvgm`))
+
+function compile_latex(
         document::AbstractString;
         tex_engine = `lualatex`,
-        options = `-halt-on-error`
+        options = `-halt-on-error`,
+        format = "dvi"
     )
     return mktempdir() do dir
 
@@ -10,37 +13,52 @@ function latex2dvi(
         # Unfortunately for us, Luatex does not like to compile
         # straight to stdout; it really wants a filename.
         # We make a temporary directory for it to output to.
-        latex = open(`$tex_engine $options -output-directory=$dir -output-format=dvi -jobname=temp`, "r+")
+        latex = open(`$tex_engine $options -output-directory=$dir -output-format=$format -jobname=temp`, "r+")
         print(latex, document) # print the TeX document to stdin
         close(latex.in)      # close the file descriptor to let LaTeX know we're done
-        @show success(latex)
-        @show readdir(dir)
+        suc = success(latex)
+        dircontents = joinpath.(dir, readdir(dir))
+
+        !suc && (println(read(joinpath(dir, "temp.log"), String)))
 
         # We want to keep file writes to a minimum.  Everything should stay in memory.
         # Therefore, we exit the directory at this point, so that all auxiliary files
         # can be deleted.
-        return read(joinpath(dir, "temp.dvi"))
+        return read(joinpath(dir, "temp.$format"))
 
     end
 end
 
+latex2dvi(args...; kwargs...) = compile_latex(args...; format = "dvi", kwargs...)
+latex2pdf(args...; kwargs...) = compile_latex(args...; format = "pdf", kwargs...)
+
 function dvi2svg(
         dvi::Vector{UInt8};
         bbox = .2, # minimal bounding box
-        options = `--libgs=/usr/local/lib/libgs.so.9`
+        options = ``
     )
     # dvisvgm will allow us to convert the DVI file into an SVG which
     # can be rendered by Rsvg.  In this case, we are able to provide
     # dvisvgm a DVI file from stdin, and receive a SVG string from
     # stdout.  This greatly simplifies the pipeline, and anyone with
     # a working TeX installation should have these utilities available.
-    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts --stdin --stdout`, "r+")
+    dvisvgm = open(`$(DVISVGM_PATH[]) --bbox=$bbox $options --no-fonts --stdin --stdout`, "r+")
 
     write(dvisvgm, dvi)
 
     close(dvisvgm.in)
 
     return read(dvisvgm.out, String) # read the SVG in as a String
+end
+
+function pdf2svg(pdf::Vector{UInt8})
+    pdftocairo = open(`pdftocairo -svg - -`, "r+")
+
+    write(pdftocairo, pdf)
+
+    close(pdftocairo.in)
+
+    return read(pdftocairo.out, String)
 end
 
 # function dvi2png(dvi::Vector{UInt8}; dpi = 3000.0, libgs = nothing)
