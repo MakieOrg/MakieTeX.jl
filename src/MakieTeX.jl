@@ -13,4 +13,5 @@ include("layoutable.jl")
 
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
+export LTeX
 end # document
