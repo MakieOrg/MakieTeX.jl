@@ -14,7 +14,7 @@ function default_attributes(::Type{LTeX}, scene)
         width = Auto(),
         alignmode = Inside(),
         valign = :center,
-        halign = :center,
+        halign = :left,
     )
 end
 
@@ -25,23 +25,25 @@ end
 function LTeX(parent::Scene; bbox = nothing, kwargs...)
     attrs = merge!(Attributes(kwargs), default_attributes(LTeX, parent))
 
-    @extract attrs (tex, visible, padding)
+    @extract attrs (tex, visible, padding, halign, valign)
 
-    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, attrs.halign, attrs.valign, attrs.alignmode; suggestedbbox = bbox)
+    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, halign, valign, attrs.alignmode; suggestedbbox = bbox)
 
     textpos = Node(Point2f0(0, 0))
 
     cached_tex = @lift CachedTeX($tex)
 
-    t = teximg!(parent, textpos, cached_tex; visible = visible, raw = true)[end]
+    wh = @lift ($cached_tex.raw_dims.width, $cached_tex.raw_dims.height)
 
-    onany(cached_tex, padding) do cached_tex, padding
+    t = teximg!(parent, textpos, cached_tex; visible = visible, raw = true, align = @lift ($halign, $valign))[end]
+
+    onany(cached_tex, padding, ) do cached_tex, padding
         autowidth = cached_tex.raw_dims.width + padding[1] + padding[2]
         autoheight = cached_tex.raw_dims.height + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)
     end
 
-    onany(layoutobservables.computedbbox, padding) do bbox, padding
+    onany(layoutobservables.computedbbox, padding, halign, valign) do bbox, padding, halign, valign
 
         tw = cached_tex[].raw_dims.width
         th = cached_tex[].raw_dims.height
@@ -52,7 +54,7 @@ function LTeX(parent::Scene; bbox = nothing, kwargs...)
         # this is also part of the hack to improve left alignment until
         # boundingboxes are perfect
         tx = box + padding[1]
-        ty = boy + padding[3] + 0.5 * th
+        ty = boy + padding[3]
 
         textpos[] = Point2f0(tx, ty)
     end
@@ -111,3 +113,22 @@ function Base.delete!(lt::LTeX)
     # remove the plot object from the scene
     delete!(lt.parent, lt.plot)
 end
+
+
+
+# LLegend integration
+# function MakieLayout.layoutable_textlike(scene, label::LaTeXString, textsize, font, color, halign, valign)
+#     return LTeX(scene,
+#         tex = label,
+#         halign = halign,
+#         valign = valign
+#     )
+# end
+#
+# function MakieLayout.layoutable_textlike(scene, label::TeXDocument, textsize, font, color, halign, valign)
+#     return LTeX(scene,
+#         tex = label,
+#         halign = halign,
+#         valign = valign
+#     )
+# end
