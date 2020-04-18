@@ -34,7 +34,7 @@ function dvi2svg(
     # dvisvgm a DVI file from stdin, and receive a SVG string from
     # stdout.  This greatly simplifies the pipeline, and anyone with
     # a working TeX installation should have these utilities available.
-    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts  --stdin --stdout`, "r+")
+    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts --stdin --stdout`, "r+")
 
     write(dvisvgm, dvi)
 
