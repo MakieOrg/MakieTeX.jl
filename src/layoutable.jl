@@ -7,7 +7,7 @@ end
 
 function default_attributes(::Type{LTeX}, scene)
     Attributes(
-        tex = "α = βδ → \frac{ϵ_0}{4πμ_{air}}",
+        tex = raw"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}",
         visible = true,
         padding = (0f0, 0f0, 0f0, 0f0),
         height = Auto(),
