@@ -1,6 +1,9 @@
 module MakieTeX
-using AbstractPlotting, Makie
-using Rsvg, Cairo
+using AbstractPlotting, CairoMakie, MakieLayout
+using Rsvg, Cairo, LaTeXStrings
+using Colors
+
+using AbstractPlotting.GeometryBasics: origin, widths
 
 struct TeXDocument
 
@@ -38,16 +41,23 @@ struct CachedTeX
     doc::TeXDocument
     handle::Rsvg.RsvgHandle
     raw_dims::Rsvg.RsvgDimensionData
+    svg::String
 end
 
 function CachedTeX(doc::TeXDocument)
-    handle = svg2rsvg(dvi2svg(latex2dvi(convert(String, doc))))
-    dims = Rsvg.get_handle_dims(handle)
+    svg = dvi2svg(latex2dvi(convert(String, doc)))
+    handle = svg2rsvg(svg)
+    dims = Rsvg.handle_get_dimensions(handle)
     return CachedTeX(
         doc,
         handle,
-        dims
+        dims,
+        svg
     )
+end
+
+function CachedTeX(str::String)
+    return CachedTeX(implant_math(str))
 end
 
 function implant_math(str)
@@ -63,7 +73,19 @@ function implant_math(str)
             $str
         \\)
         """
-    ) |> String
+    )
+end
+
+function implant_text(str)
+    return TeXDocument(
+        "\\RequirePackage{luatex85}",
+        """
+        \\usepackage{amsmath, xcolor}
+        \\pagestyle{empty}
+        """,
+        ("standalone", "preview, tightpage"),
+        str
+    )
 end
 
 include("rendering.jl")
@@ -71,5 +93,5 @@ include("rendering.jl")
 include("recipe.jl")
 
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
-
+export teximg, teximg!, TeXImg
 end # document

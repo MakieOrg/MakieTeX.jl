@@ -26,7 +26,7 @@ end
 
 function dvi2svg(
         dvi::Vector{UInt8};
-        bbox = "min", # minimal bounding box
+        bbox = .2, # minimal bounding box
         options = `--libgs=/usr/local/lib/libgs.so.9`
     )
     # dvisvgm will allow us to convert the DVI file into an SVG which
@@ -34,7 +34,7 @@ function dvi2svg(
     # dvisvgm a DVI file from stdin, and receive a SVG string from
     # stdout.  This greatly simplifies the pipeline, and anyone with
     # a working TeX installation should have these utilities available.
-    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts  --stdin --stdout --libgs=/usr/local/Cellar/ghostscript/9.52/lib/libgs.dylib`, "r+")
+    dvisvgm = open(`dvisvgm --bbox=$bbox $options --no-fonts  --stdin --stdout`, "r+")
 
     write(dvisvgm, dvi)
 
@@ -70,9 +70,9 @@ function svg2img(svg::String; dpi = 3000.0)
     # Then, it's possible to store the image in a native Julia array,
     # which simplifies the process of rendering.
     d = Rsvg.handle_get_dimensions(handle)
-    @show d
+
     w, h = d.width, d.height
-    img = Matrix{AbstractPlotting.Colors.ARGB32}(undef, w, h)
+    img = Matrix{Colors.ARGB32}(undef, w, h)
 
     # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
     cs = Cairo.CairoImageSurface(img)
@@ -82,7 +82,29 @@ function svg2img(svg::String; dpi = 3000.0)
     Rsvg.handle_render_cairo(c, handle)
 
     # The image is rendered transposed, so we need to flip it.
-    return rotr90(Base.transpose(img))
+    return rotr90(permutedims(img))
+end
+
+function rsvg2img(handle::Rsvg.RsvgHandle; dpi = 10000.0)
+    Rsvg.handle_set_dpi(handle, dpi)
+
+    # We can find the final dimensions (in pixel units) of the Rsvg image.
+    # Then, it's possible to store the image in a native Julia array,
+    # which simplifies the process of rendering.
+    d = Rsvg.handle_get_dimensions(handle)
+
+    w, h = d.width, d.height
+    img = Matrix{Colors.ARGB32}(undef, w, h)
+
+    # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
+    cs = Cairo.CairoImageSurface(img)
+    c = Cairo.CairoContext(cs)
+
+    # Render the parsed SVG to a Cairo context
+    Rsvg.handle_render_cairo(c, handle)
+
+    # The image is rendered transposed, so we need to flip it.
+    return rotr90(permutedims(img))
 end
 
 function svg2rsvg(svg::String; dpi = 72.0)
