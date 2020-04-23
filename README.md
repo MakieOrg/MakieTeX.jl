@@ -1,7 +1,7 @@
 # MakieTeX
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliaplots.org/MakieTeX.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliaplots.org/MakieTeX.jl/dev)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://juliaplots.org/MakieTeX.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://juliaplots.org/MakieTeX.jl/dev)
 
 ```julia
 using Makie, MakieTeX
