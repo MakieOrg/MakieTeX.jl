@@ -1,8 +1,5 @@
 # MakieTeX
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](http://juliaplots.org/MakieTeX.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](http://juliaplots.org/MakieTeX.jl/dev)
-
 ```julia
 using Makie, MakieTeX
 teximg(Rect2(0, 0, 122, 24), raw"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix\xi }~ dx")
