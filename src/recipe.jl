@@ -39,6 +39,7 @@ end
 function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, pos::Point2, doc::CachedTeX)
     println("hi")
     dims = doc.raw_dims
+    @info dims
     return (Rect(pos..., dims.width, dims.height), doc)
 end
 

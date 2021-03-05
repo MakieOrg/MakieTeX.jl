@@ -1,11 +1,6 @@
-mutable struct LTeX <: MakieLayout.LObject
-    parent::Scene
-    layoutobservables::MakieLayout.LayoutObservables
-    plot::TeXImg
-    attributes::Attributes
-end
+MakieLayout.@Layoutable LTeX
 
-function default_attributes(::Type{LTeX}, scene)
+function MakieLayout.default_attributes(::Type{LTeX}, scene)
     Attributes(
         tex = raw"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}",
         visible = true,
@@ -15,28 +10,61 @@ function default_attributes(::Type{LTeX}, scene)
         alignmode = Inside(),
         valign = :center,
         halign = :left,
+        tellwidth = true,
+        tellheight = true
     )
 end
 
-function LTeX(parent::Scene, tex; kwargs...)
-    LTeX(parent; tex = tex, kwargs...)
+function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene, tex; kwargs...)
+    MakieLayout.layoutable(LTeX, fig_or_scene; tex = tex, kwargs...)
 end
 
-function LTeX(parent::Scene; bbox = nothing, kwargs...)
-    attrs = merge!(Attributes(kwargs), default_attributes(LTeX, parent))
+function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwargs...)
+    # this is more or less copied from MakieLayout.Label
+    topscene = MakieLayout.get_topscene(fig_or_scene)
+    default_attrs = MakieLayout.default_attributes(LTeX, topscene).attributes
+    theme_attrs = MakieLayout.subtheme(topscene, :LTeX)
+    attrs = MakieLayout.merge!(MakieLayout.merge!(Attributes(kwargs), theme_attrs), Attributes(default_attrs))
 
+    # @extract attrs (tex, textsize, font, color, visible, halign, valign,
+    #     rotation, padding)
     @extract attrs (tex, visible, padding, halign, valign)
 
-    layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, halign, valign, attrs.alignmode; suggestedbbox = bbox)
 
+    layoutobservables = LayoutObservables{LTeX}(
+        attrs.width, attrs.height, attrs.tellwidth, attrs.tellheight,
+        halign, valign, attrs.alignmode; suggestedbbox = bbox
+    )
+
+    # This is Point3f0 in Label
     textpos = Node(Point2f0(0, 0))
 
     cached_tex = @lift CachedTeX($tex)
 
     wh = @lift ($cached_tex.raw_dims.width, $cached_tex.raw_dims.height)
 
-    t = teximg!(parent, textpos, cached_tex; visible = visible, raw = true, align = @lift ($halign, $valign))[end]
+    # Label
+    # alignnode = lift(halign, rotation) do h, rot
+    #     # left align the text if it's not rotated and left aligned
+    #     if rot == 0 && (h == :left || h == 0.0)
+    #         (:left, :center)
+    #     else
+    #         (:center, :center)
+    #     end
+    # end
 
+    t = teximg!(
+        topscene, textpos, cached_tex; visible = visible, raw = true, 
+        align = @lift ($halign, $valign)
+    )
+
+    # Label
+    # onany(text, textsize, font, rotation, padding) do text, textsize, font, rotation, padding
+    #     textbb[] = FRect2D(boundingbox(t))
+    #     autowidth = width(textbb[]) + padding[1] + padding[2]
+    #     autoheight = height(textbb[]) + padding[3] + padding[4]
+    #     layoutobservables.autosize[] = (autowidth, autoheight)
+    # end
     onany(cached_tex, padding, ) do cached_tex, padding
         autowidth = cached_tex.raw_dims.width + padding[1] + padding[2]
         autoheight = cached_tex.raw_dims.height + padding[3] + padding[4]
@@ -56,20 +84,75 @@ function LTeX(parent::Scene; bbox = nothing, kwargs...)
         tx = box + padding[1]
         ty = boy + padding[3]
 
+        # Also Point3f0 in Label
         textpos[] = Point2f0(tx, ty)
     end
-
 
     # trigger first update, otherwise bounds are wrong somehow
     tex[] = tex[]
     # trigger bbox
     layoutobservables.suggestedbbox[] = layoutobservables.suggestedbbox[]
 
-    lt = LTeX(parent, layoutobservables, t, attrs)
+    lt = LTeX(fig_or_scene, layoutobservables, attrs, Dict(:tex => t))
 
     lt
 end
 
+################################################################################
+
+# function LTeX(parent::Scene, tex; kwargs...)
+#     LTeX(parent; tex = tex, kwargs...)
+# end
+
+# function LTeX(parent::Scene; bbox = nothing, kwargs...)
+#     attrs = merge!(Attributes(kwargs), default_attributes(LTeX, parent))
+
+#     @extract attrs (tex, visible, padding, halign, valign)
+
+#     layoutobservables = LayoutObservables(LTeX, attrs.width, attrs.height, halign, valign, attrs.alignmode; suggestedbbox = bbox)
+
+#     textpos = Node(Point2f0(0, 0))
+
+#     cached_tex = @lift CachedTeX($tex)
+
+#     wh = @lift ($cached_tex.raw_dims.width, $cached_tex.raw_dims.height)
+
+#     t = teximg!(parent, textpos, cached_tex; visible = visible, raw = true, align = @lift ($halign, $valign))[end]
+
+#     onany(cached_tex, padding, ) do cached_tex, padding
+#         autowidth = cached_tex.raw_dims.width + padding[1] + padding[2]
+#         autoheight = cached_tex.raw_dims.height + padding[3] + padding[4]
+#         layoutobservables.autosize[] = (autowidth, autoheight)
+#     end
+
+#     onany(layoutobservables.computedbbox, padding, halign, valign) do bbox, padding, halign, valign
+
+#         tw = cached_tex[].raw_dims.width
+#         th = cached_tex[].raw_dims.height
+
+#         box = bbox.origin[1]
+#         boy = bbox.origin[2]
+
+#         # this is also part of the hack to improve left alignment until
+#         # boundingboxes are perfect
+#         tx = box + padding[1]
+#         ty = boy + padding[3]
+
+#         textpos[] = Point2f0(tx, ty)
+#     end
+
+
+#     # trigger first update, otherwise bounds are wrong somehow
+#     tex[] = tex[]
+#     # trigger bbox
+#     layoutobservables.suggestedbbox[] = layoutobservables.suggestedbbox[]
+
+#     lt = LTeX(parent, layoutobservables, t, attrs)
+
+#     lt
+# end
+
+#=
 defaultlayout(lt::LTeX) = ProtrusionLayout(lt)
 
 function align_to_bbox!(lt::LTeX, bbox)
@@ -113,7 +196,7 @@ function Base.delete!(lt::LTeX)
     # remove the plot object from the scene
     delete!(lt.parent, lt.plot)
 end
-
+=#
 
 
 # LLegend integration
