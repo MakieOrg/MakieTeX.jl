@@ -8,7 +8,8 @@
             dpi = 72.0,
             align = (:left, :center),
             textsize = 12, # in pt
-            position = Point2f0(0)
+            position = Point3f0(0),
+            rotation = 0f0
         )
     )
 end
@@ -68,7 +69,16 @@ function AbstractPlotting.plot!(plot::T) where T <: TeXImg
         nothing
     end
 
-    image!(plot, xr, yr, img)
+    model = map(plot.model, plot.rotation, xr, yr) do model, angle, xr, yr
+        x0 = xr.left; x1 = xr.right
+        y0 = yr.left; y1 = yr.right
+        model * 
+        AbstractPlotting.translationmatrix(Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0)) *
+        AbstractPlotting.rotationmatrix_z(angle) * 
+        AbstractPlotting.translationmatrix(- Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0))
+    end
+
+    image!(plot, xr, yr, img, model=model)
 end
 
 function get_ink_extents(surf::CairoSurface)
@@ -127,11 +137,17 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
         pos[1],
         pos[2] - (h + y0) * scale_factor[2] / h
     )
+    Cairo.rotate(ctx, -img.rotation[])
+    # Rotated center - normal center
+    cx = 0.5scale_factor[1] * cos(img.rotation[]) - 0.5scale_factor[2] * sin(img.rotation[]) - 0.5scale_factor[1]
+    cy = 0.5scale_factor[1] * sin(img.rotation[]) + 0.5scale_factor[2] * cos(img.rotation[]) - 0.5scale_factor[2]
+    Cairo.translate(ctx, cx, cy)
     Cairo.scale(
         ctx,
         scale_factor[1] / w,
         scale_factor[2] / h
     )
+
     render_surface(ctx, surf)
     Cairo.restore(ctx)
 end

@@ -13,7 +13,8 @@ function MakieLayout.default_attributes(::Type{LTeX}, scene)
         tellwidth = true,
         tellheight = true,
         dpi = 72.0,
-        textsize = 12
+        textsize = 12,
+        rotation = 0
     )
 end
 
@@ -30,7 +31,7 @@ function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwar
 
     # @extract attrs (tex, textsize, font, color, visible, halign, valign,
     #     rotation, padding)
-    @extract attrs (tex, dpi, textsize, visible, padding, halign, valign)
+    @extract attrs (tex, dpi, textsize, visible, padding, halign, valign, rotation)
 
 
     layoutobservables = LayoutObservables{LTeX}(
@@ -43,10 +44,10 @@ function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwar
 
     cached_tex = @lift CachedTeX($tex, $dpi)
 
-    # Label
-    alignnode = lift(halign) do h
+    # this is just a hack until boundingboxes in abstractplotting are perfect
+    alignnode = lift(halign, rotation) do h, rot
         # left align the text if it's not rotated and left aligned
-        if h == :left || h == 0.0
+        if rot == 0 && (h == :left || h == 0.0)
             (:left, :center)
         else
             (:center, :center)
@@ -55,13 +56,13 @@ function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwar
 
     t = teximg!(
         topscene, cached_tex; position = textpos, visible = visible, raw = true,
-        textsize = textsize, dpi = dpi, align = alignnode
+        textsize = textsize, dpi = dpi, align = alignnode, rotation = rotation
     )
 
     textbb = Ref(BBox(0, 1, 0, 1))
 
     # Label
-    onany(cached_tex, textsize, padding) do _, textsize, padding
+    onany(cached_tex, textsize, rotation, padding) do _, textsize, _, padding
         textbb[] = FRect2D(boundingbox(t))
         autowidth  = AbstractPlotting.width(textbb[]) + padding[1] + padding[2]
         autoheight = AbstractPlotting.height(textbb[]) + padding[3] + padding[4]
@@ -77,7 +78,7 @@ function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwar
 
         # this is also part of the hack to improve left alignment until
         # boundingboxes are perfect
-        tx = if halign[] == :left || halign[] == 0.0
+        tx = if rotation[] == 0 && (halign[] == :left || halign[] == 0.0)
             box + padding[1]
         else
             box + padding[1] + 0.5 * tw
