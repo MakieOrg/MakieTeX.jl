@@ -53,7 +53,6 @@ function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwar
         end
     end
 
-    @info "layoutable $dpi"
     t = teximg!(
         topscene, cached_tex; position = textpos, visible = visible, raw = true,
         textsize = textsize, dpi = dpi, align = alignnode
