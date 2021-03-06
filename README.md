@@ -1,18 +1,25 @@
 # MakieTeX
 
+MakieTeX works by compiling a latex document and transforming it to a renderable
+svg for CairoMakie or raster image for GLMakie. 
+
 ```julia
-using Makie, MakieTeX
-teximg(Rect2(0, 0, 122, 24), raw"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix\xi }~ dx")
+using GLMakie, MakieTeX
+fig, ax, p = teximg(raw"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix\xi }~ dx", textsize=100)
+# Don't stretch the text 
+ax.autolimitaspect[] = 1f0
+autolimits!(ax)
+fig
 ```
 ![teximg](https://user-images.githubusercontent.com/32143268/79641464-5696ab80-81b5-11ea-902d-d65da76dfa69.png)
 
 ```julia
-using MakieLayout, Makie, MakieTeX
-scene, layout = layoutscene(resolution = (500, 200));
-ax = layout[1, 1] = LAxis(scene);
+using GLMakie MakieTeX
+fig = Figure(resolution = (400, 300));
+ax = Axis(fig[1, 1]);
 hidexdecorations!(ax); hideydecorations!(ax);
-tex = layout[2, 1] = MakieTeX.LTeX(scene, raw"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}");
-scene
+tex = LTeX(fig[2, 1], raw"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", textsize=20);
+fig
 ```
 ![ltex](https://user-images.githubusercontent.com/32143268/79641864-b42bf780-81b7-11ea-8958-407f6c732069.png)
 
