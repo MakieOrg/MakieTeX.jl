@@ -14,19 +14,19 @@
 end
 
 function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::AbstractString)
-    return CachedTeX(implant_math(x))
+    return (CachedTeX(implant_math(x)),)
 end
 
 function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)
     if first(x) == "\$" && last(x) == "\$"
-        return CachedTeX(implant_math(x))
+        return (CachedTeX(implant_math(x)),)
     else
-        return CachedTeX(implant_text(x))
+        return (CachedTeX(implant_text(x)),)
     end
 end
 
 function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, doc::TeXDocument)
-    return CachedTeX(doc)
+    return (CachedTeX(doc),)
 end
 
 function AbstractPlotting.plot!(plot::T) where T <: TeXImg
