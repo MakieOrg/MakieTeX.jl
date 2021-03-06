@@ -112,7 +112,8 @@ function rsvg2img(handle::Rsvg.RsvgHandle; dpi = 10000.0)
     d = Rsvg.handle_get_dimensions(handle)
 
     w, h = d.width, d.height
-    img = Matrix{Colors.ARGB32}(undef, w, h)
+    # img = Matrix{Colors.ARGB32}(undef, w, h)
+    img = fill(Colors.ARGB32(1,1,1,0), w, h)
 
     # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
     cs = Cairo.CairoImageSurface(img)
