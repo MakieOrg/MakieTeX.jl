@@ -1,85 +1,74 @@
 
-@recipe(TeXImg, origin, tex) do scene
+@recipe(TeXImg, tex) do scene
     merge(
         default_theme(scene),
         Attributes(
             color = AbstractPlotting.automatic,
             implant = true,
-            dpi = 3000.0,
-            align = (:left, :center)
+            dpi = 72.0,
+            align = (:left, :center),
+            textsize = 12, # in pt
+            position = Point2f0(0)
         )
     )
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::T, x::AbstractString) where T <: Rect2D
-    println("as")
-    return (bbox, CachedTeX(implant_math(x)))
+function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::AbstractString)
+    return CachedTeX(implant_math(x))
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, pos::T, x::AbstractString) where T <: Point2
-    println("sa")
-    doc = CachedTeX(implant_math(x))
-    dims = doc.raw_dims
-    return (Rect(pos..., dims.width, dims.height), CachedTeX(implant_math(x)))
-end
-
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::RT, x::LaTeXString) where RT <: Rect2D
+function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)
     if first(x) == "\$" && last(x) == "\$"
-        return (bbox, CachedTeX(implant_math(x)))
+        return CachedTeX(implant_math(x))
     else
-        return (bbox, CachedTeX(implant_text(x)))
+        return CachedTeX(implant_text(x))
     end
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, bbox::RT, doc::TeXDocument) where RT <: Rect2D
-    println("doc")
-    return (bbox, CachedTeX(doc))
+function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, doc::TeXDocument)
+    return CachedTeX(doc)
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, pos::Point2, doc::CachedTeX)
-    println("hi")
-    dims = doc.raw_dims
-    @info dims
-    return (Rect(pos..., dims.width, dims.height), doc)
-end
+function AbstractPlotting.plot!(plot::T) where T <: TeXImg
+    # image to draw
+    # We always want to draw this at a 1:1 ratio, so increasing textsize or
+    # changing dpi should rerender
+    img = map(plot[1], plot.dpi, plot.textsize) do texdoc, dpi, textsize
+        scale = textsize / 12
+        rsvg2img(texdoc.handle, scale * dpi)
+    end
 
-function AbstractPlotting.plot!(img::T) where T <: TeXImg
-
-    bbox   = img[1]
-    texdoc = img[2][]
-
-    halign, valign = lift(first, img.align), lift(last, img.align)
-
-    png = rsvg2img(texdoc.handle)
-
-    xr, yr = Node{LinRange}(LinRange(0, 1, 10)), Node{LinRange}(LinRange(0, 1, 10))
-
-    lift(bbox, halign, valign) do bbox, halign, valign
-        x0, y0 = origin(bbox)
-        w, h   = widths(bbox)
-
+    # Rect to draw in
+    # This is mostly aligning
+    xr = Node(0.0..1.0)
+    yr = Node(0.0..1.0)
+    lift(img, plot.position, plot.align) do img, pos, align
+        halign, valign = align
+        x, y = pos
+        w, h = size(img)
 
         if halign == :left
-            x0 -= 0
+            x -= 0
         elseif halign == :center
-            x0 -= w / 2
+            x -= w / 2
         elseif halign == :right
-            x0 -= w
+            x -= w
         end
 
         if valign == :top
-            y0 -= h
+            y -= h
         elseif valign == :center
-            y0 -= h / 2
+            y -= h / 2
         elseif valign == :bottom
-            y0 -= 0
+            y -= 0
         end
 
-        xr[] = LinRange(x0, x0 + w, size(png, 1))
-        yr[] = LinRange(y0, y0 + h, size(png, 2))
+        xr[] = x..x+w
+        yr[] = y..y+h
+        nothing
     end
 
-    image!(img, xr, yr, png)
+    image!(plot, xr, yr, img)
 end
 
 function get_ink_extents(surf::CairoSurface)
@@ -100,7 +89,7 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     bbox = AbstractPlotting.boundingbox(img)
 
     ctx = screen.context
-    tex = img[2][]
+    tex = img[1][]
     halign, valign = img.align[]
 
     handle = svg2rsvg(tex.svg)
@@ -109,23 +98,25 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     surf, rctx = rsvg2recordsurf(handle)
     x0, y0, w, h = get_ink_extents(surf)
 
-    pos = CairoMakie.project_position(scene, origin(img[1][]), img.model[])
-    scale_factor = CairoMakie.project_scale(scene, widths(bbox), img.model[])
+    pos = CairoMakie.project_position(scene, img.position[], img.model[])
+    scale = img.textsize[] / 12
+    _w = scale * w; _h = scale * h
+    scale_factor = CairoMakie.project_scale(scene, Vec2f0(_w, _h), img.model[])
 
     pos = if halign == :left
-        pos .+ (0, 0)
+        pos
     elseif halign == :center
-        pos .+ (scale_factor[1] / w / 2, 0)
+        pos .- (scale_factor[1] / 2, 0)
     elseif halign == :right
-        pos .+ (scale_factor[1] / w, 0)
+        pos .- (scale_factor[1], 0)
     end
 
     pos = if valign == :top
-        pos .- (0, scale_factor[2] / h)
+        pos .+ (0, scale_factor[2])
     elseif valign == :center
-        pos .- (0, scale_factor[2] / h / 2)
+        pos .+ (0, scale_factor[2] / 2)
     elseif valign == :bottom
-        pos .- (0, 0)
+        pos
     end
 
 
