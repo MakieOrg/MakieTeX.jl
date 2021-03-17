@@ -56,9 +56,9 @@ struct CachedTeX
     svg::String
 end
 
-function CachedTeX(doc::TeXDocument)
+function CachedTeX(doc::TeXDocument, dpi = 72.0)
     svg = dvi2svg(latex2dvi(convert(String, doc)))
-    handle = svg2rsvg(svg)
+    handle = svg2rsvg(svg, dpi)
     dims = Rsvg.handle_get_dimensions(handle)
     return CachedTeX(
         doc,
@@ -68,15 +68,15 @@ function CachedTeX(doc::TeXDocument)
     )
 end
 
-function CachedTeX(str::String)
-    return CachedTeX(implant_math(str))
+function CachedTeX(str::String, dpi = 72.0)
+    return CachedTeX(implant_math(str), dpi)
 end
 
-function CachedTeX(str::LaTeXString)
+function CachedTeX(x::LaTeXString, dpi = 72.0)
     return if first(x) == "\$" && last(x) == "\$"
-        CachedTeX(implant_math(x))
+        CachedTeX(implant_math(x), dpi)
     else
-        CachedTeX(implant_text(x))
+        CachedTeX(implant_text(x), dpi)
     end
 end
 
