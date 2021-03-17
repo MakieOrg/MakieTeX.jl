@@ -1,4 +1,11 @@
-const DVISVGM_PATH = Ref(readchomp(`which dvisvgm`))
+const DVISVGM_PATH = Ref{String}()
+
+function dvisvg()
+    if !isassigned(DVISVGM_PATH)
+       DVISVGM_PATH[] = readchomp(`which dvisvgm`)
+    end
+    return DVISVGM_PATH[]
+end
 
 function compile_latex(
         document::AbstractString;
@@ -42,7 +49,7 @@ function dvi2svg(
     # dvisvgm a DVI file from stdin, and receive a SVG string from
     # stdout.  This greatly simplifies the pipeline, and anyone with
     # a working TeX installation should have these utilities available.
-    dvisvgm = open(`$(DVISVGM_PATH[]) --bbox=$bbox $options --no-fonts --stdin --stdout`, "r+")
+    dvisvgm = open(`$(dvisvg()) --bbox=$bbox $options --no-fonts --stdin --stdout`, "r+")
 
     write(dvisvgm, dvi)
 
@@ -112,7 +119,7 @@ function rsvg2img(handle::Rsvg.RsvgHandle, dpi = 72.0)
     # Then, it's possible to store the image in a native Julia array,
     # which simplifies the process of rendering.
     d = Rsvg.handle_get_dimensions(handle)
-    
+
     # Cairo does not draw "empty" pixels, so we need to fill here
     w, h = d.width, d.height
     img = fill(Colors.ARGB32(1,1,1,0), w, h)
