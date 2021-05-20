@@ -66,23 +66,23 @@ function MakieLayout.layoutable(::Type{LTeX}, fig_or_scene; bbox = nothing, kwar
         # rotation is applied via a model matrix which isn't used in the bbox calculation
         # so we need to deal with it here
         bb = boundingbox(t)
-        R = AbstractPlotting.Mat3f0(
+        R = Makie.Mat3f0(
              cos(rotation), sin(rotation), 0,
             -sin(rotation), cos(rotation), 0,
             0, 0, 1
         )
-        points = map(p -> R * p, unique(AbstractPlotting.coordinates(bb)))
-        new_bb = AbstractPlotting.xyz_boundingbox(identity, points)
+        points = map(p -> R * p, unique(Makie.coordinates(bb)))
+        new_bb = Makie.xyz_boundingbox(identity, points)
         textbb[] = FRect2D(new_bb)
         # textbb[] = FRect2D(boundingbox(t))
-        autowidth  = AbstractPlotting.width(textbb[]) + padding[1] + padding[2]
-        autoheight = AbstractPlotting.height(textbb[]) + padding[3] + padding[4]
+        autowidth  = Makie.width(textbb[]) + padding[1] + padding[2]
+        autoheight = Makie.height(textbb[]) + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)
     end
 
     onany(layoutobservables.computedbbox, padding) do bbox, padding
-        tw = AbstractPlotting.width(textbb[])
-        th = AbstractPlotting.height(textbb[])
+        tw = Makie.width(textbb[])
+        th = Makie.height(textbb[])
         
         box = bbox.origin[1]
         boy = bbox.origin[2]

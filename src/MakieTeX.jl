@@ -1,10 +1,10 @@
 module MakieTeX
-using AbstractPlotting, CairoMakie, AbstractPlotting.MakieLayout
+using Makie, CairoMakie, Makie.MakieLayout
 using Rsvg, Cairo
 using Colors, LaTeXStrings
 
-using AbstractPlotting.GeometryBasics: origin, widths
-using AbstractPlotting.Observables
+using Makie.GeometryBasics: origin, widths
+using Makie.Observables
 
 include("types.jl")
 include("rendering.jl")
