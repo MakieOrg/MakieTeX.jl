@@ -3,7 +3,7 @@
     merge(
         default_theme(scene),
         Attributes(
-            color = AbstractPlotting.automatic,
+            color = Makie.automatic,
             implant = true,
             dpi = 72.0,
             align = (:left, :center),
@@ -14,11 +14,11 @@
     )
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::AbstractString)
+function Makie.convert_arguments(::Type{<: TeXImg}, x::AbstractString)
     return (CachedTeX(implant_math(x)),)
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)
+function Makie.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)
     if first(x) == "\$" && last(x) == "\$"
         return (CachedTeX(implant_math(x)),)
     else
@@ -26,11 +26,11 @@ function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)
     end
 end
 
-function AbstractPlotting.convert_arguments(::Type{<: TeXImg}, doc::TeXDocument)
+function Makie.convert_arguments(::Type{<: TeXImg}, doc::TeXDocument)
     return (CachedTeX(doc),)
 end
 
-function AbstractPlotting.plot!(plot::T) where T <: TeXImg
+function Makie.plot!(plot::T) where T <: TeXImg
     # image to draw
     # We always want to draw this at a 1:1 ratio, so increasing textsize or
     # changing dpi should rerender
@@ -73,9 +73,9 @@ function AbstractPlotting.plot!(plot::T) where T <: TeXImg
         x0 = xr.left; x1 = xr.right
         y0 = yr.left; y1 = yr.right
         model * 
-        AbstractPlotting.translationmatrix(Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0)) *
-        AbstractPlotting.rotationmatrix_z(angle) * 
-        AbstractPlotting.translationmatrix(- Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0))
+        Makie.translationmatrix(Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0)) *
+        Makie.rotationmatrix_z(angle) * 
+        Makie.translationmatrix(- Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0))
     end
 
     image!(plot, xr, yr, img, model=model)
@@ -96,7 +96,7 @@ end
 
 function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img::T) where T <: MakieTeX.TeXImg
 
-    bbox = AbstractPlotting.boundingbox(img)
+    bbox = Makie.boundingbox(img)
 
     ctx = screen.context
     tex = img[1][]
