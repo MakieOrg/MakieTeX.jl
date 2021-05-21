@@ -1,6 +1,6 @@
-authors = ["Anshul Singhvi"]
 name = "MakieTeX"
 uuid = "6d554a22-29e7-47bd-aee5-0c5f06619414"
+authors = ["Anshul Singhvi"]
 version = "0.0.2"
 
 [deps]
@@ -14,7 +14,7 @@ Rsvg = "c4c386cf-5103-5370-be45-f3a111cca3b8"
 [compat]
 AbstractPlotting = "0.15, 0.16, 0.17, 0.18"
 Cairo = "1.0.4"
-CairoMakie = "0.3, 0.4"
+CairoMakie = "0.3, 0.4, 0.5"
 Colors = "0.9, 0.10, 0.11, 0.12"
 LaTeXStrings = "1.2"
 Rsvg = "1"
