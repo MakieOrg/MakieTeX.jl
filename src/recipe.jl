@@ -85,7 +85,7 @@ function get_ink_extents(surf::CairoSurface)
     dims = zeros(Float64, 4)
 
     ccall(
-        (:cairo_recording_surface_ink_extents, CairoMakie.LIB_CAIRO),
+        (:cairo_recording_surface_ink_extents, CairoMakie.Cairo.libcairo),
         Cvoid,
         (Ptr{Cvoid}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}),
         surf.ptr, Ref(dims, 1), Ref(dims, 2), Ref(dims, 3), Ref(dims, 4)

@@ -89,7 +89,7 @@ function svg2img(svg::String, dpi = 72.0)
     # First, we instantiate an Rsvg handle, which holds a parsed representation of
     # the SVG.  Then, we set its DPI to the provided DPI (usually, 300 is good).
     handle = Rsvg.handle_new_from_data(svg)
-    Rsvg.handle_set_dpi(handle, dpi)
+    Rsvg.handle_set_dpi(handle, Float64(dpi))
 
     # We can find the final dimensions (in pixel units) of the Rsvg image.
     # Then, it's possible to store the image in a native Julia array,
@@ -113,7 +113,7 @@ function svg2img(svg::String, dpi = 72.0)
 end
 
 function rsvg2img(handle::Rsvg.RsvgHandle, dpi = 72.0)
-    Rsvg.handle_set_dpi(handle, dpi)
+    Rsvg.handle_set_dpi(handle, Float64(dpi))
 
     # We can find the final dimensions (in pixel units) of the Rsvg image.
     # Then, it's possible to store the image in a native Julia array,
@@ -137,7 +137,7 @@ end
 
 function svg2rsvg(svg::String, dpi = 72.0)
     handle = Rsvg.handle_new_from_data(svg)
-    Rsvg.handle_set_dpi(handle, dpi)
+    Rsvg.handle_set_dpi(handle, Float64(dpi))
     return handle
 end
 
