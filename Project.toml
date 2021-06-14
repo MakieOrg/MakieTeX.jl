@@ -1,7 +1,7 @@
 authors = ["Anshul Singhvi"]
 name = "MakieTeX"
 uuid = "6d554a22-29e7-47bd-aee5-0c5f06619414"
-version = "0.0.3"
+version = "0.0.4"
 
 [deps]
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
@@ -12,9 +12,9 @@ LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Rsvg = "c4c386cf-5103-5370-be45-f3a111cca3b8"
 
 [compat]
-Makie = "0.13"
+Makie = "0.13, 0.14"
 Cairo = "1.0.4"
-CairoMakie = "0.5"
+CairoMakie = "0.5.5, 0.6"
 Colors = "0.9, 0.10, 0.11, 0.12"
 LaTeXStrings = "1.2"
 Rsvg = "1"
