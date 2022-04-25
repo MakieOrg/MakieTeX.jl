@@ -7,8 +7,8 @@
             implant = true,
             dpi = 72.0,
             align = (:left, :center),
-            textsize = 12, # in pt
-            position = Point3f0(0),
+            scale = 1.0,
+            position = Point3{Float32}(0),
             rotation = 0f0
         )
     )
@@ -34,15 +34,15 @@ function Makie.plot!(plot::T) where T <: TeXImg
     # image to draw
     # We always want to draw this at a 1:1 ratio, so increasing textsize or
     # changing dpi should rerender
-    img = map(plot[1], plot.dpi, plot.textsize) do texdoc, dpi, textsize
-        scale = textsize / 12
+    img = map(plot[1], plot.dpi, plot.scale) do texdoc, dpi, scale
+        scale = scale
         rsvg2img(texdoc.handle, scale * dpi)
     end
 
     # Rect to draw in
     # This is mostly aligning
-    xr = Node(0.0..1.0)
-    yr = Node(0.0..1.0)
+    xr = Observable(0.0..1.0)
+    yr = Observable(0.0..1.0)
     lift(img, plot.position, plot.align) do img, pos, align
         halign, valign = align
         x, y = pos
@@ -72,10 +72,10 @@ function Makie.plot!(plot::T) where T <: TeXImg
     model = map(plot.model, plot.rotation, xr, yr) do model, angle, xr, yr
         x0 = xr.left; x1 = xr.right
         y0 = yr.left; y1 = yr.right
-        model * 
-        Makie.translationmatrix(Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0)) *
-        Makie.rotationmatrix_z(angle) * 
-        Makie.translationmatrix(- Vec3f0(0.5(x1+x0), 0.5(y1+y0), 0))
+        model *
+        Makie.translationmatrix(Vec3{Float32}(0.5(x1+x0), 0.5(y1+y0), 0)) *
+        Makie.rotationmatrix_z(angle) *
+        Makie.translationmatrix(- Vec3{Float32}(0.5(x1+x0), 0.5(y1+y0), 0))
     end
 
     image!(plot, xr, yr, img, model=model)
@@ -109,9 +109,9 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     x0, y0, w, h = get_ink_extents(surf)
 
     pos = CairoMakie.project_position(scene, img.position[], img.model[])
-    scale = img.textsize[] / 12
+    scale = img.scale[]
     _w = scale * w; _h = scale * h
-    scale_factor = CairoMakie.project_scale(scene, Vec2f0(_w, _h), img.model[])
+    scale_factor = CairoMakie.project_scale(scene, Vec2{Float32}(_w, _h), img.model[])
 
     pos = if halign == :left
         pos

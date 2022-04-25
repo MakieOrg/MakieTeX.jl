@@ -1,46 +1,103 @@
 const DVISVGM_PATH = Ref{String}()
+const LIBGS_PATH = Ref{String}()
 
 function dvisvg()
     if !isassigned(DVISVGM_PATH)
-       DVISVGM_PATH[] = readchomp(`which dvisvgm`)
+        if Sys.isunix()
+           DVISVGM_PATH[] = readchomp(`which dvisvgm`)
+       end
     end
     return DVISVGM_PATH[]
 end
 
+
+function libgs()
+    if !isassigned(LIBGS_PATH) && !haskey(ENV, "LIBGS")
+        if Sys.isapple()
+           LIBGS_PATH[] = joinpath(readchomp(`brew --cellar ghostscript`), "9.56.1", "lib", "libgs.dylib.9.56")
+       end
+   elseif !isassigned(LIBGS_PATH) && haskey(ENV, "LIBGS")
+        LIBGS_PATH[] = ENV["LIBGS"]
+    end
+    return LIBGS_PATH[]
+end
+
+
+
 function compile_latex(
         document::AbstractString;
         tex_engine = `lualatex`,
-        options = `-halt-on-error`,
-        format = "dvi"
+        options = `-file-line-error -halt-on-error`,
+        format = "dvi",
+        read_format = format
     )
+
+    # First, we do some input checking.
+    if !(format ∈ ("dvi", "pdf"))
+        @error "Format must be either dvi or pdf; was $format"
+    end
+    formatcmd = ``
+    if format == "dvi"
+        if tex_engine==`lualatex`
+            tex_engine=`dvilualatex`
+        end
+        # produce only dvi not pdf
+        formatcmd = `-dvi -pdf-`
+    else # format == "pdf"
+        formatcmd = `-pdf`
+    end
+
+    # Unfortunately for us, Latexmk (which is required for any complex LaTeX doc)
+    # does not like to compile straight to stdout, OR take in input from stdin;
+    # it needs a file. We make a temporary directory for it to output to,
+    # and create a file in there.
     return mktempdir() do dir
+        cd(dir) do
 
-        # dir=mktempdir()
-        # Begin by compiling the latex in a temp directory
-        # Unfortunately for us, Luatex does not like to compile
-        # straight to stdout; it really wants a filename.
-        # We make a temporary directory for it to output to.
-        latex = open(`$tex_engine $options -output-directory=$dir -output-format=$format -jobname=temp`, "r+")
-        print(latex, document) # print the TeX document to stdin
-        close(latex.in)      # close the file descriptor to let LaTeX know we're done
-        suc = success(latex)
-        dircontents = joinpath.(dir, readdir(dir))
+            # First, create the tex file and write the document to it.
+            touch("temp.tex")
+            file = open("temp.tex", "w")
+            print(file, document)
+            close(file)
 
-        !suc && (println(read(joinpath(dir, "temp.log"), String)))
+            # Now, we run the latexmk command in a pipeline so that we can redirect stdout and stderr to internal containers.
+            # First we establish these pipelines:
+            out = Pipe()
+            err = Pipe()
 
-        # We want to keep file writes to a minimum.  Everything should stay in memory.
-        # Therefore, we exit the directory at this point, so that all auxiliary files
-        # can be deleted.
-        return read(joinpath(dir, "temp.$format"))
+            latex_cmd = `latexmk $options --shell-escape -latex=$tex_engine -cd -interaction=nonstopmode --output-format=$format $formatcmd temp.tex`
 
+            latex_pipeline = pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err)
+
+            try
+                latex = run(latex_pipeline)
+                suc = success(latex)
+                close(out.in)
+                close(err.in)
+                if !isfile("temp.$read_format")
+                    println("Latex did not write temp.$(read_format)!")
+                    println("Files in temp directory are:\n" * join(readdir(), ','))
+                    printstyled("Stdout\n", bold=true)
+                    println(read(out, String))
+                    printstyled("Stderr\n", bold=true)
+                    println(read(err, String))
+                    return
+                end
+            finally
+                return read(joinpath("temp.$read_format"), String)
+            end
+        end
     end
 end
+
+
+compile_latex(document::TeXDocument; kwargs...) = compile_latex(convert(String, document); kwargs...)
 
 latex2dvi(args...; kwargs...) = compile_latex(args...; format = "dvi", kwargs...)
 latex2pdf(args...; kwargs...) = compile_latex(args...; format = "pdf", kwargs...)
 
 function dvi2svg(
-        dvi::Vector{UInt8};
+        dvi::String;
         bbox = .2, # minimal bounding box
         options = ``
     )
@@ -49,13 +106,22 @@ function dvi2svg(
     # dvisvgm a DVI file from stdin, and receive a SVG string from
     # stdout.  This greatly simplifies the pipeline, and anyone with
     # a working TeX installation should have these utilities available.
-    dvisvgm = open(`$(dvisvg()) --bbox=$bbox $options --no-fonts --stdin --stdout`, "r+")
 
-    write(dvisvgm, dvi)
+    dvisvgm_cmd = Cmd(`$(dvisvg()) --bbox=$bbox --no-fonts --stdin --stdout $options`, env = ("LIBGS" => libgs(),))
 
-    close(dvisvgm.in)
+    # We create an IO buffer to redirect stderr
+    err = Pipe()
+
+    dvisvgm = open(dvisvgm_cmd, "r+")
+
+    redirect_stderr(err) do
+        write(dvisvgm, dvi)
+        close(dvisvgm.in)
+    end
 
     return read(dvisvgm.out, String) # read the SVG in as a String
+
+
 end
 
 function pdf2svg(pdf::Vector{UInt8})
@@ -89,27 +155,8 @@ function svg2img(svg::String, dpi = 72.0)
     # First, we instantiate an Rsvg handle, which holds a parsed representation of
     # the SVG.  Then, we set its DPI to the provided DPI (usually, 300 is good).
     handle = Rsvg.handle_new_from_data(svg)
-    Rsvg.handle_set_dpi(handle, Float64(dpi))
 
-    # We can find the final dimensions (in pixel units) of the Rsvg image.
-    # Then, it's possible to store the image in a native Julia array,
-    # which simplifies the process of rendering.
-    d = Rsvg.handle_get_dimensions(handle)
-
-    # NOTE
-    # I did not check if this needs to be filled, but rsvg2img needs it...
-    w, h = d.width, d.height
-    img = fill(Colors.ARGB32(1,1,1,0), w, h)
-
-    # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
-    cs = Cairo.CairoImageSurface(img)
-    c = Cairo.CairoContext(cs)
-
-    # Render the parsed SVG to a Cairo context
-    Rsvg.handle_render_cairo(c, handle)
-
-    # The image is rendered transposed, so we need to flip it.
-    return rotr90(permutedims(img))
+    return rsvg2img(handle, dpi)
 end
 
 function rsvg2img(handle::Rsvg.RsvgHandle, dpi = 72.0)
