@@ -23,7 +23,7 @@ function libgs()
 end
 
 
-
+# The main compilation method - compiles arbitrary LaTeX documents
 function compile_latex(
         document::AbstractString;
         tex_engine = `lualatex`,
@@ -96,6 +96,8 @@ compile_latex(document::TeXDocument; kwargs...) = compile_latex(convert(String, 
 latex2dvi(args...; kwargs...) = compile_latex(args...; format = "dvi", kwargs...)
 latex2pdf(args...; kwargs...) = compile_latex(args...; format = "pdf", kwargs...)
 
+
+# DVI pipeline - LaTeX → DVI → SVG → Rsvg → Cairo
 function dvi2svg(
         dvi::String;
         bbox = .2, # minimal bounding box
@@ -124,8 +126,12 @@ function dvi2svg(
 
 end
 
-function pdf2svg(pdf::Vector{UInt8})
-    pdftocairo = open(`pdftocairo -svg - -`, "r+")
+# PDF pipeline - LaTeX → PDF → SVG → Rsvg → Cairo
+# Better in general
+function pdf2svg(pdf::Vector{UInt8}; kwargs...)
+    pdftocairo = Poppler_jll.pdftocairo() do exe
+        open(`$exe -svg - -`, "r+")
+    end
 
     write(pdftocairo, pdf)
 
@@ -134,29 +140,22 @@ function pdf2svg(pdf::Vector{UInt8})
     return read(pdftocairo.out, String)
 end
 
-# function dvi2png(dvi::Vector{UInt8}; dpi = 72.0, libgs = nothing)
-#
-#     # dvisvgm will allow us to convert the DVI file into an SVG which
-#     # can be rendered by Rsvg.  In this case, we are able to provide
-#     # dvisvgm a DVI file from stdin, and receive a SVG string from
-#     # stdout.  This greatly simplifies the pipeline, and anyone with
-#     # a working TeX installation should have these utilities available.
-#     dvipng = open(`dvipng --bbox=$bbox $options --no-fonts  --stdin --stdout `, "r+")
-#
-#     write(dvipng, dvi)
-#
-#     close(dvipng.in)
-#
-#     return read(dvipng.out, String) # read the SVG in as a String
-# end
+pdf2svg(pdf::String) = pdf2svg(Vector{UInt8}(pdf))
 
-function svg2img(svg::String, dpi = 72.0)
+# SVG/RSVG functions
+# Real simple stuff
 
-    # First, we instantiate an Rsvg handle, which holds a parsed representation of
-    # the SVG.  Then, we set its DPI to the provided DPI (usually, 300 is good).
+function svg2rsvg(svg::String, dpi = 72.0)
     handle = Rsvg.handle_new_from_data(svg)
+    Rsvg.handle_set_dpi(handle, Float64(dpi))
+    return handle
+end
 
-    return rsvg2img(handle, dpi)
+function rsvg2recordsurf(handle::Rsvg.RsvgHandle)
+    surf = Cairo.CairoRecordingSurface()
+    ctx  = Cairo.CairoContext(surf)
+    Rsvg.handle_render_cairo(ctx, handle)
+    return (surf, ctx)
 end
 
 function rsvg2img(handle::Rsvg.RsvgHandle, dpi = 72.0)
@@ -182,17 +181,13 @@ function rsvg2img(handle::Rsvg.RsvgHandle, dpi = 72.0)
     return rotr90(permutedims(img))
 end
 
-function svg2rsvg(svg::String, dpi = 72.0)
-    handle = Rsvg.handle_new_from_data(svg)
-    Rsvg.handle_set_dpi(handle, Float64(dpi))
-    return handle
-end
+function svg2img(svg::String, dpi = 72.0)
 
-function rsvg2recordsurf(handle::Rsvg.RsvgHandle)
-    surf = Cairo.CairoRecordingSurface()
-    ctx  = Cairo.CairoContext(surf)
-    Rsvg.handle_render_cairo(ctx, handle)
-    return (surf, ctx)
+    # First, we instantiate an Rsvg handle, which holds a parsed representation of
+    # the SVG.  Then, we set its DPI to the provided DPI (usually, 300 is good).
+    handle = Rsvg.handle_new_from_data(svg)
+
+    return rsvg2img(handle, dpi)
 end
 
 function render_surface(ctx::CairoContext, surf)

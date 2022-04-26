@@ -5,30 +5,30 @@ import Makie.MakieLayout: inherit
 Makie.MakieLayout.@Block LTeX begin
     @attributes begin
         "The LaTeX code to be compiled and drawn.  Can be a String, a TeXDocument or a CachedTeX."
-        tex = "Text"
+        tex = "\\LaTeX"
         "The size conversion factor in dots per inch (default 72)."
         dpi::Float32 = 72.0
-        "Controls if the text is visible."
+        "Controls if the graphic is visible."
         visible::Bool = true
         "A scaling factor to resize the graphic."
         scale::Float32 = 1.0
-        "The vertical alignment of the text in its suggested boundingbox"
-        valign = :center
-        "The horizontal alignment of the text in its suggested boundingbox"
+        "The horizontal alignment of the graphic in its suggested boundingbox"
         halign = :center
-        "The counterclockwise rotation of the text in radians."
+        "The vertical alignment of the graphic in its suggested boundingbox"
+        valign = :center
+        "The counterclockwise rotation of the graphic in radians."
         rotation::Float32 = 0f0
-        "The extra space added to the sides of the text boundingbox."
+        "The extra space added to the sides of the graphic boundingbox."
         padding = (0f0, 0f0, 0f0, 0f0)
-        "The height setting of the text."
+        "The height setting of the graphic."
         height = Auto()
-        "The width setting of the text."
+        "The width setting of the graphic."
         width = Auto()
         "Controls if the parent layout can adjust to this element's width"
         tellwidth::Bool = true
         "Controls if the parent layout can adjust to this element's height"
         tellheight::Bool = true
-        "The align mode of the text in its parent GridLayout."
+        "The align mode of the graphic in its parent GridLayout."
         alignmode = Inside()
     end
 end
@@ -42,9 +42,13 @@ function Makie.MakieLayout.initialize_block!(l::LTeX)
 
     textpos = Observable(Point3f(0, 0, 0))
 
+    alignnode = lift(l.valign, l.halign) do valign, halign
+        return (halign, valign)
+    end
+
     t = teximg!(
         topscene, l.tex; position = textpos, visible = l.visible,
-        scale = l.scale, dpi = l.dpi, align = (:center, :center), rotation = l.rotation,
+        scale = l.scale, dpi = l.dpi, align = alignnode, rotation = l.rotation,
         markerspace = :screen,
         inspectable = false
     )

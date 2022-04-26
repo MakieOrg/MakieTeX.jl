@@ -6,7 +6,7 @@
             color = Makie.automatic,
             implant = true,
             dpi = 72.0,
-            align = (:left, :center),
+            align = (:center, :center),
             scale = 1.0,
             position = Point3{Float32}(0),
             rotation = 0f0
@@ -15,7 +15,7 @@
 end
 
 function Makie.convert_arguments(::Type{<: TeXImg}, x::AbstractString)
-    return (CachedTeX(implant_math(x)),)
+    return (CachedTeX(implant_text(x)),)
 end
 
 function Makie.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)

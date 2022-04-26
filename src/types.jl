@@ -90,9 +90,17 @@ These are primarily:
 - `engine = \`lualatex\`/\`xelatex\`/...`: the LaTeX engine to use when rendering
 - `options=\`-file-line-error\``: the options to pass to `latexmk`.
 """
-function CachedTeX(doc::TeXDocument, dpi = 72.0; kwargs...)
-    svg = dvi2svg(latex2dvi(convert(String, doc); kwargs...))
+function CachedTeX(doc::TeXDocument, dpi = 72.0; method = :pdf, kwargs...)
+    svg = if method == :dvi
+        dvi2svg(latex2dvi(convert(String, doc); kwargs...))
+    elseif method == :pdf
+        pdf2svg(latex2pdf(convert(String, doc); kwargs...))
+    else
+        @error("$method not recognized!  Must be one of (:dvi, :pdf).")
+    end
+
     handle = svg2rsvg(svg, dpi)
+
     dims = Rsvg.handle_get_dimensions(handle)
     return CachedTeX(
         doc,

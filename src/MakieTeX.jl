@@ -6,6 +6,8 @@ using Colors, LaTeXStrings
 using Makie.GeometryBasics: origin, widths
 using Makie.Observables
 
+using Poppler_jll
+
 include("types.jl")
 include("rendering.jl")
 include("recipe.jl")
