@@ -6,15 +6,6 @@ MakieTeX allows you to draw and visualize arbitrary TeX documents in Makie!  You
 MakieTeX works by compiling a latex document and transforming it to a renderable
 svg for CairoMakie or raster image for GLMakie.
 
-```julia
-using GLMakie, Makie, MakieTeX, LaTeXStrings
-fig, ax, p = teximg(L"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix\xi }~ dx", scale=10)
-# Don't stretch the text
-ax.autolimitaspect[] = 1f0
-autolimits!(ax)
-fig
-```
-![teximg](https://user-images.githubusercontent.com/10947937/110216144-c5542480-7ead-11eb-9753-7ff215e36056.png)
 
 ```julia
 using GLMakie, Makie, MakieTeX
@@ -25,6 +16,15 @@ tex = LTeX(fig[2, 1], raw"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi
 fig
 ```
 ![ltex](https://user-images.githubusercontent.com/10947937/110216157-d1d87d00-7ead-11eb-8507-62ddcff2a841.png)
+
+```julia
+using GLMakie, Makie, MakieTeX, LaTeXStrings
+fig, ax, p = teximg(L"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix\xi }~ dx", scale=10)
+# Don't stretch the text
+ax.aspect = DataAspect()
+fig
+```
+![teximg](https://user-images.githubusercontent.com/10947937/110216144-c5542480-7ead-11eb-9753-7ff215e36056.png)
 
 There is a way to integrate LTeX into a legend, but it's pretty hacky now.  Ask on `#makie` in the JuliaLang Slack if you want to know.
 ![legendtex](https://user-images.githubusercontent.com/32143268/79641479-6adaa880-81b5-11ea-8138-4d6054ccfa6d.png)
@@ -37,7 +37,7 @@ This example is from [Texample.net](https://texample.net/tikz/examples/title-gra
 ```julia
 using MakieTeX, CairoMakie, Makie
 td = TeXDocument(raw"""
-\documentclass{minimal}
+\documentclass{standalone}
 \usepackage{tikz}
 \usetikzlibrary{trees,snakes}
 \begin{document}
@@ -67,6 +67,9 @@ fig
 ```
 ![makietex](https://user-images.githubusercontent.com/32143268/165130481-53ee0fe1-4c70-4453-b430-7a2ad37082f8.png)
 
+If you are
+
+
 ## Installation
 
 In order to run the latest code, you should check out the master branch of this repo and the master branch of Makie.  You can do this by:
@@ -78,6 +81,6 @@ In order to run the latest code, you should check out the master branch of this 
 
 ## The rendering pipeline
 
-The standard rendering pipeline works as follows: the string is converted in to a TeXDocument, which is compiled to dvi.  The dvi file is then converted to svg via dvi2svg (Ghostscript should be accessible and the environment variable "LIBGS" should point to libgs.dylib).  Then, the svg is processed by librsvg.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and then plot that.
+The standard rendering pipeline works as follows: the string is converted in to a TeXDocument, which is compiled to pdf (by default, using system lualatex).  The pdf file is then converted to svg via `pdftocairo` (provided by Poppler_jll.jl so no need to install it).  Then, the svg is processed by librsvg.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and then plot that.
 
-One area where MakieTeX does not function well is shading.  Any shaded contents in your LaTeX document will likely not come out well in the picture!  If you want to put something with shading in, use the PDF to PNG conversion pipeline, and convert at high pixel density.
+MakieTeX should

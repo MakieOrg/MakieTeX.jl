@@ -32,14 +32,16 @@ function compile_latex(
         read_format = format
     )
 
+    use_tex_engine=tex_engine
+
     # First, we do some input checking.
     if !(format ∈ ("dvi", "pdf"))
         @error "Format must be either dvi or pdf; was $format"
     end
     formatcmd = ``
     if format == "dvi"
-        if tex_engine==`lualatex`
-            tex_engine=`dvilualatex`
+        if use_tex_engine==`lualatex`
+            use_tex_engine=`dvilualatex`
         end
         # produce only dvi not pdf
         formatcmd = `-dvi -pdf-`
@@ -65,7 +67,7 @@ function compile_latex(
             out = Pipe()
             err = Pipe()
 
-            latex_cmd = `latexmk $options --shell-escape -latex=$tex_engine -cd -interaction=nonstopmode --output-format=$format $formatcmd temp.tex`
+            latex_cmd = `latexmk $options --shell-escape -latex=$use_tex_engine -cd -interaction=nonstopmode --output-format=$format $formatcmd temp.tex`
 
             latex_pipeline = pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err)
 
@@ -84,7 +86,21 @@ function compile_latex(
                     return
                 end
             finally
-                return read(joinpath("temp.$read_format"), String)
+                if format == "pdf"
+
+                    crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
+
+                    pdfcrop = joinpath(dirname(pathof(@__MODULE__)), "pdfcrop.pl")
+
+                    Ghostscript_jll.gs() do gs_exe
+                        Perl_jll.perl() do perl_exe
+                            run(`$perl_exe $pdfcrop --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                        end
+                    end
+                    return read("temp_cropped.pdf", String)
+                else
+                    return read("temp.$read_format", String)
+                end
             end
         end
     end
