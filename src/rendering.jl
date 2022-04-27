@@ -88,13 +88,20 @@ function compile_latex(
             finally
                 if format == "pdf"
 
+                    if pdf_num_pages("temp.pdf") > 1
+                        @warn("The PDF has more than 1 page!  Choosing the first page.")
+                    end
+
+                    additional_flags =
+
                     crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
 
                     pdfcrop = joinpath(dirname(pathof(@__MODULE__)), "pdfcrop.pl")
-
-                    Ghostscript_jll.gs() do gs_exe
-                        Perl_jll.perl() do perl_exe
-                            run(`$perl_exe $pdfcrop --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                    redirect_stderr(devnull) do
+                        Ghostscript_jll.gs() do gs_exe
+                            Perl_jll.perl() do perl_exe
+                                run(`$perl_exe $pdfcrop --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                            end
                         end
                     end
                     return read("temp_cropped.pdf", String)
@@ -146,7 +153,7 @@ end
 # Better in general
 function pdf2svg(pdf::Vector{UInt8}; kwargs...)
     pdftocairo = Poppler_jll.pdftocairo() do exe
-        open(`$exe -svg - -`, "r+")
+        open(`$exe -f 1 -l 1 -svg - -`, "r+")
     end
 
     write(pdftocairo, pdf)
@@ -215,4 +222,24 @@ function render_surface(ctx::CairoContext, surf)
 
     Cairo.restore(ctx)
     return
+end
+
+
+
+# Utility functions
+
+function pdf_num_pages(filename)
+    metadata = Poppler_jll.pdfinfo() do exe
+        read(`$exe $filename`, String)
+    end
+
+    infos = split(metadata, '\n')
+
+    ind = findfirst(x -> contains(x, "Pages"), infos)
+
+    pageinfo = infos[ind]
+
+    @show split(pageinfo, ' ')
+
+    return parse(Int, split(pageinfo, ' ')[end])
 end

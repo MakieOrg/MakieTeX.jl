@@ -81,6 +81,8 @@ In order to run the latest code, you should check out the master branch of this 
 
 ## The rendering pipeline
 
-The standard rendering pipeline works as follows: the string is converted in to a TeXDocument, which is compiled to pdf (by default, using system lualatex).  The pdf file is then converted to svg via `pdftocairo` (provided by Poppler_jll.jl so no need to install it).  Then, the svg is processed by librsvg.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and then plot that.
+The standard rendering pipeline works as follows: the string is converted in to a TeXDocument, which is compiled to pdf (by default, using system lualatex).  The pdf file is then cropped using the `pdfcrop` Perl script (this requires Perl_jll and Ghostscript_jll).
+
+This cropped PDF is converted to svg via `pdftocairo` (provided by Poppler_jll).  Then, the svg is processed by librsvg.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and then plot that.
 
 MakieTeX should
