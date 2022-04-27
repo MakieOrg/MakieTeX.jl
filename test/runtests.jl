@@ -81,4 +81,19 @@ end
         save(joinpath(example_path, "plaintex.pdf"), fig; px_per_unit=1)
         save(joinpath(example_path, "plaintex.svg"), fig; px_per_unit=0.75)
     end
+
+    @testset "Layouting" begin
+
+        @testset "Logo" begin
+            fig = Figure(figure_padding = 1, resolution = (1, 1))
+            @test_nowarn LTeX(fig[1, 1], "Makie\\TeX.jl")
+            @test_nowarn resize_to_layout!(fig)
+
+            save(joinpath(example_path, "logo.png"), fig; px_per_unit=3)
+            save(joinpath(example_path, "logo.pdf"), fig; px_per_unit=1)
+            save(joinpath(example_path, "logo.svg"), fig; px_per_unit=0.75)
+
+            @test true
+        end
+    end
 end

@@ -1,10 +1,12 @@
-# MakieTeX
+# <img src="https://user-images.githubusercontent.com/32143268/165514916-4337e55a-18ec-4831-ab0f-11ebcb679600.svg" alt="MakieTeX.jl" height="30" align = "top">
+## <a href = "https://www.latex-project.org/"><img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="30" align = "top"></a> integration for <a href = "https://www.github.com/JuliaPlots/Makie.jl"><img src="https://raw.githubusercontent.com/JuliaPlots/Makie.jl/master/assets/logo.png" alt="Makie.jl" height="30" align = "top"></a>
 
 MakieTeX allows you to draw and visualize arbitrary TeX documents in Makie!  You can insert anything from a single line of math to a large and complex TikZ diagram.
 
-
 MakieTeX works by compiling a latex document and transforming it to a renderable
-svg for CairoMakie or raster image for GLMakie.
+svg for CairoMakie, or a raster image for GLMakie.
+
+In order for MakieTeX to work, you must have `latexmk` and a TeX engine (preferably LuaTeX installed.
 
 
 ```julia

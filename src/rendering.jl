@@ -94,7 +94,7 @@ function compile_latex(
 
                     crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
 
-                    pdfcrop = joinpath(dirname(pathof(@__MODULE__)), "pdfcrop.pl")
+                    pdfcrop = joinpath(@__DIR__, "pdfcrop.pl")
                     redirect_stderr(devnull) do
                         redirect_stdout(devnull) do
                             Ghostscript_jll.gs() do gs_exe
