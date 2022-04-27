@@ -22,6 +22,7 @@ function render_texample(url)
 
     save(joinpath(example_path, "$filename.png"), fig; px_per_unit=3)
     save(joinpath(example_path, "$filename.pdf"), fig; px_per_unit=1)
+    save(joinpath(example_path, "$filename.svg"), fig; px_per_unit=0.75)
 
     @test true
 
@@ -73,11 +74,11 @@ end
 
         @test_nowarn LTeX(fig[1, 1], "This is Lorem Ipsum")
 
-        @test_nowarn LTeX(fig[1, 2], L"\oiiint_a^\mathbb R \mathscr D ~dt = \textbf{Poincar\'e quotient}")
+        @test_nowarn LTeX(fig[1, 2], L"\iiint_a^{\mathbb{R}} \mathfrak D ~dt = \textbf{Poincar\'e quotient}")
 
 
         save(joinpath(example_path, "plaintex.png"), fig; px_per_unit=3)
         save(joinpath(example_path, "plaintex.pdf"), fig; px_per_unit=1)
-
+        save(joinpath(example_path, "plaintex.svg"), fig; px_per_unit=0.75)
     end
 end

@@ -36,29 +36,7 @@ With the `TeXDocument` struct, you can feed in a String which contains a full La
 This example is from [Texample.net](https://texample.net/tikz/examples/title-graphics/)
 ```julia
 using MakieTeX, CairoMakie, Makie
-td = TeXDocument(raw"""
-\documentclass{standalone}
-\usepackage{tikz}
-\usetikzlibrary{trees,snakes}
-\begin{document}
-\pagestyle{empty}
-\tikzstyle{level 1}=[sibling angle=120]
-\tikzstyle{level 2}=[sibling angle=60]
-\tikzstyle{level 3}=[sibling angle=30]
-\tikzstyle{every node}=[fill]
-\tikzstyle{edge from parent}=[snake=expanding waves,segment length=1mm,
-                              segment angle=10,draw]
-\begin{tikzpicture}[grow cyclic,shape=circle,very thick,level distance=13mm,
-                    cap=round]
-\node {} child [color=\A] foreach \A in {red,green,blue}
-    { node {} child [color=\A!50!\B] foreach \B in {red,green,blue}
-        { node {} child [color=\A!50!\B!50!\C] foreach \C in {black,gray,white}
-            { node {} }
-        }
-    };
-\end{tikzpicture}
-\end{document}
-""")
+td = TeXDocument(read(download("https://texample.net/media/tikz/examples/TEX/title-graphics.tex"), String))
 fig = Figure()
 lt = LTeX(fig[1, 1], td; tellheight=false)
 ax = Axis(fig[1, 2])
@@ -67,7 +45,22 @@ fig
 ```
 ![makietex](https://user-images.githubusercontent.com/32143268/165130481-53ee0fe1-4c70-4453-b430-7a2ad37082f8.png)
 
-If you are
+## Cool graphics!
+
+
+![2plots](https://user-images.githubusercontent.com/32143268/165445977-79fbb1fe-6bd5-47c9-9501-be6c1ae837b9.svg)
+
+![cielab](https://user-images.githubusercontent.com/32143268/165446027-a5cae0e4-f48a-41de-8170-ab4059651bc9.svg)
+
+![dominoes](https://user-images.githubusercontent.com/32143268/165446028-0504abf9-7362-48c0-a07a-19a5cf038de0.svg)
+
+![or-gate](https://user-images.githubusercontent.com/32143268/165446029-93578a5e-7825-40cc-9c1b-573ecaa2630f.svg)
+
+![planets](https://user-images.githubusercontent.com/32143268/165446030-15d8e53c-06b9-4fa9-8867-03a0449fa9dc.svg)
+
+![rotated-triangle](https://user-images.githubusercontent.com/32143268/165446031-1502461b-8599-4d27-9526-9f1c4d4c8267.svg)
+
+
 
 
 ## Installation

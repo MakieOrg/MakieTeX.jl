@@ -115,13 +115,15 @@ function CachedTeX(str::String, dpi = 72.0; kwargs...)
 end
 
 function CachedTeX(x::LaTeXString, dpi = 72.0; kwargs...)
+    x = convert(String, x)
     return if first(x) == "\$" && last(x) == "\$"
-        CachedTeX(implant_math(x), dpi; kwargs...)
+        CachedTeX(implant_math(x[2:end-1]), dpi; kwargs...)
     else
         CachedTeX(implant_text(x), dpi; kwargs...)
     end
 end
 
+# do not rerun the pipeline on CachedTeX
 CachedTeX(ct::CachedTeX, dpi=72.0) = ct
 
 
@@ -148,7 +150,7 @@ function implant_math(str)
         """\\(\\displaystyle $str\\)""", true;
         requires = "\\RequirePackage{luatex85}",
         preamble = """
-        \\usepackage{amsmath, xcolor}
+        \\usepackage{amsmath, amsfonts, xcolor}
         \\pagestyle{empty}
         """,
         class = "standalone",
@@ -161,7 +163,7 @@ function implant_text(str)
         str, true;
         requires = "\\RequirePackage{luatex85}",
         preamble = """
-        \\usepackage{amsmath, xcolor}
+        \\usepackage{amsmath, amsfonts, xcolor}
         \\pagestyle{empty}
         """,
         class = "standalone",

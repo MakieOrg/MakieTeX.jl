@@ -96,9 +96,11 @@ function compile_latex(
 
                     pdfcrop = joinpath(dirname(pathof(@__MODULE__)), "pdfcrop.pl")
                     redirect_stderr(devnull) do
-                        Ghostscript_jll.gs() do gs_exe
-                            Perl_jll.perl() do perl_exe
-                                run(`$perl_exe $pdfcrop --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                        redirect_stdout(devnull) do
+                            Ghostscript_jll.gs() do gs_exe
+                                Perl_jll.perl() do perl_exe
+                                    run(`$perl_exe $pdfcrop --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                                end
                             end
                         end
                     end
