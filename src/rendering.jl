@@ -92,8 +92,6 @@ function compile_latex(
                         @warn("The PDF has more than 1 page!  Choosing the first page.")
                     end
 
-                    additional_flags =
-
                     crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
 
                     pdfcrop = joinpath(dirname(pathof(@__MODULE__)), "pdfcrop.pl")
@@ -238,8 +236,6 @@ function pdf_num_pages(filename)
     ind = findfirst(x -> contains(x, "Pages"), infos)
 
     pageinfo = infos[ind]
-
-    @show split(pageinfo, ' ')
 
     return parse(Int, split(pageinfo, ' ')[end])
 end

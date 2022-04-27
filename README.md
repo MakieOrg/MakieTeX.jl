@@ -85,4 +85,4 @@ The standard rendering pipeline works as follows: the string is converted in to 
 
 This cropped PDF is converted to svg via `pdftocairo` (provided by Poppler_jll).  Then, the svg is processed by librsvg.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and then plot that.
 
-MakieTeX should
+Thus, you only need a TeX engine, preferably LuaTeX, installed on your system.
