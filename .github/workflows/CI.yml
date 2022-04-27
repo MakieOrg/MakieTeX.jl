@@ -40,7 +40,7 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - name: Install latex
-        run: sudo apt-get update && sudo apt-get install -y texlive
+        run: sudo apt-get update && sudo apt-get install -y texlive texlive-luatex
       - name: Install master branch of Makie et al
         run: julia --project=@. -e 'using Pkg; pkg"add Makie#master CairoMakie#master MakieCore#master"'
       - uses: julia-actions/julia-buildpkg@v1
