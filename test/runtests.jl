@@ -12,7 +12,7 @@ function render_texample(url)
 
     fig = Figure()
 
-    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String)))
+    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String))))
 
     @test true
 
@@ -34,7 +34,6 @@ end
             "city",
             "planets",
             "model-physics",
-            "mindmap",
             "smart-description",
             "or-gate",
             "polar-plot",
@@ -54,11 +53,11 @@ end
 
             fig = Figure()
 
-            @test_warn lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String)))
+            @test_warn r"The PDF has more than 1 page!  Choosing the first page." LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
 
             resize_to_layout!(fig)
 
-            filename = splitdir(splitext(url)[1])[2]
+            filename = "mandala"
 
             save(joinpath(example_path, "$filename.png"), fig; px_per_unit=3)
             save(joinpath(example_path, "$filename.pdf"), fig; px_per_unit=1)

@@ -111,7 +111,7 @@ function CachedTeX(doc::TeXDocument, dpi = 72.0; method = :pdf, kwargs...)
 end
 
 function CachedTeX(str::String, dpi = 72.0; kwargs...)
-    return CachedTeX(implant_math(str), dpi; kwargs...)
+    return CachedTeX(implant_text(str), dpi; kwargs...)
 end
 
 function CachedTeX(x::LaTeXString, dpi = 72.0; kwargs...)

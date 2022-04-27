@@ -12,7 +12,7 @@ using GLMakie, Makie, MakieTeX
 fig = Figure(resolution = (400, 300));
 ax = Axis(fig[1, 1]);
 lines!(rand(10), color = 1:10);
-tex = LTeX(fig[2, 1], raw"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", scale=2);
+tex = LTeX(fig[2, 1], L"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", scale=2);
 fig
 ```
 ![ltex](https://user-images.githubusercontent.com/10947937/110216157-d1d87d00-7ead-11eb-8507-62ddcff2a841.png)
