@@ -9,7 +9,7 @@
             align = (:center, :center),
             scale = 1.0,
             position = Point3{Float32}(0),
-            rotation = 0f0
+            rotation = 0f0,
         )
     )
 end
@@ -108,10 +108,10 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     surf, rctx = rsvg2recordsurf(handle)
     x0, y0, w, h = get_ink_extents(surf)
 
-    pos = CairoMakie.project_position(scene, img.position[], img.model[])
+    pos = CairoMakie.project_position(scene, :data, img.position[], img.model[])
     scale = img.scale[]
     _w = scale * w; _h = scale * h
-    scale_factor = CairoMakie.project_scale(scene, Vec2{Float32}(_w, _h), img.model[])
+    scale_factor = CairoMakie.project_scale(scene, :data, Vec2{Float32}(_w, _h), img.model[])
 
     pos = if halign == :left
         pos
