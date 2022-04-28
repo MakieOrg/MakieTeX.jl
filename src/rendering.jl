@@ -99,7 +99,7 @@ function compile_latex(
                         redirect_stdout(devnull) do
                             Ghostscript_jll.gs() do gs_exe
                                 Perl_jll.perl() do perl_exe
-                                    run(`$perl_exe $pdfcrop --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                                    run(`$perl_exe $pdfcrop --margin '1 1 1 1' --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
                                 end
                             end
                         end
