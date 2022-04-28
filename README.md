@@ -27,11 +27,11 @@ ax.aspect = DataAspect()
 fig
 ```
 
-<img src="https://user-images.githubusercontent.com/10947937/110216144-c5542480-7ead-11eb-9753-7ff215e36056.png" height=500></img>
+<img src="https://user-images.githubusercontent.com/10947937/110216144-c5542480-7ead-11eb-9753-7ff215e36056.png" height=300></img>
 
 There is a way to integrate LTeX into a legend, but it's pretty hacky now.  Ask on `#makie` in the JuliaLang Slack if you want to know.
 
-<img src="https://user-images.githubusercontent.com/32143268/79641479-6adaa880-81b5-11ea-8138-4d6054ccfa6d.png" height=500></img>
+<img src="https://user-images.githubusercontent.com/32143268/79641479-6adaa880-81b5-11ea-8138-4d6054ccfa6d.png" height=300></img>
 
 You can also use MakieTeX to "replace" labels and titles with LaTeX, although it's a little hacky!
 
@@ -55,7 +55,7 @@ colgap!(gl, 1, 5)
 
 fig
 ```
-<img src="https://user-images.githubusercontent.com/32143268/165825392-63de2e69-eb86-42b9-a946-c9ffe727a28f.svg" height=500></img>
+<img src="https://user-images.githubusercontent.com/32143268/165825392-63de2e69-eb86-42b9-a946-c9ffe727a28f.svg" height=300></img>
 
 
 ## Including full LaTeX documents
