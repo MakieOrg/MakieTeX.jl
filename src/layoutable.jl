@@ -56,7 +56,7 @@ function Makie.MakieLayout.initialize_block!(l::LTeX)
     textbb = Ref(BBox(0, 1, 0, 1))
 
     onany(l.tex, l.dpi, l.scale, l.rotation, l.padding) do tex, dpi, scale, rotation, padding
-        textbb[] = Makie.MakieLayout.Rect2f(boundingbox(t))
+        textbb[] = Makie.rotatedrect(Makie.MakieLayout.Rect2f(boundingbox(t)), rotation)
         autowidth = Makie.MakieLayout.width(textbb[]) + padding[1] + padding[2]
         autoheight = Makie.MakieLayout.height(textbb[]) + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)
