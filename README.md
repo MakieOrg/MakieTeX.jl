@@ -17,7 +17,7 @@ lines!(rand(10), color = 1:10);
 tex = LTeX(fig[2, 1], L"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", scale=2);
 fig
 ```
-![ltex](https://user-images.githubusercontent.com/10947937/110216157-d1d87d00-7ead-11eb-8507-62ddcff2a841.png)
+<img src="https://user-images.githubusercontent.com/10947937/110216157-d1d87d00-7ead-11eb-8507-62ddcff2a841.png"></img>
 
 ```julia
 using GLMakie, Makie, MakieTeX, LaTeXStrings
@@ -26,10 +26,37 @@ fig, ax, p = teximg(L"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix
 ax.aspect = DataAspect()
 fig
 ```
-![teximg](https://user-images.githubusercontent.com/10947937/110216144-c5542480-7ead-11eb-9753-7ff215e36056.png)
+
+<img src="https://user-images.githubusercontent.com/10947937/110216144-c5542480-7ead-11eb-9753-7ff215e36056.png" height=500></img>
 
 There is a way to integrate LTeX into a legend, but it's pretty hacky now.  Ask on `#makie` in the JuliaLang Slack if you want to know.
-![legendtex](https://user-images.githubusercontent.com/32143268/79641479-6adaa880-81b5-11ea-8138-4d6054ccfa6d.png)
+
+<img src="https://user-images.githubusercontent.com/32143268/79641479-6adaa880-81b5-11ea-8138-4d6054ccfa6d.png" height=500></img>
+
+You can also use MakieTeX to "replace" labels and titles with LaTeX, although it's a little hacky!
+
+```julia
+using CairoMakie, MakieTeX
+fig = Figure(fontsize = 12, resolution = (300, 300))
+# Create a GridLayout for the axis and labels
+gl = fig[1, 1] = GridLayout()
+# Create the Axis within this layout, leave space for the title and labels
+ax = Axis(gl[2,2])
+# plot to the axis
+lines!(ax, rand(10); color = rand(RGBAf, 10))
+
+# create labels and title
+x_label = LTeX(gl[3, 2], raw"$t$ (time)", tellheight = true, tellwidth = false)
+y_label = LTeX(gl[2, 1], L"\int_a^t f(\tau) ~d\tau"; rotation = pi/2, tellheight = false, tellwidth = true)
+title = LTeX(gl[1, 2], "\\Huge \\LaTeX~ title", tellheight = true, tellwidth = false)
+
+rowgap!(gl, 2, 1)
+colgap!(gl, 1, 5)
+
+fig
+```
+<img src="https://user-images.githubusercontent.com/32143268/165824858-37c6988a-2305-4f51-bc40-004cedfcffdd.svg" height=500></img>
+
 
 ## Including full LaTeX documents
 
