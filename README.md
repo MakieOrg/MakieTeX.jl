@@ -48,14 +48,14 @@ lines!(ax, rand(10); color = rand(RGBAf, 10))
 # create labels and title
 x_label = LTeX(gl[3, 2], raw"$t$ (time)", tellheight = true, tellwidth = false)
 y_label = LTeX(gl[2, 1], L"\int_a^t f(\tau) ~d\tau"; rotation = pi/2, tellheight = false, tellwidth = true)
-title = LTeX(gl[1, 2], "\\Huge \\LaTeX~ title", tellheight = true, tellwidth = false)
+title = LTeX(gl[1, 2], "\\Huge {\\LaTeX} title", tellheight = true, tellwidth = false)
 
 rowgap!(gl, 2, 1)
 colgap!(gl, 1, 5)
 
 fig
 ```
-<img src="https://user-images.githubusercontent.com/32143268/165824858-37c6988a-2305-4f51-bc40-004cedfcffdd.svg" height=500></img>
+<img src="https://user-images.githubusercontent.com/32143268/165825392-63de2e69-eb86-42b9-a946-c9ffe727a28f.svg" height=500></img>
 
 
 ## Including full LaTeX documents
