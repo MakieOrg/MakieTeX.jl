@@ -42,7 +42,7 @@ jobs:
       - name: Install latex
         run: sudo apt-get update && sudo apt-get install -y texlive-full texlive-luatex latexmk
       - name: Install master branch of Makie et al
-        run: julia --project=@. -e 'using Pkg; pkg"add Makie#master CairoMakie#master MakieCore#master"'
+        run: julia --project=@. -e 'using Pkg; pkg"add Makie CairoMakie MakieCore"'
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: actions/upload-artifact@v3
