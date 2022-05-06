@@ -72,9 +72,8 @@ end
 
 struct CachedTeX
     doc::TeXDocument
-    handle::Rsvg.RsvgHandle
-    raw_dims::Rsvg.RsvgDimensionData
-    svg::String
+    surface::CairoSurface # Poppler handle
+    dims::Vector{Float64}
 end
 
 """
@@ -90,23 +89,15 @@ These are primarily:
 - `engine = \`lualatex\`/\`xelatex\`/...`: the LaTeX engine to use when rendering
 - `options=\`-file-line-error\``: the options to pass to `latexmk`.
 """
-function CachedTeX(doc::TeXDocument, dpi = 72.0; method = :pdf, kwargs...)
-    svg = if method == :dvi
-        dvi2svg(latex2dvi(convert(String, doc); kwargs...))
-    elseif method == :pdf
-        pdf2svg(latex2pdf(convert(String, doc); kwargs...))
-    else
-        @error("$method not recognized!  Must be one of (:dvi, :pdf).")
-    end
+function CachedTeX(doc::TeXDocument; kwargs...)
+    pdf = latex2pdf(convert(String, doc); kwargs...)
 
-    handle = svg2rsvg(svg, dpi)
-
-    dims = Rsvg.handle_get_dimensions(handle)
+    surf = pdf2recordsurf(pdf)
+    dims = get_ink_extents(surf)
     return CachedTeX(
         doc,
-        handle,
-        dims,
-        svg
+        surf,
+        dims .+ [0, 0, 1, 1],
     )
 end
 

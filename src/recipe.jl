@@ -5,7 +5,7 @@
         Attributes(
             color = Makie.automatic,
             implant = true,
-            dpi = 72.0,
+            render_density = 1,
             align = (:center, :center),
             scale = 1.0,
             position = Point3{Float32}(0),
@@ -34,19 +34,18 @@ function Makie.plot!(plot::T) where T <: TeXImg
     # image to draw
     # We always want to draw this at a 1:1 ratio, so increasing textsize or
     # changing dpi should rerender
-    img = map(plot[1], plot.dpi, plot.scale) do texdoc, dpi, scale
-        scale = scale
-        rsvg2img(texdoc.handle, scale * dpi)
+    img = map(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
+        recordsurf2img(cachedtex, round(Int, render_density * scale))
     end
 
     # Rect to draw in
     # This is mostly aligning
     xr = Observable(0.0..1.0)
     yr = Observable(0.0..1.0)
-    lift(img, plot.position, plot.align) do img, pos, align
+    lift(img, plot.position, plot.align, plot.render_density) do img, pos, align, render_density
         halign, valign = align
         x, y = pos
-        w, h = size(img)
+        w, h = round.(Int, size(img) ./ render_density)
 
         if halign == :left
             x -= 0
@@ -85,7 +84,7 @@ function get_ink_extents(surf::CairoSurface)
     dims = zeros(Float64, 4)
 
     ccall(
-        (:cairo_recording_surface_ink_extents, CairoMakie.Cairo.libcairo),
+        (:cairo_recording_surface_ink_extents, Cairo.libcairo),
         Cvoid,
         (Ptr{Cvoid}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}),
         surf.ptr, Ref(dims, 1), Ref(dims, 2), Ref(dims, 3), Ref(dims, 4)
@@ -102,11 +101,9 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     tex = img[1][]
     halign, valign = img.align[]
 
-    handle = svg2rsvg(tex.svg)
-    dims = tex.raw_dims
+    surf = tex.surface
 
-    surf, rctx = rsvg2recordsurf(handle)
-    x0, y0, w, h = get_ink_extents(surf)
+    x0, y0, w, h = tex.dims
 
     pos = CairoMakie.project_position(scene, :data, img.position[], img.model[])
     scale = img.scale[]

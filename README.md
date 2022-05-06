@@ -105,6 +105,6 @@ In order to run the latest code, you should check out the master branch of this 
 
 The standard rendering pipeline works as follows: the string is converted in to a TeXDocument, which is compiled to pdf (by default, using system lualatex).  The pdf file is then cropped using the `pdfcrop` Perl script (this requires Perl_jll and Ghostscript_jll).
 
-This cropped PDF is converted to svg via `pdftocairo` (provided by Poppler_jll).  Then, the svg is processed by librsvg.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and then plot that.
+This cropped PDF is then loaded by Poppler, accessed through `Poppler_jll.jl` and libpoppler-glib, and rendered to a Cairo surface.  From here, if CairoMakie is the backend, we can render directly to the surface.  For any other backend, we render an ARGB image and, then plot that.
 
-Thus, you only need a TeX engine, preferably LuaTeX, installed on your system.
+Thus, you only need a TeX engine, preferably LuaTeX, installed on your system.  We don't automatically detect the TeX engine, though, so if you want to change that, set ``` MakieTeX.CURRENT_TEX_ENGINE[] = `xelatex` ``` (note the backticks in place of quotes) or some other engine, as long as it is compatible with `latexmk`.
