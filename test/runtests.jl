@@ -27,6 +27,8 @@ function render_texample(url)
     @test true
 
 end
+
+
 @testset "MakieTeX.jl" begin
 
     @testset "texample.net" begin
@@ -94,6 +96,25 @@ end
             save(joinpath(example_path, "logo.svg"), fig; px_per_unit=0.75)
 
             @test true
+        end
+    end
+
+    mkpath(joinpath(example_path, "aligns"))
+
+    @testset "aligns" begin
+        f = Figure(resolution = (200, 200))
+        lt = LTeX(f[1, 1], raw"Hello from Makie\TeX{}!")
+        teximg = lt.blockscene.plots[1]
+
+        for halign in (:left, :center, :right)
+            for valign in (:top, :center, :bottom)
+                @testset "$(halign), $(valign)" begin
+                    @test_nowarn teximg.align = (halign, valign)
+                    @test_nowarn save(joinpath(example_path, "aligns", "$(halign)_$(valign).png"), f; px_per_unit = 3)
+                    @test_nowarn save(joinpath(example_path, "aligns", "$(halign)_$(valign).svg"), f; px_per_unit = 1)
+                    @test_nowarn save(joinpath(example_path, "aligns", "$(halign)_$(valign).pdf"), f; px_per_unit = 0.75)
+                end
+            end
         end
     end
 end
