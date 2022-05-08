@@ -122,11 +122,11 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     end
 
     pos = if valign == :top
-        pos .+ (0, scale_factor[2])
+        pos
     elseif valign == :center
         pos .+ (0, scale_factor[2] / 2)
     elseif valign == :bottom
-        pos
+        pos .+ (0, scale_factor[2])
     end
 
 
