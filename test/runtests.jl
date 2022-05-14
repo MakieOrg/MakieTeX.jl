@@ -20,9 +20,9 @@ function render_texample(url)
 
     filename = splitdir(splitext(url)[1])[2]
 
-    save(joinpath(example_path, "$filename.png"), fig; px_per_unit=3)
-    save(joinpath(example_path, "$filename.pdf"), fig; px_per_unit=1)
-    save(joinpath(example_path, "$filename.svg"), fig; px_per_unit=0.75)
+    save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
+    save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
+    save(joinpath(example_path, "texample", "$filename.svg"), fig; px_per_unit=0.75)
 
     @test true
 
@@ -32,6 +32,9 @@ end
 @testset "MakieTeX.jl" begin
 
     @testset "texample.net" begin
+
+        mkpath(joinpath(example_path, "texample"))
+
         names = [
             "rotated-triangle",
             "city",
@@ -62,8 +65,8 @@ end
 
             filename = "mandala"
 
-            save(joinpath(example_path, "$filename.png"), fig; px_per_unit=3)
-            save(joinpath(example_path, "$filename.pdf"), fig; px_per_unit=1)
+            save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
+            save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
 
         end
 
@@ -84,24 +87,10 @@ end
         save(joinpath(example_path, "plaintex.svg"), fig; px_per_unit=0.75)
     end
 
-    @testset "Layouting" begin
-
-        @testset "Logo" begin
-            fig = Figure(figure_padding = 1, resolution = (1, 1))
-            @test_nowarn LTeX(fig[1, 1], "Makie\\TeX.jl")
-            @test_nowarn resize_to_layout!(fig)
-
-            save(joinpath(example_path, "logo.png"), fig; px_per_unit=3)
-            save(joinpath(example_path, "logo.pdf"), fig; px_per_unit=1)
-            save(joinpath(example_path, "logo.svg"), fig; px_per_unit=0.75)
-
-            @test true
-        end
-    end
-
-    mkpath(joinpath(example_path, "aligns"))
-
     @testset "aligns" begin
+
+        mkpath(joinpath(example_path, "aligns"))
+
         f = Figure(resolution = (200, 200))
         lt = LTeX(f[1, 1], raw"Hello from Makie\TeX{}!")
         teximg = lt.blockscene.plots[1]
@@ -117,4 +106,24 @@ end
             end
         end
     end
+
+    @testset "Layouting" begin
+
+        @testset "Logo" begin
+            fig = Figure(figure_padding = 1, resolution = (1, 1))
+            @test_nowarn LTeX(fig[1, 1], "Makie\\TeX.jl")
+            @test_nowarn resize_to_layout!(fig)
+
+            save(joinpath(example_path, "logo.png"), fig; px_per_unit=3)
+            save(joinpath(example_path, "logo.pdf"), fig; px_per_unit=1)
+            save(joinpath(example_path, "logo.svg"), fig; px_per_unit=0.75)
+
+            @test true
+        end
+    end
+
+
+
+    end
+
 end
