@@ -68,18 +68,32 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<: CachedTeX}})
-    teximg!(t, t[1]; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
+    teximg!(
+        t, t[1];
+        space = t.space, position=t.position, align = t.align,
+        rotation = t.rotation, visible = t.visible,
+        scale = 1, render_density = 5,
+    )
 end
 
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<:AbstractVector{<:CachedTeX}}})
-    teximgcollection!(t, t[1]; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
+    teximgcollection!(
+        t, t[1];
+        space = t.space, position=t.position, align = t.align,
+        rotation = t.rotation, visible = t.visible,
+        scale = 1, render_density = 5,
+    )
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<:TeXDocument}})
     plottable_cached_tex = lift(CachedTeX, t[1])
 
-    teximg!(t, plottable_cached_tex; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
+    teximg!(
+        t, plottable_cached_tex;
+        space = t.space, position=t.position, align = t.align,
+        rotation = t.rotation, visible = t.visible,
+        scale = 1, render_density = 5, )
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
@@ -87,24 +101,35 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
         return CachedTeX.(ltexs)
     end
 
-    teximgcollection!(t, plottable_cached_texs; space = t.space, position = t.position, scale=1, render_density=5, align = t.align, rotation = t.rotation, visible = t.visible)
+    teximgcollection!(
+        t, plottable_cached_texs;
+        space = t.space, position = t.position, align = t.align,
+        rotation = t.rotation, visible = t.visible,
+        scale=1, render_density=5
+    )
 end
 
-"Call this function to replace the standard LaTeXString rendering with true TeX rendering!"
-function hijack_latexstrings!()
-    @eval begin
-        function Makie.plot!(t::Makie.Text{<: Tuple{<:LaTeXString}})
-            plottable_cached_tex = lift(to_plottable_cachedtex, t[1], t.font, t.textsize, t.lineheight, t.color)
+################################################################################
+#                              ☠️   Real Piracy 🦜                              #
+################################################################################
 
-            teximg!(t, Makie.Observables.async_latest(plottable_cached_tex); position=t.position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
-        end
+# Here, we pirate the Makie functions which plot LaTeXString text using
+# MathTeXEngine.jl and make them use MakieTeX's handling routines.
+# This means that once MakieTeX is loaded, there is no way to go back to
+# MathTeXEngine!
+# A future solution for this would be to have some global render mode which decides
+# which path is taken, but that would have to be done in Makie itself.
 
-        function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
-            plottable_cached_texs = lift(t[1], t.font, t.textsize, t.lineheight, t.color) do ltexs, font, textsize, lineheight, color
-                return to_plottable_cachedtex.(ltexs, font, textsize, lineheight, color)
-            end
+function Makie.plot!(t::Makie.Text{<: Tuple{<:LaTeXString}})
+    plottable_cached_tex = lift(to_plottable_cachedtex, t[1], t.font, t.textsize, t.lineheight, t.color)
 
-            teximgcollection!(t, Makie.Observables.async_latest(plottable_cached_texs); position = t.position, align = t.align, rotation = t.rotation, visible = t.visible)
-        end
+    teximg!(t, Makie.Observables.async_latest(plottable_cached_tex); position=t.position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
+end
+
+function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
+    plottable_cached_texs = lift(t[1], t.font, t.textsize, t.lineheight, t.color) do ltexs, font, textsize, lineheight, color
+        return to_plottable_cachedtex.(ltexs, font, textsize, lineheight, color)
     end
+
+    teximgcollection!(t, Makie.Observables.async_latest(plottable_cached_texs); position = t.position, align = t.align, rotation = t.rotation, visible = t.visible)
 end
