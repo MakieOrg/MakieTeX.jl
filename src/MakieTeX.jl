@@ -13,6 +13,7 @@ const MAKIETEX_RENDER_UNSAFE = Ref(false)
 include("types.jl")
 include("rendering.jl")
 include("recipe.jl")
+include("text_override.jl")
 include("layoutable.jl")
 
 export TeXDocument, CachedTeX

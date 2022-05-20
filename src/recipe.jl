@@ -130,7 +130,7 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
         scale_factor[2] / h
     )
 
-    if MAKIETEX_RENDER_UNSAFE
+    if MAKIETEX_RENDER_UNSAFE[]
         document = tex.ptr
         page = ccall(
             (:poppler_document_get_page, Poppler_jll.libpoppler_glib),

@@ -168,7 +168,21 @@ end
         or \href{mailto:anshulsinghvi@gmail.com}{email me}
         \end{document}
         """)
-        
+
+    end
+
+    @testset "Text override" begin
+        @testset "Font scaling" begin
+            fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
+            """), textsize=16); fig
+        end
+        @testset "Theming" begin
+            with_theme(theme_dark()) do
+                fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
+                """), textsize=16); fig
+            end
+        end
+
     end
 
 end
