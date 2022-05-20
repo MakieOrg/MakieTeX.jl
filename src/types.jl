@@ -103,7 +103,7 @@ $(FIELDS)
 """
 function CachedTeX(doc::TeXDocument; kwargs...)
 
-    pdf = latex2pdf(convert(String, doc); kwargs...)
+    pdf = Vector{UInt8}(latex2pdf(convert(String, doc); kwargs...))
     ptr = load_pdf(pdf)
     surf = firstpage2recordsurf(ptr)
     dims = (pdf_get_page_size(ptr, 0))

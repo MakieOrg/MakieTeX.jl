@@ -54,12 +54,15 @@ function compile_latex(
             out = Pipe()
             err = Pipe()
 
-            latex_cmd = `latexmk $options --shell-escape -latex=$use_tex_engine -cd -interaction=nonstopmode --output-format=$format $formatcmd temp.tex`
-
-            latex_pipeline = pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err)
-
             try
-                latex = run(latex_pipeline)
+                latex = if tex_engine == `tectonic`
+                    tectonic_jll.tectonic() do bin
+                    	run(pipeline(ignorestatus(`$bin temp.tex`), stdout=out, stderr=err))
+                    end
+                else # latexmk
+                    latex_cmd = `latexmk $options --shell-escape -latex=$use_tex_engine -cd -interaction=nonstopmode --output-format=$format $formatcmd temp.tex`
+                    run(pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err))
+                end
                 suc = success(latex)
                 close(out.in)
                 close(err.in)
@@ -85,13 +88,14 @@ function compile_latex(
                     # Convert engine from Latex to TeX - for example,
                     # Lua*LA*TeX => LuaTeX, ...
                     crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
+                    crop_engine == `tectonic` && return read("temp.pdf", String)
 
                     pdfcrop = joinpath(@__DIR__, "pdfcrop.pl")
                     redirect_stderr(devnull) do
                         redirect_stdout(devnull) do
                             Ghostscript_jll.gs() do gs_exe
                                 Perl_jll.perl() do perl_exe
-                                    run(`$perl_exe $pdfcrop --margin $crop_margins --$crop_engine --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                                    run(`$perl_exe $pdfcrop --margin $crop_margins $() --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
                                 end
                             end
                         end
@@ -114,15 +118,16 @@ latex2pdf(args...; kwargs...) = compile_latex(args...; format = "pdf", kwargs...
 
 # Pure poppler pipeline - directly from PDF to Cairo surface.
 
-function load_pdf(pdf::String)::Ptr{Cvoid} # Poppler document handle
+load_pdf(pdf::String) = load_pdf(Vector{UInt8}(pdf))
 
-    pdf_chars = Vector{UInt8}(pdf)
+function load_pdf(pdf::Vector{UInt8})::Ptr{Cvoid} # Poppler document handle
+
     # Use Poppler to load the document.
     document = ccall(
         (:poppler_document_new_from_data, Poppler_jll.libpoppler_glib),
         Ptr{Cvoid},
         (Ptr{Cchar}, Csize_t, Cstring, Ptr{Cvoid}),
-        pdf_chars, Csize_t(length(pdf_chars)), C_NULL, C_NULL
+        pdf, Csize_t(length(pdf)), C_NULL, C_NULL
     )
 
     if document == C_NULL
