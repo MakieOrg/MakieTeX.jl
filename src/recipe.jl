@@ -131,7 +131,7 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     )
 
     if MAKIETEX_RENDER_UNSAFE[]
-        document = tex.ptr
+        document = update_pointer!(tex)
         page = ccall(
             (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
             Ptr{Cvoid},

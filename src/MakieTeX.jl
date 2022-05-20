@@ -5,6 +5,7 @@ using Colors, LaTeXStrings
 
 using Makie.GeometryBasics: origin, widths
 using Makie.Observables
+using DocStringExtensions
 
 using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll
 

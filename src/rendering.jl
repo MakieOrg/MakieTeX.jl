@@ -4,12 +4,11 @@ const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([2,2,2,2])
 
 function dvisvg()
     if !isassigned(DVISVGM_PATH)
-        if Sys.isunix()
-           DVISVGM_PATH[] = readchomp(`which dvisvgm`)
-       end
+        DVISVGM_PATH = Sys.which("dvisvgm")
     end
     return DVISVGM_PATH[]
 end
+
 
 # The main compilation method - compiles arbitrary LaTeX documents
 function compile_latex(
@@ -65,11 +64,11 @@ function compile_latex(
                 close(out.in)
                 close(err.in)
                 if !isfile("temp.$read_format")
-                    println("Latex did not write temp.$(read_format)!")
+                    println("Latex did not write temp.$(read_format)!  Using the $(tex_engine) engine.")
                     println("Files in temp directory are:\n" * join(readdir(), ','))
-                    printstyled("Stdout\n", bold=true)
+                    printstyled("Stdout\n", bold=true, color = :blue)
                     println(read(out, String))
-                    printstyled("Stderr\n", bold=true)
+                    printstyled("Stderr\n", bold=true, color = :red)
                     println(read(err, String))
                     error()
                 end
