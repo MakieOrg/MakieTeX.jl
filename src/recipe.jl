@@ -10,20 +10,13 @@
             scale = 1.0,
             position = Point3{Float32}(0),
             rotation = 0f0,
+            space = :data,
         )
     )
 end
 
 function Makie.convert_arguments(::Type{<: TeXImg}, x::AbstractString)
     return (CachedTeX(implant_text(x)),)
-end
-
-function Makie.convert_arguments(::Type{<: TeXImg}, x::LaTeXString)
-    if first(x) == "\$" && last(x) == "\$"
-        return (CachedTeX(implant_math(x)),)
-    else
-        return (CachedTeX(implant_text(x)),)
-    end
 end
 
 function Makie.convert_arguments(::Type{<: TeXImg}, doc::TeXDocument)
@@ -35,7 +28,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
     # We always want to draw this at a 1:1 ratio, so increasing textsize or
     # changing dpi should rerender
     img = map(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
-        recordsurf2img(cachedtex, round(Int, render_density * scale))
+        firstpage2img(cachedtex; render_density = render_density * scale)
     end
 
     # Rect to draw in
@@ -47,20 +40,23 @@ function Makie.plot!(plot::T) where T <: TeXImg
         x, y = pos
         w, h = round.(Int, size(img) ./ render_density)
 
+        x -= w / 2
+        y -= h / 2
+
         if halign == :left
-            x -= 0
+            x -= w/2
         elseif halign == :center
-            x -= w / 2
+            x -= 0
         elseif halign == :right
             x -= w
         end
 
         if valign == :top
-            y -= h
+            y -= h/2
         elseif valign == :center
-            y -= h / 2
-        elseif valign == :bottom
             y -= 0
+        elseif valign == :bottom
+            y -= -h/2
         end
 
         xr[] = x..x+w
@@ -80,19 +76,6 @@ function Makie.plot!(plot::T) where T <: TeXImg
     image!(plot, xr, yr, img, model=model)
 end
 
-function get_ink_extents(surf::CairoSurface)
-    dims = zeros(Float64, 4)
-
-    ccall(
-        (:cairo_recording_surface_ink_extents, Cairo.libcairo),
-        Cvoid,
-        (Ptr{Cvoid}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}),
-        surf.ptr, Ref(dims, 1), Ref(dims, 2), Ref(dims, 3), Ref(dims, 4)
-    )
-
-    return dims
-end
-
 function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img::T) where T <: MakieTeX.TeXImg
 
     bbox = Makie.boundingbox(img)
@@ -101,21 +84,24 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     tex = img[1][]
     halign, valign = img.align[]
 
-    surf = tex.surface
+    x0, y0 = 0.0, 0.0
+    w, h = tex.dims
 
-    x0, y0, w, h = tex.dims
-
-    pos = CairoMakie.project_position(scene, :data, img.position[], img.model[])
+    pos = CairoMakie.project_position(
+        scene, img.space[],
+        Makie.apply_transform(scene.transformation.transform_func[], img.position[]),
+        img.model[]
+    )
     scale = img.scale[]
     _w = scale * w; _h = scale * h
-    scale_factor = CairoMakie.project_scale(scene, :data, Vec2{Float32}(_w, _h), img.model[])
+    scale_factor = CairoMakie.project_scale(scene, img.space[], Vec2{Float32}(_w, _h), img.model[])
 
     pos = if halign == :left
-        pos
+        pos .- (scale_factor[1] / 2, 0) .- (0, 0)
     elseif halign == :center
         pos .- (scale_factor[1] / 2, 0)
     elseif halign == :right
-        pos .- (scale_factor[1], 0)
+        pos .- (scale_factor[1]/2, 0)
     end
 
     pos = if valign == :top
@@ -132,19 +118,39 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     Cairo.translate(
         ctx,
         pos[1],
-        pos[2] - (h + y0) * scale_factor[2] / h
+        pos[2] - (1 + y0/h) * scale_factor[2]
     )
-    Cairo.rotate(ctx, -img.rotation[])
+
     # Rotated center - normal center
+
+    Cairo.rotate(ctx, -img.rotation[])
+
     cx = 0.5scale_factor[1] * cos(img.rotation[]) - 0.5scale_factor[2] * sin(img.rotation[]) - 0.5scale_factor[1]
     cy = 0.5scale_factor[1] * sin(img.rotation[]) + 0.5scale_factor[2] * cos(img.rotation[]) - 0.5scale_factor[2]
     Cairo.translate(ctx, cx, cy)
+
     Cairo.scale(
         ctx,
         scale_factor[1] / w,
         scale_factor[2] / h
     )
 
-    render_surface(ctx, surf)
+    # render to screen
+
+    document = tex.ptr
+    page = ccall(
+        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
+        Ptr{Cvoid},
+        (Ptr{Cvoid}, Cint),
+        document, 0 # page 0 is first page
+    )
+    # Render the page to the surface
+    ccall(
+        (:poppler_page_render, Poppler_jll.libpoppler_glib),
+        Cvoid,
+        (Ptr{Cvoid}, Ptr{Cvoid}),
+        page, ctx.ptr
+    )
+
     Cairo.restore(ctx)
 end

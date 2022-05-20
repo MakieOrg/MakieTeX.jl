@@ -42,13 +42,10 @@ function Makie.MakieLayout.initialize_block!(l::LTeX)
 
     textpos = Observable(Point3f(0, 0, 0))
 
-    alignnode = lift(l.valign, l.halign) do valign, halign
-        return (halign, valign)
-    end
-
     t = teximg!(
         topscene, l.tex; position = textpos, visible = l.visible,
-        scale = l.scale, render_density = l.render_density, align = alignnode, rotation = l.rotation,
+        scale = l.scale, render_density = l.render_density, align = (:center, :center),
+        rotation=l.rotation,
         markerspace = :screen,
         inspectable = false
     )
