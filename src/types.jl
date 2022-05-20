@@ -72,8 +72,8 @@ end
 
 struct CachedTeX
     doc::TeXDocument
-    surface::CairoSurface # Poppler handle
-    dims::Vector{Float64}
+    ptr::Ptr{Cvoid} # Poppler handle
+    dims::Tuple{Float64, Float64}
 end
 
 """
@@ -90,14 +90,15 @@ These are primarily:
 - `options=\`-file-line-error\``: the options to pass to `latexmk`.
 """
 function CachedTeX(doc::TeXDocument; kwargs...)
-    pdf = latex2pdf(convert(String, doc); kwargs...)
 
-    surf = pdf2recordsurf(pdf)
-    dims = get_ink_extents(surf)
+    pdf = latex2pdf(convert(String, doc); kwargs...)
+    ptr = load_pdf(pdf)
+    dims = (pdf_get_page_size(ptr, 0))
+
     return CachedTeX(
         doc,
-        surf,
-        dims .+ [0, 0, 1, 1],
+        ptr,
+        dims# .+ (1, 1),
     )
 end
 
@@ -130,9 +131,9 @@ CachedTeX(ct::CachedTeX, dpi=72.0) = ct
 
 function Base.show(io::IO, ct::CachedTeX)
     if length(ct.doc.contents) > 1000
-        println(io, "CachedTeX(TexDocument(...), $(ct.handle), $(ct.raw_dims))")
+        println(io, "CachedTeX(TexDocument(...), $(ct.ptr), $(ct.dims))")
     else
-        println(io, "CachedTeX($(ct.doc), $(ct.handle), $(ct.raw_dims))")
+        println(io, "CachedTeX($(ct.doc), $(ct.ptr), $(ct.dims))")
     end
 end
 
@@ -143,6 +144,7 @@ function implant_math(str)
         preamble = """
         \\usepackage{amsmath, amsfonts, xcolor}
         \\pagestyle{empty}
+        \\nopagecolor
         """,
         class = "standalone",
         classoptions = "preview, tightpage, 12pt",
@@ -151,11 +153,12 @@ end
 
 function implant_text(str)
     return TeXDocument(
-        str, true;
+        String(str), true;
         requires = "\\RequirePackage{luatex85}",
         preamble = """
         \\usepackage{amsmath, amsfonts, xcolor}
         \\pagestyle{empty}
+        \\nopagecolor
         """,
         class = "standalone",
         classoptions = "preview, tightpage, 12pt"

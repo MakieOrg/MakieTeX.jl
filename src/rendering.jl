@@ -115,7 +115,7 @@ latex2pdf(args...; kwargs...) = compile_latex(args...; format = "pdf", kwargs...
 
 # Pure poppler pipeline - directly from PDF to Cairo surface.
 
-function pdf2recordsurf(pdf::String)
+function load_pdf(pdf::String)::Ptr{Cvoid} # Poppler document handle
 
     pdf_chars = Vector{UInt8}(pdf)
     # Use Poppler to load the document.
@@ -130,19 +130,13 @@ function pdf2recordsurf(pdf::String)
         error("The document at $path could not be loaded by Poppler!")
     end
 
-    num_pages = ccall(
-        (:poppler_document_get_n_pages, Poppler_jll.libpoppler_glib),
-        Cint,
-        (Ptr{Cvoid},),
-        document
-    )
+    num_pages = pdf_num_pages(document)
 
     if num_pages != 1
         @warn "There were $num_pages pages in the document!  Selecting first page."
     end
 
-    # Now render page 1
-    # Load the first page from the document
+    # Try to load the first page from the document, to test whether it is valid
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
         Ptr{Cvoid},
@@ -154,14 +148,58 @@ function pdf2recordsurf(pdf::String)
         error("Poppler was unable to read page 1 at index 0!  Please check your PDF.")
     end
 
+    return document
 
-    # Create a Cairo surface and context to render to
-    surf = Cairo.CairoRecordingSurface()
+    #
+    # # Create a Cairo surface and context to render to
+    # surf = Cairo.CairoRecordingSurface()
+    # ctx  = Cairo.CairoContext(surf)
+    # Cairo.save(ctx)
+    # # Render the page to the surface
+    # ccall(
+    #     (:poppler_page_render_for_printing, Poppler_jll.libpoppler_glib),
+    #     Cvoid,
+    #     (Ptr{Cvoid}, Ptr{Cvoid}),
+    #     page, ctx.ptr
+    # )
+    #
+    # Cairo.restore(ctx)
+    #
+    # Cairo.flush(surf)
+    #
+    # return surf
+
+end
+
+# Rendering functions for the resulting Cairo surfaces and images
+
+function firstpage2img(tex::CachedTeX; scale = 1, render_density = 1)
+    document = tex.ptr
+    page = ccall(
+        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
+        Ptr{Cvoid},
+        (Ptr{Cvoid}, Cint),
+        document, 0 # page 0 is first page
+    )
+
+    w = ceil(Int, tex.dims[1] * render_density)
+    h = ceil(Int, tex.dims[2] * render_density)
+
+    img = fill(Colors.ARGB32(1,1,1,0), w, h)
+
+    surf = CairoImageSurface(img)
+
+    ccall((:cairo_surface_set_device_scale, Cairo.libcairo), Cvoid, (Ptr{Nothing}, Cdouble, Cdouble),
+        surf.ptr, render_density, render_density)
+
     ctx  = Cairo.CairoContext(surf)
+
+    Cairo.set_antialias(ctx, Cairo.ANTIALIAS_BEST)
+
     Cairo.save(ctx)
     # Render the page to the surface
     ccall(
-        (:poppler_page_render_for_printing, Poppler_jll.libpoppler_glib),
+        (:poppler_page_render, Poppler_jll.libpoppler_glib),
         Cvoid,
         (Ptr{Cvoid}, Ptr{Cvoid}),
         page, ctx.ptr
@@ -169,13 +207,11 @@ function pdf2recordsurf(pdf::String)
 
     Cairo.restore(ctx)
 
-    Cairo.flush(surf)
+    Cairo.finish(surf)
 
-    return surf
+    return (permutedims(img))
 
 end
-
-# Rendering functions for the resulting Cairo surfaces and images
 
 function recordsurf2img(tex::CachedTeX, render_density = 1)
 
@@ -183,10 +219,10 @@ function recordsurf2img(tex::CachedTeX, render_density = 1)
     # Then, it's possible to store the image in a native Julia array,
     # which simplifies the process of rendering.
     # Cairo does not draw "empty" pixels, so we need to fill here
-    w = ceil(Int, (tex.dims[3] - tex.dims[1]) * render_density)
-    h = ceil(Int, (tex.dims[4] - tex.dims[2]) * render_density)
+    w = ceil(Int, tex.dims[1] * render_density)
+    h = ceil(Int, tex.dims[2] * render_density)
 
-    img = fill(Colors.ARGB32(1,1,1,0), w, h)
+    img = fill(Colors.ARGB32(0,0,0,0), w, h)
 
     # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
     cs = Cairo.CairoImageSurface(img)
@@ -204,7 +240,7 @@ end
 function render_surface(ctx::CairoContext, surf)
     Cairo.save(ctx)
 
-    Cairo.set_source(ctx, surf,-2.0, 0.0)
+    Cairo.set_source(ctx, surf,-0.0, 0.0)
 
     Cairo.paint(ctx)
 
@@ -216,7 +252,7 @@ end
 
 # Utility functions
 
-function pdf_num_pages(filename)
+function pdf_num_pages(filename::String)
     metadata = Poppler_jll.pdfinfo() do exe
         read(`$exe $filename`, String)
     end
@@ -228,6 +264,41 @@ function pdf_num_pages(filename)
     pageinfo = infos[ind]
 
     return parse(Int, split(pageinfo, ' ')[end])
+end
+
+function pdf_num_pages(document::Ptr{Cvoid})
+    ccall(
+        (:poppler_document_get_n_pages, Poppler_jll.libpoppler_glib),
+        Cint,
+        (Ptr{Cvoid},),
+        document
+    )
+end
+
+"""
+    pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)::Tuple{Float64, Float64}
+
+`document` must be a Poppler document handle.  Returns a tuple of `width, height`.
+"""
+function pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)
+
+    page = ccall(
+        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
+        Ptr{Cvoid},
+        (Ptr{Cvoid}, Cint),
+        document, page_number # page 0 is first page
+    )
+
+    if page == C_NULL
+        error("Poppler was unable to read the page with index $page_number!  Please check your PDF.")
+    end
+
+    width = Ref{Cdouble}(0.0)
+    height = Ref{Cdouble}(0.0)
+
+    ccall((:poppler_page_get_size, Poppler_jll.libpoppler_glib), Cvoid, (Ptr{Cvoid}, Ptr{Cdouble}, Ptr{Cdouble}), page, width, height)
+
+    return (width[], height[])
 end
 
 
