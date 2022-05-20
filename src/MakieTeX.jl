@@ -8,6 +8,8 @@ using Makie.Observables
 
 using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll
 
+const MAKIETEX_RENDER_UNSAFE = Ref(false)
+
 include("types.jl")
 include("rendering.jl")
 include("recipe.jl")

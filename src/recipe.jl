@@ -1,4 +1,3 @@
-
 @recipe(TeXImg, tex) do scene
     merge(
         default_theme(scene),
@@ -130,8 +129,26 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
         scale_factor[1] / w,
         scale_factor[2] / h
     )
-    # render to screen
-    Cairo.set_source(ctx, img[1][].surf, 0, 0)
-    Cairo.paint(ctx)
+
+    if MAKIETEX_RENDER_UNSAFE
+        document = tex.ptr
+        page = ccall(
+            (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
+            Ptr{Cvoid},
+            (Ptr{Cvoid}, Cint),
+            document, 0 # page 0 is first page
+        )
+        # Render the page to the surface
+        ccall(
+            (:poppler_page_render, Poppler_jll.libpoppler_glib),
+            Cvoid,
+            (Ptr{Cvoid}, Ptr{Cvoid}),
+            page, ctx.ptr
+        )
+    else
+        # render to screen
+        Cairo.set_source(ctx, img[1][].surf, 0, 0)
+        Cairo.paint(ctx)
+    end
     Cairo.restore(ctx)
 end
