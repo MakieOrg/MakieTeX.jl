@@ -61,10 +61,19 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
     return CachedTeX(TeXDocument(string, true; requires = requires, preamble = preamble))
 end
 
+function Makie.plot!(t::Makie.Text{<: Tuple{<: CachedTeX}})
+    teximg!(t, t[1]; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align, visible = t.visible)
+end
+
+
+function Makie.plot!(t::Makie.Text{<: Tuple{<:AbstractVector{<:CachedTeX}}})
+    teximgcollection!(t, t[1]; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align, visible = t.visible)
+end
+
 function Makie.plot!(t::Makie.Text{<: Tuple{<:TeXDocument}})
     plottable_cached_tex = lift(CachedTeX, t[1])
 
-    teximg!(t, plottable_cached_tex; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align)
+    teximg!(t, plottable_cached_tex; space = t.space, position=t.position, scale = 1, render_density = 5, align = t.align, visible = t.visible)
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
@@ -72,7 +81,7 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
         return CachedTeX.(ltexs)
     end
 
-    teximgcollection!(t, plottable_cached_texs; space = t.space, position = t.position, scale=1, render_density=5, align = t.align)
+    teximgcollection!(t, plottable_cached_texs; space = t.space, position = t.position, scale=1, render_density=5, align = t.align, visible = t.visible)
 end
 
 "Call this function to replace the standard LaTeXString rendering with true TeX rendering!"
@@ -81,7 +90,7 @@ function hijack_latexstrings!()
         function Makie.plot!(t::Makie.Text{<: Tuple{<:LaTeXString}})
             plottable_cached_tex = lift(to_plottable_cachedtex, t[1], t.font, t.textsize, t.lineheight, t.color)
 
-            teximg!(t, Makie.Observables.async_latest(plottable_cached_tex); position=t.position, scale = 1, render_density = 5, align = t.align)
+            teximg!(t, Makie.Observables.async_latest(plottable_cached_tex); position=t.position, scale = 1, render_density = 5, align = t.align, visible = t.visible)
         end
 
         function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
@@ -89,7 +98,7 @@ function hijack_latexstrings!()
                 return to_plottable_cachedtex.(ltexs, font, textsize, lineheight, color)
             end
 
-            teximgcollection!(t, Makie.Observables.async_latest(plottable_cached_texs); position = t.position, align = t.align)
+            teximgcollection!(t, Makie.Observables.async_latest(plottable_cached_texs); position = t.position, align = t.align, visible = t.visible)
         end
     end
 end
