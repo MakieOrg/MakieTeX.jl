@@ -173,14 +173,21 @@ end
 
     @testset "Text override" begin
         @testset "Font scaling" begin
-            fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
+            @test_nowarn begin
+                fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
             """), textsize=16); fig
+            end
         end
         @testset "Theming" begin
-            with_theme(theme_dark()) do
+            @test_nowarn begin
+                with_theme(theme_dark()) do
                 fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
                 """), textsize=16); fig
+                end
             end
+        end
+
+        @testset "Rotation" begin
         end
 
     end
