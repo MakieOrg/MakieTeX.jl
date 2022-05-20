@@ -213,6 +213,37 @@ function firstpage2img(tex::CachedTeX; scale = 1, render_density = 1)
 
 end
 
+
+function firstpage2recordsurf(document::Ptr{Cvoid}; scale = 1, render_density = 1)
+    w, h = pdf_get_page_size(document, 0)
+    page = ccall(
+        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
+        Ptr{Cvoid},
+        (Ptr{Cvoid}, Cint),
+        document, 0 # page 0 is first page
+    )
+
+    surf = Cairo.CairoRecordingSurface()
+
+    ctx  = Cairo.CairoContext(surf)
+
+    Cairo.set_antialias(ctx, Cairo.ANTIALIAS_BEST)
+
+    # Render the page to the surface
+    ccall(
+        (:poppler_page_render, Poppler_jll.libpoppler_glib),
+        Cvoid,
+        (Ptr{Cvoid}, Ptr{Cvoid}),
+        page, ctx.ptr
+    )
+
+    Cairo.flush(surf)
+
+    return surf
+
+end
+
+
 function recordsurf2img(tex::CachedTeX, render_density = 1)
 
     # We can find the final dimensions (in pixel units) of the Rsvg image.

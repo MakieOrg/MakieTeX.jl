@@ -112,45 +112,25 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
         pos .+ (0, scale_factor[2])
     end
 
-
-
+    # Rotated center - Normal center
+    cx = 0.5scale_factor[1] * cos(img.rotation[]) - 0.5scale_factor[2] * sin(img.rotation[]) - 0.5scale_factor[1]
+    cy = 0.5scale_factor[1] * sin(img.rotation[]) + 0.5scale_factor[2] * cos(img.rotation[]) - 0.5scale_factor[2]
+    
     Cairo.save(ctx)
     Cairo.translate(
         ctx,
         pos[1],
         pos[2] - (1 + y0/h) * scale_factor[2]
     )
-
-    # Rotated center - normal center
-
     Cairo.rotate(ctx, -img.rotation[])
-
-    cx = 0.5scale_factor[1] * cos(img.rotation[]) - 0.5scale_factor[2] * sin(img.rotation[]) - 0.5scale_factor[1]
-    cy = 0.5scale_factor[1] * sin(img.rotation[]) + 0.5scale_factor[2] * cos(img.rotation[]) - 0.5scale_factor[2]
     Cairo.translate(ctx, cx, cy)
-
     Cairo.scale(
         ctx,
         scale_factor[1] / w,
         scale_factor[2] / h
     )
-
     # render to screen
-
-    document = tex.ptr
-    page = ccall(
-        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
-        Ptr{Cvoid},
-        (Ptr{Cvoid}, Cint),
-        document, 0 # page 0 is first page
-    )
-    # Render the page to the surface
-    ccall(
-        (:poppler_page_render, Poppler_jll.libpoppler_glib),
-        Cvoid,
-        (Ptr{Cvoid}, Ptr{Cvoid}),
-        page, ctx.ptr
-    )
-
+    Cairo.set_source(ctx, img[1][].surf, 0, 0)
+    Cairo.paint(ctx)
     Cairo.restore(ctx)
 end

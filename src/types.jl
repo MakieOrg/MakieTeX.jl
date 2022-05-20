@@ -70,9 +70,10 @@ function Base.convert(::Type{String}, doc::TeXDocument)
     return Base.convert(String, doc.contents)
 end
 
-struct CachedTeX
+mutable struct CachedTeX
     doc::TeXDocument
     ptr::Ptr{Cvoid} # Poppler handle
+    surf::CairoSurface
     dims::Tuple{Float64, Float64}
 end
 
@@ -93,13 +94,16 @@ function CachedTeX(doc::TeXDocument; kwargs...)
 
     pdf = latex2pdf(convert(String, doc); kwargs...)
     ptr = load_pdf(pdf)
+    surf = firstpage2recordsurf(ptr)
     dims = (pdf_get_page_size(ptr, 0))
 
-    return CachedTeX(
+    ct = CachedTeX(
         doc,
         ptr,
+        surf,
         dims# .+ (1, 1),
     )
+    return ct
 end
 
 function CachedTeX(str::String, dpi = 72.0; kwargs...)

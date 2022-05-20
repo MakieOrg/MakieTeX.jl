@@ -6,7 +6,7 @@ using Colors, LaTeXStrings
 using Makie.GeometryBasics: origin, widths
 using Makie.Observables
 
-using Poppler_jll, Perl_jll, Ghostscript_jll
+using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll
 
 include("types.jl")
 include("rendering.jl")
