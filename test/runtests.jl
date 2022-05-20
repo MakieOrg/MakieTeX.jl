@@ -149,4 +149,26 @@ end
 
     end
 
+    @testset "Links" begin
+        td = TeXDocument(raw"""
+        \documentclass{standalone}
+        \usepackage{hyperref}
+        \hypersetup{
+            colorlinks=true,
+            linkcolor=blue,
+            filecolor=magenta,
+            urlcolor=cyan,
+        }
+        \begin{document}
+        \href{http://www.overleaf.com}{Something
+        Linky} or go to the next url: \url{http://www.overleaf.com} or open \\
+
+        the next file \href{run:./file.txt}{File.txt} or \href{tel:8008008000}{call someone}\\
+
+        or \href{mailto:anshulsinghvi@gmail.com}{email me}
+        \end{document}
+        """)
+        
+    end
+
 end

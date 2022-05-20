@@ -23,12 +23,13 @@ function Makie.convert_arguments(::Type{<: TeXImg}, doc::TeXDocument)
     return (CachedTeX(doc),)
 end
 
+
 function Makie.plot!(plot::T) where T <: TeXImg
     # image to draw
     # We always want to draw this at a 1:1 ratio, so increasing textsize or
     # changing dpi should rerender
     img = map(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
-        firstpage2img(cachedtex; render_density = render_density * scale)
+        rotr90(firstpage2img(cachedtex; render_density = render_density * scale))
     end
 
     # Rect to draw in
@@ -48,7 +49,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
         elseif halign == :center
             x -= 0
         elseif halign == :right
-            x -= w
+            x += w/2
         end
 
         if valign == :top
@@ -97,25 +98,25 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img:
     scale_factor = CairoMakie.project_scale(scene, img.space[], Vec2{Float32}(_w, _h), img.model[])
 
     pos = if halign == :left
-        pos .- (scale_factor[1] / 2, 0) .- (0, 0)
+        pos .- (scale_factor[1], 0)
     elseif halign == :center
         pos .- (scale_factor[1] / 2, 0)
     elseif halign == :right
-        pos .- (scale_factor[1]/2, 0)
+        pos
     end
 
     pos = if valign == :top
-        pos
+        pos .+ (0, scale_factor[2])
     elseif valign == :center
         pos .+ (0, scale_factor[2] / 2)
     elseif valign == :bottom
-        pos .+ (0, scale_factor[2])
+        pos .- (0, 0)
     end
 
     # Rotated center - Normal center
     cx = 0.5scale_factor[1] * cos(img.rotation[]) - 0.5scale_factor[2] * sin(img.rotation[]) - 0.5scale_factor[1]
     cy = 0.5scale_factor[1] * sin(img.rotation[]) + 0.5scale_factor[2] * cos(img.rotation[]) - 0.5scale_factor[2]
-    
+
     Cairo.save(ctx)
     Cairo.translate(
         ctx,
