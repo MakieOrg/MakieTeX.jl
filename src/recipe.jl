@@ -142,7 +142,7 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
     Cairo.translate(
         ctx,
         pos[1],
-        pos[2] - (1 + y0/h) * scale[2]
+        pos[2] - scale[2]
     )
     # rotate context by required rotation
     Cairo.rotate(ctx, -rotation)
