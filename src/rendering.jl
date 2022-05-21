@@ -1,7 +1,3 @@
-const DVISVGM_PATH = Ref{String}()
-const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
-const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([2,2,2,2])
-
 function dvisvg()
     if !isassigned(DVISVGM_PATH)
         DVISVGM_PATH = Sys.which("dvisvgm")
