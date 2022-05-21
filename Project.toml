@@ -1,7 +1,7 @@
 name = "MakieTeX"
 uuid = "6d554a22-29e7-47bd-aee5-0c5f06619414"
 authors = ["Anshul Singhvi"]
-version = "0.2.0-DEV"
+version = "0.2.0"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"

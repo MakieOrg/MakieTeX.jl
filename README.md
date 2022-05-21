@@ -36,6 +36,7 @@ Also note that as of Makie 0.17, you cannot _change_ the text rendering mode; th
 You need not install anything for MakieTeX to work, since we ship a minimal TeX renderer called [`tectonic`](https://tectonic-typesetting.github.io/en-US/) (based on XeLaTeX).  This will download any missing packages when it encounters them the first time.  However, it will likely not know about any local packages or TEXMF paths, nor will it be able to render advanced features like TikZ graphs which require LuaTeX.  The latexmk/lualatex combination will also likely be faster, and able to use advanced features like calling to other languages with `pythontex` (oh, the heresy!)
 
 MakieTeX also renders TeX in accordance with the theme - specifically, if one changes the text color or textsize, it will be reflected in the rendered TeX.  Wrapping the above code with `with_theme(theme_dark()) do ... end` yields:
+
 <img src="https://user-images.githubusercontent.com/32143268/169671099-b7d21f55-1d0c-4422-90da-8bef99e07348.svg" height=300></img>
 
 
