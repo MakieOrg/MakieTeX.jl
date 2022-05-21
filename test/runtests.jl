@@ -190,7 +190,7 @@ end
         """)
 
         fig = Figure()
-        @test_nowarn lab = Label(f[1, 1], td)
+        @test_nowarn lab = Label(fig[1, 1], td)
 
         @test_nowarn save(joinpath(example_path, "link.png"), fig; px_per_unit=3)
         @test_nowarn save(joinpath(example_path, "link.pdf"), fig; px_per_unit=1)
