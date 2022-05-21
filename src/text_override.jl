@@ -118,3 +118,46 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
         visible = t.visible, scale = 1, render_density = TEXT_RENDER_DENSITY[]
     )
 end
+
+
+
+
+function Makie.boundingbox(x::Makie.Text{<:Tuple{<:CachedTeX}})
+    Makie.boundingbox(
+        x[1][],
+        to_ndim(Point3f, x.position[], 0),
+        x.rotation[],
+        to_value(get(x.attributes, :scale, 1)),
+        x.align[]
+    )
+end
+
+function Makie.boundingbox(x::Makie.Text{<:Tuple{<:AbstractArray{<:CachedTeX}}})
+    Makie.boundingbox(
+        x[1][],
+        to_ndim.(Point3f, x.position[], 0),
+        x.rotation[],
+        to_value(get(x.attributes, :scale, 1)),
+        x.align[]
+    )
+end
+
+function Makie.boundingbox(x::Makie.Text{<:Tuple{<:Union{LaTeXString, TeXDocument}}})
+    Makie.boundingbox(
+        x.plots[1][1][],
+        to_ndim(Point3f, x.position[], 0),
+        x.rotation[],
+        to_value(get(x.attributes, :scale, 1)),
+        x.align[]
+    )
+end
+
+function Makie.boundingbox(x::Makie.Text{<:Tuple{<:AbstractArray{<:Union{LaTeXString, TeXDocument}}}})
+    Makie.boundingbox(
+        x.plots[1][1][],
+        to_ndim.(Point3f, x.position[], 0),
+        x.rotation[],
+        to_value(get(x.attributes, :scale, 1)),
+        x.align[]
+    )
+end

@@ -17,10 +17,20 @@
     )
 end
 
-function offset_from_align(align::Tuple{Symbol, Symbol}, wh::Vec2f)::Vec2f
+function Makie.boundingbox(x::T) where T <: TeXImg
+    Makie.boundingbox(
+        x[1][],
+        to_ndim.(Point3f, x.position[], 0),
+        x.rotations[],
+        x.scale[],
+        x.align[]
+    )
+end
+
+function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
 
     (halign::Symbol, valign::Symbol) = align
-    (w::Float32, h::Float32) = wh[1], wh[2]
+    w, h = wh[1], wh[2]
 
     x = -w / 2
     y = -h / 2

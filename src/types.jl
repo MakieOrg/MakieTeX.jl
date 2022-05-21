@@ -175,3 +175,37 @@ function implant_text(str)
         classoptions = "preview, tightpage, 12pt"
     )
 end
+
+
+# Define bounding box methods for CachedTex
+
+function Makie.boundingbox(cachedtex::CachedTeX, position, rotation, scale,
+    align)
+    origin = offset_from_align(align, cachedtex.dims)
+    box = Rect2f(Point2f(origin), Vec2f(cachedtex.dims) * scale)
+    rect = Makie.rotatedrect(box, rotation)
+    new_origin = Point3f(rect.origin..., 0)
+    new_widths = Vec3f(rect.widths..., 0)
+    return Rect3f(new_origin + position, new_widths)
+end
+
+# this method copied from Makie.jl
+function Makie.boundingbox(cachedtexs::AbstractVector{CachedTeX}, positions, rotations, scale,
+    align)
+
+    if isempty(cachedtexs)
+        return Rect3f((0, 0, 0), (0, 0, 0))
+    else
+        bb = Rect3f()
+        broadcast_foreach(cachedtexs, positions, rotations, scale,
+        align) do cachedtex, pos, rot, scl, aln
+            if !Makie.isfinite_rect(bb)
+                bb = Makie.boundingbox(cachedtex, pos, rot, scl, aln)
+            else
+                bb = Makie.union(bb, Makie.boundingbox(cachedtex, pos, rot, scl, aln))
+            end
+        end
+        !Makie.isfinite_rect(bb) && error("Invalid `TeX` boundingbox")
+        return bb
+    end
+end
