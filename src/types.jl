@@ -120,15 +120,15 @@ function CachedTeX(doc::TeXDocument; kwargs...)
 end
 
 function CachedTeX(str::String; kwargs...)
-    return CachedTeX(implant_text(str), dpi; kwargs...)
+    return CachedTeX(implant_text(str); kwargs...)
 end
 
 function CachedTeX(x::LaTeXString; kwargs...)
     x = convert(String, x)
     return if first(x) == "\$" && last(x) == "\$"
-        CachedTeX(implant_math(x[2:end-1]), dpi; kwargs...)
+        CachedTeX(implant_math(x[2:end-1]); kwargs...)
     else
-        CachedTeX(implant_text(x), dpi; kwargs...)
+        CachedTeX(implant_text(x); kwargs...)
     end
 end
 
