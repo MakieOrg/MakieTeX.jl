@@ -12,7 +12,7 @@ function render_texample(url)
 
     fig = Figure()
 
-    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String))))
+    lt = Label(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String))))
 
     @test true
 
@@ -59,7 +59,7 @@ end
 
             fig = Figure()
 
-            @test_warn r"The PDF has more than 1 page!  Choosing the first page." LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            @test_warn r"The PDF has more than 1 page!  Choosing the first page." Label(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
 
             resize_to_layout!(fig)
 
@@ -77,9 +77,9 @@ end
         fig = Figure()
 
 
-        @test_nowarn LTeX(fig[1, 1], "This is Lorem Ipsum")
+        @test_nowarn Label(fig[1, 1], LaTeXString(raw"This is Lorem Ipsum"))
 
-        @test_nowarn LTeX(fig[1, 2], L"\iiint_a^{\mathbb{R}} \mathfrak D ~dt = \textbf{Poincar\'e quotient}")
+        @test_nowarn Label(fig[1, 2], L"\iiint_a^{\mathbb{R}} \mathfrak D ~dt = \textbf{Poincar\'e quotient}")
 
 
         save(joinpath(example_path, "plaintex.png"), fig; px_per_unit=3)
@@ -92,7 +92,7 @@ end
         mkpath(joinpath(example_path, "aligns"))
 
         f = Figure(resolution = (200, 200))
-        lt = LTeX(f[1, 1], raw"Hello from Makie\TeX{}!")
+        lt = Label(f[1, 1], LaTeXString("Hello from Makie\\TeX{}!"))
         teximg = lt.blockscene.plots[1]
 
         for halign in (:left, :center, :right)
@@ -111,7 +111,7 @@ end
 
         @testset "Logo" begin
             fig = Figure(figure_padding = 1, resolution = (1, 1))
-            @test_nowarn LTeX(fig[1, 1], "Makie\\TeX.jl")
+            @test_nowarn Label(fig[1, 1], LaTeXString("Makie\\TeX.jl"))
             @test_nowarn resize_to_layout!(fig)
 
             save(joinpath(example_path, "logo.png"), fig; px_per_unit=3)
@@ -134,7 +134,7 @@ end
         lines!(ax, rand(10); color = rand(RGBAf, 10))
 
         # create labels and title
-        @test_nowarn x_label = LTeX(gl[3, 2], raw"$t$ (time)", tellheight = true, tellwidth = false)
+        @test_nowarn x_label = LTeX(gl[3, 2], L"$t$ (time)", tellheight = true, tellwidth = false)
         @test_nowarn y_label = LTeX(gl[2, 1], L"\int_a^t f(\tau) ~d\tau"; rotation = pi/2, tellheight = false, tellwidth = true)
         @test_nowarn title = LTeX(gl[1, 2], "\\Huge {\\LaTeX} title", tellheight = true, tellwidth = false)
 
@@ -147,6 +147,26 @@ end
 
         @test true
 
+    end
+
+    @testset "Integrating with Axis" begin
+        fig = Figure(fontsize = 12, resolution = (300, 300))
+        ax = Axis(
+            fig[1,1];
+            xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
+            ylabel = LaTeXString("here we go fellas"),
+            title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
+            xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+            xlabelpadding = 12
+        )
+        # plot to the axis
+        heatmap!(ax, Makie.peaks())
+
+        save(joinpath(example_path, "integrated_axis.png"), fig; px_per_unit=3)
+        save(joinpath(example_path, "integrated_axis.pdf"), fig; px_per_unit=1)
+        save(joinpath(example_path, "integrated_axis.svg"), fig; px_per_unit=0.75)
+
+        @test true
     end
 
     @testset "Links" begin
@@ -169,6 +189,12 @@ end
         \end{document}
         """)
 
+        fig = Figure()
+        @test_nowarn lab = Label(f[1, 1], td)
+
+        @test_nowarn save(joinpath(example_path, "link.png"), fig; px_per_unit=3)
+        @test_nowarn save(joinpath(example_path, "link.pdf"), fig; px_per_unit=1)
+        @test_nowarn save(joinpath(example_path, "link.svg"), fig; px_per_unit=0.75)
     end
 
     @testset "Text override" begin
@@ -180,10 +206,24 @@ end
         end
         @testset "Theming" begin
             @test_nowarn begin
-                with_theme(theme_dark()) do
-                fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
-                """), textsize=16); fig
+                fig = with_theme(theme_dark()) do
+                    fig = Figure(fontsize = 12, resolution = (300, 300))
+                    ax = Axis(
+                        fig[1,1];
+                        xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
+                        ylabel = LaTeXString("here we go fellas"),
+                        title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
+                        xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+                        xlabelpadding = 12,
+                        ylabelpadding = 12,
+                    )
+                    # plot to the axis
+                    heatmap!(ax, Makie.peaks(); colormap = :inferno)
+                    fig
                 end
+                @test_nowarn save(joinpath(example_path, "theming.png"), fig; px_per_unit=3)
+                @test_nowarn save(joinpath(example_path, "theming.pdf"), fig; px_per_unit=1)
+                @test_nowarn save(joinpath(example_path, "theming.svg"), fig; px_per_unit=0.75)
             end
         end
 
