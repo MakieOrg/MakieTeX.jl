@@ -1,6 +1,6 @@
 module MakieTeX
 using Makie, CairoMakie, Makie.MakieLayout
-using Rsvg, Cairo
+using Cairo
 using Colors, LaTeXStrings
 
 using Makie.GeometryBasics: origin, widths
