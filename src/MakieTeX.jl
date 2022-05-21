@@ -11,7 +11,7 @@ using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll, tectonic_jll
 
 # define some constants for configuration
 "Render with Poppler pipeline (true) or Cairo pipeline (false)"
-const MAKIETEX_RENDER_UNSAFE = Ref(false)
+const RENDER_EXTRASAFE = Ref(false)
 "Path to `dvisvgm` executable"
 const DVISVGM_PATH = Ref{String}()
 "The current `TeX` engine which MakieTeX uses."

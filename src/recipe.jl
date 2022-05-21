@@ -158,7 +158,7 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
     # the rendereing pipeline
     # first is the "unsafe" Poppler pipeline, with better results in PDF
     # but worse in PNG, especially when rotated.
-    if MAKIETEX_RENDER_UNSAFE[]
+    if !(RENDER_EXTRASAFE[])
         # retrieve a new Poppler document pointer
         document = update_pointer!(cachedtex)
         # retrieve the first page
@@ -175,8 +175,9 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
             (Ptr{Cvoid}, Ptr{Cvoid}),
             page, ctx.ptr
         )
-    else # safer Cairo pipeline, also somewhat faster.
-        # render the cached CairoSurface to the screen
+    else # "safer" Cairo pipeline, also somewhat faster.
+        # render the cached CairoSurface to the screen.
+        # bad with PNG output though.
         Cairo.set_source(ctx, cachedtex.surf, 0, 0)
         Cairo.paint(ctx)
     end
