@@ -1,7 +1,7 @@
 # <img src="https://user-images.githubusercontent.com/32143268/165514916-4337e55a-18ec-4831-ab0f-11ebcb679600.svg" alt="MakieTeX.jl" height="50" align = "top">
 ## <a href = "https://www.latex-project.org/"><img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="30" align = "top"></a> integration for <a href = "https://www.github.com/JuliaPlots/Makie.jl"><img src="https://raw.githubusercontent.com/JuliaPlots/Makie.jl/master/assets/logo.png" alt="Makie.jl" height="30" align = "top"></a>
 
-<img src="https://user-images.githubusercontent.com/32143268/165445977-79fbb1fe-6bd5-47c9-9501-be6c1ae837b9.svg" height=250></img>
+<img src="https://user-images.githubusercontent.com/32143268/169671023-4d4c8cf7-eb3d-4ee1-8634-8b73fa38d31c.svg" height=400></img>
 
 
 MakieTeX allows you to draw and visualize arbitrary TeX documents in Makie!  You can insert anything from a single line of math to a large and complex TikZ diagram.
@@ -28,10 +28,17 @@ ax1 = Axis(
 heatmap!(ax1, Makie.peaks())
 fig
 ```
+<img src="https://user-images.githubusercontent.com/32143268/169671109-9c849a7b-4f57-4184-a6bb-1199a76c77c5.svg" height=300></img>
+
 
 Also note that as of Makie 0.17, you cannot _change_ the text rendering mode; this is to say, assigning a LaTeXString or TeXDocument to a `text` plot to which you have passed a String will not work as expected.  Consequently, you must provide any LaTeX you want to render _at construction_.  This is the reason why we have set the axis attributes within the constructor call.
 
 You need not install anything for MakieTeX to work, since we ship a minimal TeX renderer called [`tectonic`](https://tectonic-typesetting.github.io/en-US/) (based on XeLaTeX).  This will download any missing packages when it encounters them the first time.  However, it will likely not know about any local packages or TEXMF paths, nor will it be able to render advanced features like TikZ graphs which require LuaTeX.  The latexmk/lualatex combination will also likely be faster, and able to use advanced features like calling to other languages with `pythontex` (oh, the heresy!)
+
+MakieTeX also renders TeX in accordance with the theme - specifically, if one changes the text color or textsize, it will be reflected in the rendered TeX.  Wrapping the above code with `with_theme(theme_dark()) do ... end` yields:
+<img src="https://user-images.githubusercontent.com/32143268/169671099-b7d21f55-1d0c-4422-90da-8bef99e07348.svg" height=300></img>
+
+
 
 ### Scaling TeX
 
@@ -49,6 +56,8 @@ tex1 = LTeX(fig[1, 1], L"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\
 tex2 = LTeX(fig[2, 1], L"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", scale=2);
 fig
 ```
+![latex](https://user-images.githubusercontent.com/32143268/169671194-fc81d086-26fd-462b-8348-789ba763dbbd.svg)
+
 
 ### Inner workings
 
