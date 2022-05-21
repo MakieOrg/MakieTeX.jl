@@ -23,12 +23,19 @@
 end
 
 function Makie.plot!(plot::T) where T <: TeXImgCollection
-    # attach a function to any text that calculates the glyph layout and stores it
+
     tex_plots = TeXImg[]
-    lift(plot[1]) do cachedtexs
+    position_obs  = Observable[]
+
+    onany(plot[1]; priority = 99) do cachedtexs, _
         delete!.(Ref(plot), tex_plots)
         empty!(tex_plots)
-        sizehint!(tex_plots, length(cachedtexs))
+
+        Makie.Observables.off.(Ref(plot.position), position_obs)
+        empty!(position_obs)
+
+        sizehint!(tex_plots,    length(cachedtexs))
+        sizehint!(position_obs, length(cachedtexs))
         for (i, cachedtex) in enumerate(cachedtexs)
             if plot.rotation[] isa AbstractVector
                 rotation = @lift($(plot.rotation)[i])
@@ -36,12 +43,21 @@ function Makie.plot!(plot::T) where T <: TeXImgCollection
                 rotation = plot.rotation
             end
 
+            position_i = Observable{Point3f}(Point3f(0f0))
+            on(plot.position) do pos
+                position_i[] = pos[i]
+            end
+
             push!(
                 tex_plots,
-                teximg!(plot, cachedtex; space = plot.space[], position = @lift($(plot.position)[i]), align = plot.align, rotation = rotation)
+                teximg!(plot, cachedtex; space = plot.space[], position = position_i, align = plot.align, rotation = rotation)
             )
+            push!(position_obs, position_i)
         end
     end
+    # update plot once
+    plot[1][] = plot[1][]
+    plot.position[] = plot.position[]
     plot
 end
 
@@ -87,23 +103,26 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<:AbstractVector{<:CachedTeX}}})
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<:TeXDocument}})
+    position = Observable(t.position[])
     plottable_cached_tex = lift(CachedTeX, t[1])
 
     teximg!(
         t, plottable_cached_tex;
-        space = t.space, position=t.position, align = t.align,
+        space = t.space, position=position, align = t.align,
         rotation = t.rotation, visible = t.visible,
         scale = 1, render_density = 5, )
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
+    position = Observable(t.position[])
     plottable_cached_texs = lift(t[1]) do ltexs
-        return CachedTeX.(ltexs)
+        ct = CachedTeX.(ltexs)
+        position[] = t.position[]
     end
 
     teximgcollection!(
         t, plottable_cached_texs;
-        space = t.space, position = t.position, align = t.align,
+        space = t.space, position = position, align = t.align,
         rotation = t.rotation, visible = t.visible,
         scale=1, render_density=5
     )
@@ -121,15 +140,33 @@ end
 # which path is taken, but that would have to be done in Makie itself.
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<:LaTeXString}})
-    plottable_cached_tex = lift(to_plottable_cachedtex, t[1], t.font, t.textsize, t.lineheight, t.color)
+    position = Observable(t.position[])
+    plottable_cached_tex = lift(t[1], t.font, t.textsize, t.lineheight, t.color) do ltex, font, textsize, lineheight, color
+        ltex = to_plottable_cachedtex(ltex, font, textsize, lineheight, color)
+        position[] = t.position[]
+        return ltex
+    end
 
-    teximg!(t, Makie.Observables.async_latest(plottable_cached_tex); position=t.position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
+    teximg!(t, plottable_cached_tex; position=position, scale = 1, render_density = 5, align = t.align, rotation = t.rotation, visible = t.visible)
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
-    plottable_cached_texs = lift(t[1], t.font, t.textsize, t.lineheight, t.color) do ltexs, font, textsize, lineheight, color
-        return to_plottable_cachedtex.(ltexs, font, textsize, lineheight, color)
-    end
+    position = Observable(t.position[])
+    old_ltex = Ref(t[1][])
 
-    teximgcollection!(t, Makie.Observables.async_latest(plottable_cached_texs); position = t.position, align = t.align, rotation = t.rotation, visible = t.visible)
+    plottable_cached_texs = Observable{Vector{CachedTeX}}()
+    onany(t[1], t.position, t.font, t.textsize, t.lineheight, t.color) do ltexs, lposition, font, textsize, lineheight, color
+        if !(ltexs == old_ltex)
+            position[] = lposition
+            plottable_cached_texs.val = to_plottable_cachedtex.(ltexs, font, textsize, lineheight, color)
+            notify(plottable_cached_texs)
+            old_ltex[] = ltexs
+        else
+            position[] = lposition
+        end
+
+    end
+    t.font[] = t.font[]
+
+    teximgcollection!(t, plottable_cached_texs; position = position, align = t.align, rotation = t.rotation, visible = t.visible)
 end

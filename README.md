@@ -6,10 +6,28 @@
 
 MakieTeX allows you to draw and visualize arbitrary TeX documents in Makie!  You can insert anything from a single line of math to a large and complex TikZ diagram.
 
-MakieTeX works by compiling a latex document and transforming it to a renderable
-svg for CairoMakie, or a raster image for GLMakie.
+It works by compiling a stand-alone <img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="12" align = "top"></a> document to PDF.  For CairoMakie, the PDF is read and rendered directly, and a raster image is rendered in GLMakie.
 
-In order for MakieTeX to work, you must have `latexmk` and a TeX engine (preferably `LuaTeX`) installed.
+When loaded, MakieTeX will replace the handling of LaTeXStrings, which Makie natively performs with [`MathTeXEngine.jl`](https://github.com/Kolaru/MathTeXEngine.jl), with the MakieTeX pipeline.  This is significantly more time-consuming, so be warned - try not to `MakieTeX` for the axes of interactive plots!  Other things, which don't update as often, are fine.
+
+### Quick start
+```julia
+fig = Figure()
+l1 = Label(
+    fig[1, 1], L"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}";
+    tellwidth = false, tellheight = true
+)
+ax1 = Axis(
+    fig[2, 1];
+    xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+    ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
+    ylabelpadding = 15
+)
+heatmap!(ax1, Makie.peaks())
+fig
+```
+
+In order for MakieTeX to work, you should have `latexmk` and a TeX engine (preferably `LuaTeX`) installed.  If not, MakieTeX will default to using the shipped `tectonic` renderer (from [`Tectonic_jll`]), which uses `XeLaTeX` on the backend
 
 
 ```julia

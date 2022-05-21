@@ -22,6 +22,8 @@ export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
 export LTeX
 
+export LaTeXStrings, LaTeXString, latexstring, @L_str
+
 "Try to write to `engine` and see what happens"
 function try_tex_engine(engine::Cmd)
     try
@@ -66,7 +68,7 @@ function __init__()
 
     @warn "Could not find a TeX engine; defaulting to bundled `tectonic`"
     CURRENT_TEX_ENGINE[] = `tectonic`
-    return 
+    return
 end
 
 end # document
