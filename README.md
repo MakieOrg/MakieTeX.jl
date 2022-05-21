@@ -12,6 +12,8 @@ When loaded, MakieTeX will replace the handling of LaTeXStrings, which Makie nat
 
 ### Quick start
 ```julia
+using Makie, MakieTeX
+using CairoMakie # or whichever other backend
 fig = Figure()
 l1 = Label(
     fig[1, 1], L"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}";
@@ -27,8 +29,17 @@ heatmap!(ax1, Makie.peaks())
 fig
 ```
 
-In order for MakieTeX to work, you should have `latexmk` and a TeX engine (preferably `LuaTeX`) installed.  If not, MakieTeX will default to using the shipped `tectonic` renderer (from [`Tectonic_jll`]), which uses `XeLaTeX` on the backend
+In order for MakieTeX to work, you should have `latexmk` and a TeX engine (preferably `LuaTeX`) installed.  If not, MakieTeX will default to using the shipped `tectonic` renderer (from [`Tectonic_jll`]), which uses `XeLaTeX` on the backend.  This will work for most TeX, and installs packages if it does not detect them; however, it may not be the best thing to use.
 
+MakieTeX provides high-level dispatches on `LaTeXString`s from the [`LaTeXStrings.jl`](github.com/stevengj/LaTeXStrings.jl) package, as well as some lower level types.
+
+If you want to provide a stand-alone TeX document, without theming (for example, if you want to use specific packages or configurations), then you can use the `TeXDocument` class.  This has two main constructor methods:
+- `TeXDocument(doc::String)` which directly creates a document from the given String.  This must be stand-alone compilable, i.e., if the string was pasted into a `.tex` file, it could be compiled without changes.
+- `TeXDocument(content::String, true; requires, preamble, class, classoptions)`.  This allows you to customize the preamble, requires, class and class options separately, which is useful if you have a standard set of these and varying content.
+
+`TeXDocument`s are then compiled to `CachedTeX`, which contains the compiled PDF and some pointers to in-memory versions of those.  These are what MakieTeX eventually uses to plot to the screen.
+
+### Configuration
 
 ```julia
 using GLMakie, Makie, MakieTeX
@@ -41,7 +52,7 @@ fig
 <img src="https://user-images.githubusercontent.com/10947937/110216157-d1d87d00-7ead-11eb-8507-62ddcff2a841.png"></img>
 
 ```julia
-using GLMakie, Makie, MakieTeX, LaTeXStrings
+using GLMakie, Makie, MakieTeX
 fig, ax, p = teximg(L"\hat {f}(\xi )=\int _{-\infty }^{\infty }f(x)\ e^{-2\pi ix\xi }~ dx", scale=10)
 # Don't stretch the text
 ax.aspect = DataAspect()
