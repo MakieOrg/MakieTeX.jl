@@ -6,8 +6,8 @@ Makie.MakieLayout.@Block LTeX begin
     @attributes begin
         "The LaTeX code to be compiled and drawn.  Can be a String, a TeXDocument or a CachedTeX."
         tex = "\\LaTeX"
-        "The size conversion factor in dots per inch (default 72)."
-        dpi::Float32 = 72.0
+        "The density of pixels rendered (1 means 1 px == 1 pt)"
+        render_density::Int = 1
         "Controls if the graphic is visible."
         visible::Bool = true
         "A scaling factor to resize the graphic."
@@ -40,23 +40,22 @@ function Makie.MakieLayout.initialize_block!(l::LTeX)
     topscene = l.blockscene
     layoutobservables = l.layoutobservables
 
-    textpos = Observable(Point3f(0, 0, 0))
+    textpos = Observable(Point3f[(0, 0, 0)])
 
-    alignnode = lift(l.valign, l.halign) do valign, halign
-        return (halign, valign)
-    end
+    cached_tex = lift(collect ∘ tuple ∘ CachedTeX, l.tex)
 
     t = teximg!(
-        topscene, l.tex; position = textpos, visible = l.visible,
-        scale = l.scale, dpi = l.dpi, align = alignnode, rotation = l.rotation,
+        topscene, cached_tex; position = textpos, visible = l.visible,
+        scale = l.scale, render_density = l.render_density, align = (:center, :center),
+        rotations=l.rotation,
         markerspace = :screen,
         inspectable = false
     )
 
     textbb = Ref(BBox(0, 1, 0, 1))
 
-    onany(l.tex, l.dpi, l.scale, l.rotation, l.padding) do tex, dpi, scale, rotation, padding
-        textbb[] = Makie.rotatedrect(Makie.MakieLayout.Rect2f(boundingbox(t)), rotation)
+    onany(l.tex, l.scale, l.rotation, l.padding) do tex, scale, rotation, padding
+        textbb[] = Makie.rotatedrect(Makie.MakieLayout.Rect2f(0,0,(t[1][][1].dims .* scale)...), rotation)
         autowidth = Makie.MakieLayout.width(textbb[]) + padding[1] + padding[2]
         autoheight = Makie.MakieLayout.height(textbb[]) + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)
@@ -73,7 +72,7 @@ function Makie.MakieLayout.initialize_block!(l::LTeX)
         tx = box + padding[1] + 0.5 * tw
         ty = boy + padding[3] + 0.5 * th
 
-        textpos[] = Makie.MakieLayout.Point3f(tx, ty, 0)
+        textpos[] = Makie.MakieLayout.Point3f[(tx, ty, 0)]
     end
 
 
