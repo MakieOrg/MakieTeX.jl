@@ -36,11 +36,11 @@ function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
     y = -h / 2
 
     if halign == :left
-        x -= w/2
+        x += w/2
     elseif halign == :center
         x -= 0
     elseif halign == :right
-        x += w/2
+        x -= w/2
     end
 
     if valign == :top
