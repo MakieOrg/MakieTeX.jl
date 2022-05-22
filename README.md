@@ -71,7 +71,7 @@ Any input is converted to a `TeXDocument`, which is then compiled to `CachedTeX`
 There are several configuration constants you can set in MakieTeX, stored as const `Ref`s.  These are:
 
 ```CURRENT_TEX_ENGINE[] = `lualatex` ``` - The current `TeX` engine which MakieTeX uses.  Will default to `tectonic` if `latexmk` and `lualatex` are inaccessible on your system.
-```RENDER_EXTRASAFE[] = false``` - Render with Poppler pipeline (true) or Cairo pipeline (false).  The Poppler pipeline offers better rendering but may be slightly slower.
+```RENDER_EXTRASAFE[] = false``` - Render with Poppler pipeline (false) or Cairo pipeline (true).  The Poppler pipeline offers better rendering but may be slightly slower.
 ```_PDFCROP_DEFAULT_MARGINS[] = [2,2,2,2]``` - Default margins for `pdfcrop`.  Feel free to set this to `fill(0, 4)` if you need completely tight margins.
 ```TEXT_RENDER_DENSITY[] = 7``` - Default density when rendering from calls to `text`.  Useful only for GLMakie.
 
