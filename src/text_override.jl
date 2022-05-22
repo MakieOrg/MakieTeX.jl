@@ -5,11 +5,25 @@
 # and spreads them out!
 function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
     # $(usemain && raw"\usepackage{fontspec}")
+    packages = [
+        # math stuff
+        "amsmath", "amssymb", "amsfonts", "esint",
+        # color management
+        "xcolor",
+    ]
+    # smart detect tikz to decrease load time
+    if occursin("tikz", lstr)
+        push!(packages, "tikz")
+    end
+
+    package_load_str = raw"\usepackage{" * join(packages, ", ") * raw"}"
+
+
     preamble = """
 
     \\usepackage{lmodern}
     \\usepackage[T1]{fontenc}
-    \\usepackage{amsmath, amssymb, amsfonts, xcolor, tikz}
+    $(package_load_str)
     \\definecolor{maincolor}{HTML}{$(Makie.Colors.hex(RGBf(color)))}
     \\DeclareMathSizes{$(textsize)}{$(textsize + .5)}{$(textsize*7/12)}{$(textsize*7/12)}
     """
@@ -46,7 +60,7 @@ end
 
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<:AbstractVector{<:CachedTeX}}})
-    teximgcollection!(
+    teximg!(
         t, t[1];
         space = t.space, position=t.position, align = t.align,
         rotations = lift(to_array, t.rotation), visible = t.visible,
@@ -120,7 +134,7 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
 end
 
 
-
+# Define bounding box methods for all extended plot types
 
 function Makie.boundingbox(x::Makie.Text{<:Tuple{<:CachedTeX}})
     Makie.boundingbox(
@@ -160,4 +174,9 @@ function Makie.boundingbox(x::Makie.Text{<:Tuple{<:AbstractArray{<:Union{LaTeXSt
         to_value(get(x.attributes, :scale, 1)),
         x.align[]
     )
+end
+
+# Re-direct and allow our methods to pick these up
+function Makie.boundingbox(x::Makie.Text{<:Tuple{<:AbstractArray{<: Tuple{<:T, <:Point}}}}) where T <: AbstractString
+    return Makie.boundingbox(x.plots[1])
 end
