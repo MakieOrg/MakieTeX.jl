@@ -114,12 +114,13 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
 
     # First, find the desired position of the marker with respect to the alignment
     halign, valign = align
+    pos = position
     pos = if halign == :left
-        position .- (scale[1], 0)
+        pos # (scale[1], 0)
     elseif halign == :center
-        position .- (scale[1] / 2, 0)
+        pos .- (scale[1] / 2, 0)
     elseif halign == :right
-        position
+        pos .- (scale[1], 0)
     end
 
     pos = if valign == :top
