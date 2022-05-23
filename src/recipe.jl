@@ -36,11 +36,11 @@ function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
     y = -h / 2
 
     if halign == :left
-        x -= w/2
+        x += w/2
     elseif halign == :center
         x -= 0
     elseif halign == :right
-        x += w/2
+        x -= w/2
     end
 
     if valign == :top
@@ -114,12 +114,13 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
 
     # First, find the desired position of the marker with respect to the alignment
     halign, valign = align
+    pos = position
     pos = if halign == :left
-        position .- (scale[1], 0)
+        pos # (scale[1], 0)
     elseif halign == :center
-        position .- (scale[1] / 2, 0)
+        pos .- (scale[1] / 2, 0)
     elseif halign == :right
-        position
+        pos .- (scale[1], 0)
     end
 
     pos = if valign == :top
@@ -155,9 +156,9 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
         scale[1] / w,
         scale[2] / h
     )
-    # the rendereing pipeline
-    # first is the "unsafe" Poppler pipeline, with better results in PDF
-    # but worse in PNG, especially when rotated.
+    # the rendering pipeline
+    # first is the "safe" Poppler pipeline, with better results in PDF
+    # and PNG, especially when rotated.
     if !(RENDER_EXTRASAFE[])
         # retrieve a new Poppler document pointer
         document = update_pointer!(cachedtex)
@@ -175,7 +176,7 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
             (Ptr{Cvoid}, Ptr{Cvoid}),
             page, ctx.ptr
         )
-    else # "safer" Cairo pipeline, also somewhat faster.
+    else # "extra-safe" Cairo pipeline, also somewhat faster.
         # render the cached CairoSurface to the screen.
         # bad with PNG output though.
         Cairo.set_source(ctx, cachedtex.surf, 0, 0)
