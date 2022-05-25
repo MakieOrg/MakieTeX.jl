@@ -7,17 +7,17 @@ end
 
 # Since perl_jll doesn't build for windows we check this.
 # todo define the function in a static block
-function mtperl(f)
-    @static if Sys.iswindows() || !hasproperty(Perl_jll, :perl)
+@static if Sys.iswindows() # !hasproperty(Perl_jll, :perl)
         if isnothing(Sys.which("perl"))
             @warn "Perl not found!  Skipping cropping step"
-            return
+            mtperl(f) = identity(f)
         else
-            f(`perl`)
+            function mtperl(f)
+                    f(`perl`)
+            end
         end
-    else
-        Perl_jll.perl(f)
-    end
+else
+    mtperl(f) = Perl_jll.perl(f)
 end
 
 
