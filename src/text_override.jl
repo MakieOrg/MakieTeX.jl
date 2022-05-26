@@ -36,7 +36,15 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
     \\color{maincolor}
     """ *  String(lstr)
 
-    return CachedTeX(TeXDocument(string, true; requires = requires, preamble = preamble))
+    return CachedTeX(
+        TeXDocument(
+            string, true;
+            requires = requires,
+            preamble = preamble,
+            class = "standalone",
+            classoptions = "tightpage, margin=0.5pt"
+        )
+    )
 end
 
 # Helper functions to help
