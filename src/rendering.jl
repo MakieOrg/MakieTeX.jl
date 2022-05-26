@@ -5,6 +5,21 @@ function dvisvg()
     return DVISVGM_PATH[]
 end
 
+# Since perl_jll doesn't build for windows we check this.
+# todo define the function in a static block
+@static if Sys.iswindows() # !hasproperty(Perl_jll, :perl)
+        if isnothing(Sys.which("perl"))
+            @warn "Perl not found!  Skipping cropping step"
+            mtperl(f) = identity(f)
+        else
+            function mtperl(f)
+                    f(`perl`)
+            end
+        end
+else
+    mtperl(f) = Perl_jll.perl(f)
+end
+
 
 # The main compilation method - compiles arbitrary LaTeX documents
 function compile_latex(
@@ -90,7 +105,7 @@ function compile_latex(
                     redirect_stderr(devnull) do
                         redirect_stdout(devnull) do
                             Ghostscript_jll.gs() do gs_exe
-                                Perl_jll.perl() do perl_exe
+                                mtperl() do perl_exe
                                     run(`$perl_exe $pdfcrop --margin $crop_margins $() --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
                                 end
                             end
