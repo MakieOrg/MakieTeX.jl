@@ -193,19 +193,17 @@ end
 function Makie.boundingbox(cachedtexs::AbstractVector{CachedTeX}, positions, rotations, scale,
     align)
 
-    if isempty(cachedtexs)
-        return Rect3f((0, 0, 0), (0, 0, 0))
-    else
-        bb = Rect3f()
-        broadcast_foreach(cachedtexs, positions, rotations, scale,
-        align) do cachedtex, pos, rot, scl, aln
-            if !Makie.isfinite_rect(bb)
-                bb = Makie.boundingbox(cachedtex, pos, rot, scl, aln)
-            else
-                bb = Makie.union(bb, Makie.boundingbox(cachedtex, pos, rot, scl, aln))
-            end
+    isempty(cachedtexs) && (return Rect3f((0, 0, 0), (0, 0, 0)))
+    
+    bb = Rect3f()
+    broadcast_foreach(cachedtexs, positions, rotations, scale,
+    align) do cachedtex, pos, rot, scl, aln
+        if !Makie.isfinite_rect(bb)
+            bb = Makie.boundingbox(cachedtex, pos, rot, scl, aln)
+        else
+            bb = Makie.union(bb, Makie.boundingbox(cachedtex, pos, rot, scl, aln))
         end
-        !Makie.isfinite_rect(bb) && error("Invalid `TeX` boundingbox")
-        return bb
     end
+    !Makie.isfinite_rect(bb) && error("Invalid `TeX` boundingbox")
+    return bb
 end
