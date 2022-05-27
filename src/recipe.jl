@@ -111,24 +111,30 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
     x0, y0 = 0.0, 0.0
     w, h = cachedtex.dims
     ctx = screen.context
+    # First we center the position with respect to the center of the image,
+    # regardless of its alignment.  This ensures that rotation takes place
+    # in the correct "axis" (2d).
+    position = position .+ (-scale[1]/2, scale[2]/2)
 
-    # First, find the desired position of the marker with respect to the alignment
+
+    # Then, we find the appropriate "marker offset" w.r.t. alignment.
+    # This is separate because of Cairo's reversed y-axis.
     halign, valign = align
-    pos = position
+    pos = Point2f(0)
     pos = if halign == :left
-        pos # (scale[1], 0)
+        pos .- (-scale[1] / 2, 0)
     elseif halign == :center
-        pos .- (scale[1] / 2, 0)
+        pos .- (0, 0)
     elseif halign == :right
-        pos .- (scale[1], 0)
+        pos .- (scale[1] / 2, 0)
     end
 
     pos = if valign == :top
-        pos .+ (0, scale[2])
+        pos .+ (0, scale[2]/2)
     elseif valign == :center
-        pos .+ (0, scale[2] / 2)
+        pos .+ (0, 0)
     elseif valign == :bottom
-        pos .- (0, 0)
+        pos .- (0, scale[2]/2)
     end
 
     # Calculate, with respect to the rotation, where the rotated center of the image
@@ -142,14 +148,16 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
     # translate to normal position
     Cairo.translate(
         ctx,
-        pos[1],
-        pos[2] - scale[2]
+        position[1],
+        position[2] - scale[2]
     )
     # rotate context by required rotation
     Cairo.rotate(ctx, -rotation)
     # cairo rotates around position as an axis,
     #compensate for that with previously calculated values
     Cairo.translate(ctx, cx, cy)
+    # apply "marker offset" to implement/simulate alignment
+    Cairo.translate(ctx, pos[1], pos[2])
     # scale the marker appropriately
     Cairo.scale(
         ctx,
