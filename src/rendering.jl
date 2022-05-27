@@ -3,7 +3,7 @@
 @static if Sys.iswindows() # !hasproperty(Perl_jll, :perl)
         if isnothing(Sys.which("perl"))
             @warn "Perl not found!  Skipping cropping step"
-            mtperl(f) = identity(f)
+            mtperl(f) = nothing
         else
             function mtperl(f)
                     f(`perl`)
@@ -74,9 +74,9 @@ function compile_latex(
                 # Lua*LA*TeX => LuaTeX, ...
                 crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
                 crop_engine == `tectonic` && return read("temp.pdf", String)
-                
+
                 pdfcrop = joinpath(@__DIR__, "pdfcrop.pl")
-                redirect_stderr(devnull) do
+                new_pdf = redirect_stderr(devnull) do
                     redirect_stdout(devnull) do
                         Ghostscript_jll.gs() do gs_exe
                             mtperl() do perl_exe
@@ -86,7 +86,11 @@ function compile_latex(
                         end
                     end
                 end
-                return read("temp.pdf", String)
+                if isnothing(new_pdf)
+                    return read("temp.pdf", String)
+                else
+                    return new_pdf
+                end
             end
         end
     end
