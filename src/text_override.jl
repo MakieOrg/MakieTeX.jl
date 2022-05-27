@@ -3,9 +3,7 @@
 # passed in.
 
 function fontsize(fontsize::Real, lineheight)
-    return """
-    \\fontsize{$(fontsize)}{$(fontsize * lineheight)}
-    """
+    return """\\fontsize{$(fontsize)}{$(fontsize * lineheight)}"""
 end
 
 function define_mathfontsize(fontsize::Real, math_inc::Real, sub_mult::Real, subsub_mult::Real)
@@ -35,11 +33,10 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
 
 
     preamble = """
-
     \\usepackage{lmodern}
     \\usepackage[T1]{fontenc}
     $(package_load_str)
-    \\definecolor{maincolor}{HTML}{$(Makie.Colors.hex(RGBf(color)))}
+    \\definecolor{maincolor}{HTML}{$(Makie.Colors.hex(RGBf(Makie.to_color(color))))}
     $(define_mathfontsize(textsize, .5, 7/12, 7/12/1.5))
     """
 
