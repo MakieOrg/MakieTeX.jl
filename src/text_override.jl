@@ -47,6 +47,20 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
     )
 end
 
+# function _plottable_cachedtex_from_array(lstrs::Vector{LaTeXString}, fonts, textsizes, lineheights, colors)
+#     broadcast_foreach(lstrs, fonts, textsizes, lineheights, colors) do lstr, font, textsize, lineheight, color
+#         preamble *= "\n\\DeclareMathSizes{$(textsize)}{$(textsize + .5)}{$(textsize*7/12)}{$(textsize*7/12)}\n"
+# end
+#
+#
+# function latex_preamble_from_font(font)
+#     family = familyname(font)
+#     if family == "Noto Sans"
+#     elseif family == "Fira Sans"
+#     elseif family == "TeX Gyre Heros"
+#     end
+# end
+
 # Helper functions to help
 to_array(f::AbstractVector) = f
 to_array(f::T) where T <: Makie.VecTypes = T[f]
