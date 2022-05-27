@@ -16,7 +16,7 @@ end
 
 # The main theme-enabled function, which takes in information from multiple places
 # and spreads them out!
-function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
+function to_texdoc(lstr, font, textsize, lineheight, color)
     # $(usemain && raw"\usepackage{fontspec}")
     packages = [
         # math stuff
@@ -48,30 +48,101 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
     \\color{maincolor}
     """ *  String(lstr)
 
-    return CachedTeX(
-        TeXDocument(
-            string, true;
-            requires = requires,
-            preamble = preamble,
-            class = "standalone",
-            classoptions = "tightpage, margin=1pt"
-        )
+    return TeXDocument(
+        string, true;
+        requires = requires,
+        preamble = preamble,
+        class = "standalone",
+        classoptions = "tightpage, margin=1pt, crop"
     )
 end
 
-# function _plottable_cachedtex_from_array(lstrs::Vector{LaTeXString}, fonts, textsizes, lineheights, colors)
-#     broadcast_foreach(lstrs, fonts, textsizes, lineheights, colors) do lstr, font, textsize, lineheight, color
-#         preamble *= "\n\\DeclareMathSizes{$(textsize)}{$(textsize + .5)}{$(textsize*7/12)}{$(textsize*7/12)}\n"
-# end
-#
-#
-# function latex_preamble_from_font(font)
-#     family = familyname(font)
-#     if family == "Noto Sans"
-#     elseif family == "Fira Sans"
-#     elseif family == "TeX Gyre Heros"
-#     end
-# end
+function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
+    return CachedTeX(to_texdoc(lstr, font, textsize, lineheight, color))
+end
+
+function _plottable_cachedtex_from_array(lstrs::AbstractVector{<: AbstractString}, fonts, textsizes, lineheights, colors)
+    @show lstrs
+    packages = [
+        # math stuff
+        "amsmath", "amssymb", "amsfonts", "esint",
+        # color management
+        "xcolor",
+    ]
+    # smart detect tikz to decrease load time
+    if any(occursin("tikz", join(String.(lstrs), ' ')))
+        push!(packages, "tikz")
+    end
+
+    package_load_str = raw"\usepackage{" * join(packages, ", ") * raw"}"
+
+    # Here, we define a new environment, `MakieTeXpage`,
+    # which has no influence but can be picked up by `standalone`
+    # as a container for an individual page.
+    # This helps tremendously when batching
+    # bef
+    preamble = """
+    \\newenvironment{MakieTeXpage}[0]{}{}
+    \\standaloneenv{MakieTeXpage}
+
+    \\usepackage{lmodern}
+    \\usepackage[T1]{fontenc}
+    $(package_load_str)
+    """
+
+    requires = raw"\RequirePackage{luatex85}"
+
+    contents = """
+    \\nopagecolor{}
+    """
+    i = 1
+    broadcast_foreach(lstrs, fonts, textsizes, lineheights, colors) do lstr, font, textsize, lineheight, color
+        preamble *= """
+        \\definecolor{maincolor_$i}{HTML}{$(Makie.Colors.hex(RGBf(Makie.to_color(color))))}
+        $(define_mathfontsize(textsize, .5, 7/12, 7/12/1.5))
+        """
+        contents *= """
+
+        \\begin{MakieTeXpage}
+        $(fontsize(textsize, lineheight))\\selectfont
+        \\color{maincolor_$i}
+        $(String(lstr))
+        \\end{MakieTeXpage}
+
+        """
+        i += 1
+    end
+
+    doc = TeXDocument(
+        contents, true;
+        requires = requires,
+        preamble = preamble,
+        class = "standalone",
+        classoptions = "tightpage, margin=1pt"
+    )
+
+    full_pdf = Vector{UInt8}(latex2pdf(convert(String, doc)))
+
+    # debug statement - show the compiled PDF
+    # uncomment below for debug
+    # write("hello.pdf", full_pdf)
+
+    pdfs = split_pdf(full_pdf)
+
+    return CachedTeX.(pdfs)
+end
+
+
+function latex_font_command(font)
+    family = familyname(font)
+    bold = isbold(font)
+    italic = isitalic(font)
+    mono = ismono(font)
+    if family == "Noto Sans"
+    elseif family == "Fira Sans"
+    elseif family == "TeX Gyre Heros"
+    end
+end
 
 # Helper functions to help
 to_array(f::AbstractVector) = f
@@ -150,7 +221,7 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: LaTeXString}}})
     plottable_cached_texs = Observable{Vector{CachedTeX}}()
     onany(t[1], t.font, t.textsize, t.lineheight, t.color) do ltexs, font, textsize, lineheight, color
         if !(ltexs == old_ltex)
-            plottable_cached_texs.val = to_plottable_cachedtex.(ltexs, font, textsize, lineheight, to_color(color))
+            plottable_cached_texs.val = _plottable_cachedtex_from_array(ltexs, font, textsize, lineheight, to_color(color))
             notify(plottable_cached_texs)
             old_ltex[] = ltexs
         else
