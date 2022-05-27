@@ -74,7 +74,7 @@ end
 
 mutable struct CachedTeX
     "The original `TeXDocument` which is compiled."
-    doc::TeXDocument
+    doc::Union{TeXDocument, Nothing}
     "The resulting compiled PDF"
     pdf::Vector{UInt8}
     "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
@@ -132,6 +132,21 @@ function CachedTeX(x::LaTeXString; kwargs...)
     end
 end
 
+function CachedTeX(pdf::Vector{UInt8}; kwargs...)
+    ptr = load_pdf(pdf)
+    surf = firstpage2recordsurf(ptr)
+    dims = pdf_get_page_size(ptr, 0)
+
+    ct = CachedTeX(
+        nothing,
+        pdf,
+        ptr,
+        surf,
+        dims# .+ (1, 1),
+    )
+    return ct
+end
+
 # do not rerun the pipeline on CachedTeX
 CachedTeX(ct::CachedTeX) = ct
 
@@ -141,7 +156,9 @@ function update_pointer!(ct::CachedTeX)
 end
 
 function Base.show(io::IO, ct::CachedTeX)
-    if length(ct.doc.contents) > 1000
+    if isnothing(doc)
+        println(io, "CachedTeX(no document, $(ct.ptr), $(ct.dims))")
+    elseif length(ct.doc.contents) > 1000
         println(io, "CachedTeX(TexDocument(...), $(ct.ptr), $(ct.dims))")
     else
         println(io, "CachedTeX($(ct.doc), $(ct.ptr), $(ct.dims))")
@@ -194,7 +211,7 @@ function Makie.boundingbox(cachedtexs::AbstractVector{CachedTeX}, positions, rot
     align)
 
     isempty(cachedtexs) && (return Rect3f((0, 0, 0), (0, 0, 0)))
-    
+
     bb = Rect3f()
     broadcast_foreach(cachedtexs, positions, rotations, scale,
     align) do cachedtex, pos, rot, scl, aln
