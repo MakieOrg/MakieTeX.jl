@@ -216,7 +216,41 @@ end
             end
         end
 
+        @testset "Rotated alignment for axis label" begin
+            fig = Figure(; figure_padding = 100)
+            ax1 = Axis(
+                fig[1, 1];
+                xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+                ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
+                #ylabelpadding = 15
+            )
+            heatmap!(ax1, Makie.peaks())
+            scatter!(ax1.blockscene, ax1.blockscene.plots[end-6].plots[1].plots[1][1]; markersize = 10, color = :steelblue)
+
+            @test_nowarn save_test("axislabel_align", fig)
+
+        end
+
         @testset "Rotation" begin
+
+            fig = Figure()
+            ax = fig[1, 1] = Axis(fig)
+            pos = (500, 500)
+            posis = Point2f[]
+            scatter!(ax, posis, markersize=10)
+            for r in range(0, stop=2pi, length=20)
+                p = pos .+ (sin(r) * 100.0, cos(r) * 100)
+                push!(posis, p)
+                text!(ax, L"test",
+                    position=p,
+                    textsize=50,
+                    rotation=1.5pi - r,
+                    align=(:center, :center)
+                )
+            end
+            fig
+
+            @test_nowarn save_test("rotation", fig)
         end
 
     end
