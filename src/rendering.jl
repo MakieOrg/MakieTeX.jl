@@ -46,7 +46,7 @@ function compile_latex(
                     	run(pipeline(ignorestatus(`$bin temp.tex`), stdout=out, stderr=err))
                     end
                 else # latexmk
-                    latex_cmd = `latexmk -pdf $options --shell-escape -$use_tex_engine -cd -interaction=nonstopmode --output-format=pdf -pdf temp.tex`
+                    latex_cmd = `latexmk $options --shell-escape -$use_tex_engine -cd -interaction=nonstopmode temp.tex`
                     run(pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err))
                 end
                 suc = success(latex)
