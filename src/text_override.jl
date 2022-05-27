@@ -1,6 +1,21 @@
 # Here, we override the plotting function for Text
 # to plot a TeXImg for either a TeXDocument or a CachedTeX
 # passed in.
+
+function fontsize(fontsize::Real, lineheight)
+    return """
+    \\fontsize{$(fontsize)}{$(fontsize * lineheight)}
+    """
+end
+
+function define_mathfontsize(fontsize::Real, math_inc::Real, sub_mult::Real, subsub_mult::Real)
+    return "\\DeclareMathSizes{$(fontsize)}{$(fontsize + math_inc)}{$(fontsize * sub_mult)}{$(fontsize * subsub_mult)}"
+end
+
+function define_mathfontsizes(fontsizes::AbstractVector{<: Real}; math_incs = fill(.5, length(fontsizes)), sub_mults = fill(7/12, length(fontsizes)), subsub_mults = fill(7/12/1.5, length(fontsizes)))
+    return join(define_mathfontsize.(fontsizes, math_incs, sub_mults, subsub_mults), "\n", "\n\n")
+end
+
 # The main theme-enabled function, which takes in information from multiple places
 # and spreads them out!
 function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
@@ -25,14 +40,14 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
     \\usepackage[T1]{fontenc}
     $(package_load_str)
     \\definecolor{maincolor}{HTML}{$(Makie.Colors.hex(RGBf(color)))}
-    \\DeclareMathSizes{$(textsize)}{$(textsize + .5)}{$(textsize*7/12)}{$(textsize*7/12)}
+    $(define_mathfontsize(textsize, .5, 7/12, 7/12/1.5))
     """
 
     requires = raw"\RequirePackage{luatex85}"
 
     string = """
     \\nopagecolor{}
-    \\fontsize{$(textsize)}{$(round(Int, textsize * lineheight))}\\selectfont
+    $(fontsize(textsize, lineheight))\\selectfont
     \\color{maincolor}
     """ *  String(lstr)
 
@@ -42,7 +57,7 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
             requires = requires,
             preamble = preamble,
             class = "standalone",
-            classoptions = "tightpage, margin=0.5pt"
+            classoptions = "tightpage, margin=1pt"
         )
     )
 end
