@@ -137,3 +137,11 @@ The standard rendering pipeline works as follows: the string is converted in to 
 This cropped PDF is then loaded by Poppler, accessed through `Poppler_jll.jl` and `libpoppler-glib`.  If using the Cairo backend, it is plotted directly to a surface; if using another backend, it is rasterized to an image, and plotted using `scatter` with image markers.  The alignment is in this case depicted by `marker_offset`.
 
 Thus, you only need a TeX engine, preferably LuaTeX, installed on your system.  We don't automatically detect the TeX engine, though, so if you want to change that, set ``` MakieTeX.CURRENT_TEX_ENGINE[] = `xelatex` ``` (note the backticks in place of quotes) or some other engine, as long as it is compatible with `latexmk`.
+
+## TODOS and planned features
+
+- Better rasterization for GLMakie
+- Math and text font switching ability (preferably arbitrary)
+- Better font size algorithms
+- Multithreaded latex compilation if possible
+- Faster latex compilation (perhaps through latex caching?)
