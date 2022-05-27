@@ -23,7 +23,6 @@ ax1 = Axis(
     fig[2, 1];
     xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
     ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
-    ylabelpadding = 15
 )
 heatmap!(ax1, Makie.peaks())
 fig
