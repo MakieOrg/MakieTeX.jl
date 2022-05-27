@@ -1,10 +1,3 @@
-function dvisvg()
-    if !isassigned(DVISVGM_PATH)
-        DVISVGM_PATH = Sys.which("dvisvgm")
-    end
-    return DVISVGM_PATH[]
-end
-
 # Since perl_jll doesn't build for windows we check this.
 # todo define the function in a static block
 @static if Sys.iswindows() # !hasproperty(Perl_jll, :perl)
@@ -20,32 +13,14 @@ else
     mtperl(f) = Perl_jll.perl(f)
 end
 
-
 # The main compilation method - compiles arbitrary LaTeX documents
 function compile_latex(
         document::AbstractString;
         tex_engine = CURRENT_TEX_ENGINE[],
-        options = `-file-line-error -halt-on-error`,
-        format = "dvi",
-        read_format = format
+        options = `-file-line-error -halt-on-error`
     )
 
     use_tex_engine=tex_engine
-
-    # First, we do some input checking.
-    if !(format ∈ ("dvi", "pdf"))
-        @error "Format must be either dvi or pdf; was $format"
-    end
-    formatcmd = ``
-    if format == "dvi"
-        if use_tex_engine==`lualatex`
-            use_tex_engine=`dvilualatex`
-        end
-        # produce only dvi not pdf
-        formatcmd = `-dvi -pdf-`
-    else # format == "pdf"
-        formatcmd = `-pdf`
-    end
 
     # Unfortunately for us, Latexmk (which is required for any complex LaTeX doc)
     # does not like to compile straight to stdout, OR take in input from stdin;
@@ -71,14 +46,14 @@ function compile_latex(
                     	run(pipeline(ignorestatus(`$bin temp.tex`), stdout=out, stderr=err))
                     end
                 else # latexmk
-                    latex_cmd = `latexmk $options --shell-escape -latex=$use_tex_engine -cd -interaction=nonstopmode --output-format=$format $formatcmd temp.tex`
+                    latex_cmd = `latexmk -pdf $options --shell-escape -latex=$use_tex_engine -cd -interaction=nonstopmode --output-format=pdf -pdf temp.tex`
                     run(pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err))
                 end
                 suc = success(latex)
                 close(out.in)
                 close(err.in)
-                if !isfile("temp.$read_format")
-                    println("Latex did not write temp.$(read_format)!  Using the $(tex_engine) engine.")
+                if !isfile("temp.pdf")
+                    println("Latex did not write temp.pdf!  Using the $(tex_engine) engine.")
                     println("Files in temp directory are:\n" * join(readdir(), ','))
                     printstyled("Stdout\n", bold=true, color = :blue)
                     println(read(out, String))
@@ -87,34 +62,30 @@ function compile_latex(
                     error()
                 end
             finally
-                if format == "pdf"
 
-                    if pdf_num_pages("temp.pdf") > 1
-                        @warn("The PDF has more than 1 page!  Choosing the first page.")
-                    end
+                # if pdf_num_pages("temp.pdf") > 1
+                #     @warn("The PDF has more than 1 page!  Choosing the first page.")
+                # end
 
-                    # Generate the cropping margins
-                    crop_margins = join(_PDFCROP_DEFAULT_MARGINS[], ' ')
+                # Generate the cropping margins
+                crop_margins = join(_PDFCROP_DEFAULT_MARGINS[], ' ')
 
-                    # Convert engine from Latex to TeX - for example,
-                    # Lua*LA*TeX => LuaTeX, ...
-                    crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
-                    crop_engine == `tectonic` && return read("temp.pdf", String)
+                # Convert engine from Latex to TeX - for example,
+                # Lua*LA*TeX => LuaTeX, ...
+                crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
+                crop_engine == `tectonic` && return read("temp.pdf", String)
 
-                    pdfcrop = joinpath(@__DIR__, "pdfcrop.pl")
-                    redirect_stderr(devnull) do
-                        redirect_stdout(devnull) do
-                            Ghostscript_jll.gs() do gs_exe
-                                mtperl() do perl_exe
-                                    run(`$perl_exe $pdfcrop --margin $crop_margins $() --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
-                                end
+                pdfcrop = joinpath(@__DIR__, "pdfcrop.pl")
+                redirect_stderr(devnull) do
+                    redirect_stdout(devnull) do
+                        Ghostscript_jll.gs() do gs_exe
+                            mtperl() do perl_exe
+                                run(`$perl_exe $pdfcrop --margin $crop_margins $() --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
                             end
                         end
                     end
-                    return read("temp_cropped.pdf", String)
-                else
-                    return read("temp.$read_format", String)
                 end
+                return read("temp_cropped.pdf", String)
             end
         end
     end
@@ -123,8 +94,7 @@ end
 
 compile_latex(document::TeXDocument; kwargs...) = compile_latex(convert(String, document); kwargs...)
 
-latex2dvi(args...; kwargs...) = compile_latex(args...; format = "dvi", kwargs...)
-latex2pdf(args...; kwargs...) = compile_latex(args...; format = "pdf", kwargs...)
+latex2pdf(args...; kwargs...) = compile_latex(args...; kwargs...)
 
 
 # Pure poppler pipeline - directly from PDF to Cairo surface.
@@ -346,70 +316,3 @@ function pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)
 
     return (width[], height[])
 end
-
-
-# This is the old pipeline, going from TeX to DVI to SVG, then using Rsvg to render
-# Better boundingboxes actually, but worse...everything else
-
-
-# DVI pipeline - LaTeX → DVI → SVG → Rsvg → Cairo
-function dvi2svg(
-        dvi::String;
-        bbox = .2, # minimal bounding box
-        options = ``
-    )
-    # dvisvgm will allow us to convert the DVI file into an SVG which
-    # can be rendered by Rsvg.  In this case, we are able to provide
-    # dvisvgm a DVI file from stdin, and receive a SVG string from
-    # stdout.  This greatly simplifies the pipeline, and anyone with
-    # a working TeX installation should have these utilities available.
-
-    dvisvgm_cmd = Cmd(`$(dvisvg()) --bbox=$bbox --no-fonts --stdin --stdout $options`, env = ("LIBGS" => libgs(),))
-
-    # We create an IO buffer to redirect stderr
-    err = Pipe()
-
-    dvisvgm = open(dvisvgm_cmd, "r+")
-
-    redirect_stderr(err) do
-        write(dvisvgm, dvi)
-        close(dvisvgm.in)
-    end
-
-    return read(dvisvgm.out, String) # read the SVG in as a String
-
-
-end
-
-# PDF pipeline - LaTeX → PDF → SVG → Rsvg → Cairo
-# Better in general
-function pdf2svg(pdf::Vector{UInt8}; kwargs...)
-    pdftocairo = Poppler_jll.pdftocairo() do exe
-        open(`$exe -f 1 -l 1 -svg - -`, "r+")
-    end
-
-    write(pdftocairo, pdf)
-
-    close(pdftocairo.in)
-
-    return read(pdftocairo.out, String)
-end
-
-pdf2svg(pdf::String) = pdf2svg(Vector{UInt8}(pdf))
-
-# SVG/RSVG functions
-# Real simple stuff
-#
-# function svg2rsvg(svg::String, dpi = 72.0)
-#     handle = Rsvg.handle_new_from_data(svg)
-#     Rsvg.handle_set_dpi(handle, Float64(dpi))
-#     return handle
-# end
-#
-# function rsvg2recordsurf(handle::Rsvg.RsvgHandle)
-#     surf = Cairo.CairoRecordingSurface()
-#     ctx  = Cairo.CairoContext(surf)
-#     Rsvg.handle_render_cairo(ctx, handle)
-#     return (surf, ctx)
-# end
-#
