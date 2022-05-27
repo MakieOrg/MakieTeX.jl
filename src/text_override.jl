@@ -62,7 +62,7 @@ function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
 end
 
 function _plottable_cachedtex_from_array(lstrs::AbstractVector{<: AbstractString}, fonts, textsizes, lineheights, colors)
-    @show lstrs
+
     packages = [
         # math stuff
         "amsmath", "amssymb", "amsfonts", "esint",
