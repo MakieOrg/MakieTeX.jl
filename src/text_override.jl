@@ -159,7 +159,7 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: CachedTeX}})
         t, lift(to_array, t[1]);
         space = t.space, position=@lift([$(t.position)]), align = t.align,
         rotations = @lift([$(t.rotation)]), visible = t.visible,
-        scale = 1, render_density = TEXT_RENDER_DENSITY[],
+        scale = 1, render_density = TEXT_RENDER_DENSITY[]
     )
 end
 
@@ -169,7 +169,7 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<:AbstractVector{<:CachedTeX}}})
         t, t[1];
         space = t.space, position=t.position, align = t.align,
         rotations = lift(to_array, t.rotation), visible = t.visible,
-        scale = 1, render_density = TEXT_RENDER_DENSITY[],
+        scale = 1, render_density = TEXT_RENDER_DENSITY[]
     )
 end
 
@@ -180,7 +180,8 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<:TeXDocument}})
         t, plottable_cached_tex;
         space = t.space, position=lift(to_array, t.position), align = t.align,
         rotations = lift(to_array, t.rotation), visible = t.visible,
-        scale = 1, render_density = TEXT_RENDER_DENSITY[], )
+        scale = 1, render_density = TEXT_RENDER_DENSITY[]
+    )
 end
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
@@ -192,7 +193,7 @@ function Makie.plot!(t::Makie.Text{<: Tuple{<: AbstractVector{<: TeXDocument}}})
         t, plottable_cached_texs;
         space = t.space, position = position, align = t.align,
         rotations = t.rotation, visible = t.visible,
-        scale=1, render_density=TEXT_RENDER_DENSITY[]
+        scale = 1, render_density=TEXT_RENDER_DENSITY[]
     )
 end
 

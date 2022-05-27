@@ -12,14 +12,12 @@ using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll, tectonic_jll
 # define some constants for configuration
 "Render with Poppler pipeline (true) or Cairo pipeline (false)"
 const RENDER_EXTRASAFE = Ref(false)
-"Path to `dvisvgm` executable"
-const DVISVGM_PATH = Ref{String}()
 "The current `TeX` engine which MakieTeX uses."
 const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
 "Default margins for `pdfcrop`"
 const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
 "Default density when rendering from calls to `text`"
-const TEXT_RENDER_DENSITY = Ref(7)
+const TEXT_RENDER_DENSITY = Ref(5)
 
 
 include("types.jl")
