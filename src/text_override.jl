@@ -149,11 +149,6 @@ to_array(f::AbstractVector) = f
 to_array(f::T) where T <: Makie.VecTypes = T[f]
 to_array(f::T) where T = T[f]
 
-to_narray(f::AbstractVector, n::Int) = length(f) == n ? f : fill(f, n)
-to_narray(f::T) where T <: Makie.VecTypes = fill(f, n)
-to_narray(f::T) where T = length(f) == n ? f : fill(f, n)
-
-
 function Makie.plot!(t::Makie.Text{<: Tuple{<: CachedTeX}})
     teximg!(
         t, lift(to_array, t[1]);
