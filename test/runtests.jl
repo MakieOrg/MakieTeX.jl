@@ -37,7 +37,14 @@ end
 
 @testset "MakieTeX.jl" begin
 
-    @testset "texample.net" begin
+    can_access_texample = try
+        Downloads.download("https://texample.net/media/tikz/examples/TEX/rotated_triangle.tex")
+        true
+    catch e
+        false
+    end
+
+    can_access_texample && @testset "texample.net" begin
 
         mkpath(joinpath(example_path, "texample"))
 
@@ -103,7 +110,7 @@ end
             for valign in (:top, :center, :bottom)
                 @testset "$(halign), $(valign)" begin
                     @test_nowarn teximg.align = (halign, valign)
-                    @test_nowarn save_test("$(halign)_$(valign)", f)
+                    @test_nowarn save_test(joinpath("aligns", "$(halign)_$(valign)"), f)
                 end
             end
         end
