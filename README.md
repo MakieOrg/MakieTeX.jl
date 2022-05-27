@@ -22,6 +22,7 @@ l1 = Label(
 ax1 = Axis(
     fig[2, 1];
     xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+    ytickformat = x -> latexstring.(string.(x)),
     ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
 )
 heatmap!(ax1, Makie.peaks())
@@ -46,7 +47,7 @@ MakieTeX always plots TeX to its stated dimensions.  This allows it to be extrem
 
 We provide a layoutable object, `LTeX`, which aims to solve this.  `LTeX`s are for all intents and purposes the same as `Label`s, with two extra keywords:
 - `scale = 1`, which literally scales the generated PDF by the provided factor;
-- `render_density = 7`, which specifies how densely any PDF must be rendered for the image fallback.  This only really affects GLMakie and WGLMakie, so feel free to ignore it for CairoMakie purposes.
+- `render_density = 5`, which specifies how densely any PDF must be rendered for the image fallback.  This only really affects GLMakie and WGLMakie, so feel free to ignore it or set it to 1 for CairoMakie purposes.
 
 An example follows:
 
@@ -65,14 +66,18 @@ MakieTeX provides high-level dispatches on `LaTeXString`s from the [`LaTeXString
 
 Any input is converted to a `TeXDocument`, which is then compiled to `CachedTeX`. This last type contains the compiled PDF and some pointers to in-memory versions of the PDF.  These are what MakieTeX eventually uses to plot to the screen.
 
+When plotting arrays of LaTeXStrings, MakieTeX takes a more efficient pathway by batching the array into a multi-page `standalone` document.  This allows the relevant packages in LaTeX to be loaded once per array instead of once per string, and decreases the runtime of the README example by a sixth.
+
+In general, we use the packages `amsmath, amssymb, amsfonts, esint, lmodern, fontenc, xcolor` in rendered latexstrings.  However, work is ongoing on a good API for users to provide arbitrary preamble code.
+
 ### Configuration
 
 There are several configuration constants you can set in MakieTeX, stored as const `Ref`s.  These are:
 
 ```CURRENT_TEX_ENGINE[] = `lualatex` ``` - The current `TeX` engine which MakieTeX uses.  Will default to `tectonic` if `latexmk` and `lualatex` are inaccessible on your system.
 ```RENDER_EXTRASAFE[] = false``` - Render with Poppler pipeline (false) or Cairo pipeline (true).  The Poppler pipeline offers better rendering but may be slightly slower.
-```_PDFCROP_DEFAULT_MARGINS[] = [2,2,2,2]``` - Default margins for `pdfcrop`.  Feel free to set this to `fill(0, 4)` if you need completely tight margins.
-```TEXT_RENDER_DENSITY[] = 7``` - Default density when rendering from calls to `text`.  Useful only for GLMakie.
+```_PDFCROP_DEFAULT_MARGINS[] = [0,0,0,0]``` - Default margins for `pdfcrop`.  Feel free to set this to `fill(1, 4)` or higher if you need looser margins.  The numbers are in the order `[<left>, <top>, <right>, <bottom>]`.
+```TEXT_RENDER_DENSITY[] = 5``` - Default density when rendering from calls to `text`.  Useful only for GLMakie.
 
 
 ```julia

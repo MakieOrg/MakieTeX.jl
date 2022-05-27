@@ -206,7 +206,7 @@ end
 # This means that once MakieTeX is loaded, there is no way to go back to
 # MathTeXEngine!
 # A future solution for this would be to have some global render mode which decides
-# which path is taken, but that would have to be done in Makie itself.
+# which path is taken, but that would likely have to be done in Makie itself.
 
 function Makie.plot!(t::Makie.Text{<: Tuple{<:LaTeXString}})
     plottable_cached_tex = lift(t[1], t.font, t.textsize, t.lineheight, t.color) do ltex, font, textsize, lineheight, color
