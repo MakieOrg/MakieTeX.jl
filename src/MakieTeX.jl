@@ -17,7 +17,7 @@ const DVISVGM_PATH = Ref{String}()
 "The current `TeX` engine which MakieTeX uses."
 const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
 "Default margins for `pdfcrop`"
-const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([2,2,2,2])
+const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
 "Default density when rendering from calls to `text`"
 const TEXT_RENDER_DENSITY = Ref(7)
 
