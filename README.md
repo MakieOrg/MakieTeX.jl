@@ -28,7 +28,7 @@ ax1 = Axis(
 heatmap!(ax1, Makie.peaks())
 fig
 ```
-<img src="https://user-images.githubusercontent.com/32143268/169671109-9c849a7b-4f57-4184-a6bb-1199a76c77c5.svg" height=300></img>
+<img src="https://user-images.githubusercontent.com/32143268/170724177-d7cf9d16-8feb-4f6e-bb22-68fa8269066c.svg" height=300></img>
 
 
 Also note that as of Makie 0.17, you cannot _change_ the text rendering mode; this is to say, assigning a LaTeXString or TeXDocument to a `text` plot to which you have passed a String will not work as expected.  Consequently, you must provide any LaTeX you want to render _at construction_.  This is the reason why we have set the axis attributes within the constructor call.
@@ -37,7 +37,7 @@ You need not install anything for MakieTeX to work, since we ship a minimal TeX 
 
 MakieTeX also renders TeX in accordance with the theme - specifically, if one changes the text color or textsize, it will be reflected in the rendered TeX.  Wrapping the above code with `with_theme(theme_dark()) do ... end` yields:
 
-<img src="https://user-images.githubusercontent.com/32143268/169671099-b7d21f55-1d0c-4422-90da-8bef99e07348.svg" height=300></img>
+<img src="https://user-images.githubusercontent.com/32143268/170724393-727fd7f3-277d-46c2-9616-9fcc988e8715.svg" height=300></img>
 
 
 
