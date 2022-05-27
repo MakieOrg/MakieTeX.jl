@@ -304,3 +304,30 @@ function pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)
 
     return (width[], height[])
 end
+
+"Split an in memory PDF and return a vector of its pages"
+function split_pdf(pdf::Union{Vector{UInt8}, String})
+    mktempdir() do dir
+        cd(dir) do
+            write("temp.pdf", pdf)
+
+            num_pages = pdf_num_pages("temp.pdf")
+
+            pdfs = Vector{UInt8}[]
+            sizehint!(pdfs, num_pages)
+            redirect_stderr(devnull) do
+                redirect_stdout(devnull) do
+                    for i in 1:num_pages
+                        Ghostscript_jll.gs() do gs
+                            run(`$gs -q -dBATCH -dNOPAUSE -dFirstPage=$i -dLastPage=$i -sOutputFile=temp_$(lpad(i, 4, '0')).pdf -sDEVICE=pdfwrite temp.pdf`)
+                            push!(pdfs, read("temp_$(lpad(i, 4, '0')).pdf"))
+                            rm("temp_$(lpad(i, 4, '0')).pdf")
+                        end
+                    end
+                end
+            end
+
+            return pdfs
+        end
+    end
+end
