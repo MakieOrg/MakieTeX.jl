@@ -2,7 +2,7 @@
 # todo define the function in a static block
 @static if Sys.iswindows() # !hasproperty(Perl_jll, :perl)
         if isnothing(Sys.which("perl"))
-            @warn "Perl not found!  Skipping cropping step"
+            @warn "Perl not found!  MakieTeX will skip the cropping step during compilation!"
             mtperl(f) = nothing
         else
             function mtperl(f)
@@ -235,7 +235,7 @@ function recordsurf2img(tex::CachedTeX, render_density = 1)
     c = Cairo.CairoContext(cs)
 
     # Render the parsed SVG to a Cairo context
-
+    render_surface(c, tex.surf)
 
     # The image is rendered transposed, so we need to flip it.
     return rotr90(permutedims(img))
