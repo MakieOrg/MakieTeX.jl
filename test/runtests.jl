@@ -8,6 +8,14 @@ using Test
 example_path = joinpath(@__DIR__, "test_images")
 mkpath(example_path)
 
+function save_test(filename, fig)
+
+    save(joinpath(example_path, "$filename.png"), fig; px_per_unit=3)
+    save(joinpath(example_path, "$filename.pdf"), fig; px_per_unit=1)
+    save(joinpath(example_path, "$filename.svg"), fig; px_per_unit=0.75)
+
+end
+
 function render_texample(url)
 
     fig = Figure()
@@ -20,9 +28,7 @@ function render_texample(url)
 
     filename = splitdir(splitext(url)[1])[2]
 
-    save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
-    save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
-    save(joinpath(example_path, "texample", "$filename.svg"), fig; px_per_unit=0.75)
+    save_test(joinpath(texample, filename), fig)
 
     @test true
 
@@ -82,9 +88,7 @@ end
         @test_nowarn Label(fig[1, 2], L"\iiint_a^{\mathbb{R}} \mathfrak D ~dt = \textbf{Poincar\'e quotient}")
 
 
-        save(joinpath(example_path, "plaintex.png"), fig; px_per_unit=3)
-        save(joinpath(example_path, "plaintex.pdf"), fig; px_per_unit=1)
-        save(joinpath(example_path, "plaintex.svg"), fig; px_per_unit=0.75)
+        save_test("plaintex", fig)
     end
 
     @testset "aligns" begin
@@ -99,9 +103,7 @@ end
             for valign in (:top, :center, :bottom)
                 @testset "$(halign), $(valign)" begin
                     @test_nowarn teximg.align = (halign, valign)
-                    @test_nowarn save(joinpath(example_path, "aligns", "$(halign)_$(valign).png"), f; px_per_unit = 3)
-                    @test_nowarn save(joinpath(example_path, "aligns", "$(halign)_$(valign).svg"), f; px_per_unit = 1)
-                    @test_nowarn save(joinpath(example_path, "aligns", "$(halign)_$(valign).pdf"), f; px_per_unit = 0.75)
+                    @test_nowarn save_test("$(halign)_$(valign)", f)
                 end
             end
         end
@@ -114,9 +116,7 @@ end
             @test_nowarn Label(fig[1, 1], LaTeXString("Makie\\TeX.jl"))
             @test_nowarn resize_to_layout!(fig)
 
-            save(joinpath(example_path, "logo.png"), fig; px_per_unit=3)
-            save(joinpath(example_path, "logo.pdf"), fig; px_per_unit=1)
-            save(joinpath(example_path, "logo.svg"), fig; px_per_unit=0.75)
+            save_test("logo", fig)
 
             @test true
         end
@@ -141,9 +141,7 @@ end
         rowgap!(gl, 2, 1)
         colgap!(gl, 1, 5)
 
-        save(joinpath(example_path, "corrupted_axis.png"), fig; px_per_unit=3)
-        save(joinpath(example_path, "corrupted_axis.pdf"), fig; px_per_unit=1)
-        save(joinpath(example_path, "corrupted_axis.svg"), fig; px_per_unit=0.75)
+        save_test("corrupted_axis", fig)
 
         @test true
 
@@ -157,14 +155,11 @@ end
             ylabel = LaTeXString("here we go fellas"),
             title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
             xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
-            xlabelpadding = 12
         )
         # plot to the axis
         heatmap!(ax, Makie.peaks())
 
-        save(joinpath(example_path, "integrated_axis.png"), fig; px_per_unit=3)
-        save(joinpath(example_path, "integrated_axis.pdf"), fig; px_per_unit=1)
-        save(joinpath(example_path, "integrated_axis.svg"), fig; px_per_unit=0.75)
+        @test_nowarn save_test("integrated_axis", fig)
 
         @test true
     end
@@ -192,9 +187,7 @@ end
         fig = Figure()
         @test_nowarn lab = Label(fig[1, 1], td)
 
-        @test_nowarn save(joinpath(example_path, "link.png"), fig; px_per_unit=3)
-        @test_nowarn save(joinpath(example_path, "link.pdf"), fig; px_per_unit=1)
-        @test_nowarn save(joinpath(example_path, "link.svg"), fig; px_per_unit=0.75)
+        @test_nowarn save_test("link", fig)
     end
 
     @testset "Text override" begin
@@ -214,16 +207,12 @@ end
                         ylabel = LaTeXString("here we go fellas"),
                         title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
                         xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
-                        xlabelpadding = 12,
-                        ylabelpadding = 12,
                     )
                     # plot to the axis
                     heatmap!(ax, Makie.peaks(); colormap = :inferno)
                     fig
                 end
-                @test_nowarn save(joinpath(example_path, "theming.png"), fig; px_per_unit=3)
-                @test_nowarn save(joinpath(example_path, "theming.pdf"), fig; px_per_unit=1)
-                @test_nowarn save(joinpath(example_path, "theming.svg"), fig; px_per_unit=0.75)
+                @test_nowarn save_test("theming", fig)
             end
         end
 
