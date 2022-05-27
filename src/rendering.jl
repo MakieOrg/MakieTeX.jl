@@ -135,36 +135,17 @@ function load_pdf(pdf::Vector{UInt8})::Ptr{Cvoid} # Poppler document handle
 
     return document
 
-    #
-    # # Create a Cairo surface and context to render to
-    # surf = Cairo.CairoRecordingSurface()
-    # ctx  = Cairo.CairoContext(surf)
-    # Cairo.save(ctx)
-    # # Render the page to the surface
-    # ccall(
-    #     (:poppler_page_render_for_printing, Poppler_jll.libpoppler_glib),
-    #     Cvoid,
-    #     (Ptr{Cvoid}, Ptr{Cvoid}),
-    #     page, ctx.ptr
-    # )
-    #
-    # Cairo.restore(ctx)
-    #
-    # Cairo.flush(surf)
-    #
-    # return surf
-
 end
 
 # Rendering functions for the resulting Cairo surfaces and images
 
-function firstpage2img(tex::CachedTeX; scale = 1, render_density = 1)
+function page2img(tex::CachedTeX, page::Int; scale = 1, render_density = 1)
     document = tex.ptr
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
         Ptr{Cvoid},
         (Ptr{Cvoid}, Cint),
-        document, 0 # page 0 is first page
+        document, page # page 0 is first page
     )
 
     w = ceil(Int, tex.dims[1] * render_density)
@@ -198,14 +179,15 @@ function firstpage2img(tex::CachedTeX; scale = 1, render_density = 1)
 
 end
 
+firstpage2img(tex; kwargs...) = page2img(tex, 0; kwargs...)
 
-function firstpage2recordsurf(document::Ptr{Cvoid}; scale = 1, render_density = 1)
-    w, h = pdf_get_page_size(document, 0)
+function page2recordsurf(document::Ptr{Cvoid}, page::Int; scale = 1, render_density = 1)
+    w, h = pdf_get_page_size(document, page)
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
         Ptr{Cvoid},
         (Ptr{Cvoid}, Cint),
-        document, 0 # page 0 is first page
+        document, page # page 0 is first page
     )
 
     surf = Cairo.CairoRecordingSurface()
@@ -228,6 +210,7 @@ function firstpage2recordsurf(document::Ptr{Cvoid}; scale = 1, render_density = 
 
 end
 
+firstpage2recordsurf(tex; kwargs...) = page2recordsurf(tex, 0; kwargs...)
 
 function recordsurf2img(tex::CachedTeX, render_density = 1)
 
