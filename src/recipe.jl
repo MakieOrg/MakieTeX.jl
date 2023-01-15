@@ -106,7 +106,7 @@ end
 
 
 # CairoMakie direct drawing method
-function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::CachedTeX, position::VecTypes, scale::VecTypes, rotation::Real, align::Tuple{Symbol, Symbol})
+function draw_tex(scene::Scene, screen::CairoMakie.Screen, cachedtex::CachedTeX, position::VecTypes, scale::VecTypes, rotation::Real, align::Tuple{Symbol, Symbol})
     # establish some initial values
     x0, y0 = 0.0, 0.0
     w, h = cachedtex.dims
@@ -194,7 +194,7 @@ function draw_tex(scene::Scene, screen::CairoMakie.CairoScreen, cachedtex::Cache
     Cairo.restore(ctx)
 end
 
-function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.CairoScreen, img::T) where T <: MakieTeX.TeXImg
+function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.Screen, img::T) where T <: MakieTeX.TeXImg
 
     broadcast_foreach(img[1][], img.position[], img.scale[], CairoMakie.remove_billboard(img.rotations[]), img.align[]) do cachedtex, position, scale, rotation, align
 
