@@ -85,36 +85,36 @@ end
 
     end
 
-    @testset "Rendering math and text" begin
+    # @testset "Rendering math and text" begin
 
-        fig = Figure()
-
-
-        @test_nowarn Label(fig[1, 1], LaTeXString(raw"This is Lorem Ipsum"))
-
-        @test_nowarn Label(fig[1, 2], L"\iiint_a^{\mathbb{R}} \mathfrak D ~dt = \textbf{Poincar\'e quotient}")
+    #     fig = Figure()
 
 
-        save_test("plaintex", fig)
-    end
+    #     @test_nowarn Label(fig[1, 1], LaTeXString(raw"This is Lorem Ipsum"))
 
-    @testset "aligns" begin
+    #     @test_nowarn Label(fig[1, 2], L"\iiint_a^{\mathbb{R}} \mathfrak D ~dt = \textbf{Poincar\'e quotient}")
 
-        mkpath(joinpath(example_path, "aligns"))
 
-        f = Figure(resolution = (200, 200))
-        lt = Label(f[1, 1], LaTeXString("Hello from Makie\\TeX{}!"))
-        teximg = lt.blockscene.plots[1]
+    #     save_test("plaintex", fig)
+    # end
 
-        for halign in (:left, :center, :right)
-            for valign in (:top, :center, :bottom)
-                @testset "$(halign), $(valign)" begin
-                    @test_nowarn teximg.align = (halign, valign)
-                    @test_nowarn save_test(joinpath("aligns", "$(halign)_$(valign)"), f)
-                end
-            end
-        end
-    end
+    # @testset "aligns" begin
+
+    #     mkpath(joinpath(example_path, "aligns"))
+
+    #     f = Figure(resolution = (200, 200))
+    #     lt = Label(f[1, 1], LaTeXString("Hello from Makie\\TeX{}!"))
+    #     teximg = lt.blockscene.plots[1]
+
+    #     for halign in (:left, :center, :right)
+    #         for valign in (:top, :center, :bottom)
+    #             @testset "$(halign), $(valign)" begin
+    #                 @test_nowarn teximg.align = (halign, valign)
+    #                 @test_nowarn save_test(joinpath("aligns", "$(halign)_$(valign)"), f)
+    #             end
+    #         end
+    #     end
+    # end
 
     @testset "Layouting" begin
 
@@ -154,22 +154,22 @@ end
 
     end
 
-    @testset "Integrating with Axis" begin
-        fig = Figure(fontsize = 12, resolution = (300, 300))
-        ax = Axis(
-            fig[1,1];
-            xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
-            ylabel = LaTeXString("here we go fellas"),
-            title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
-            xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
-        )
-        # plot to the axis
-        heatmap!(ax, Makie.peaks())
+    # @testset "Integrating with Axis" begin
+    #     fig = Figure(fontsize = 12, resolution = (300, 300))
+    #     ax = Axis(
+    #         fig[1,1];
+    #         xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
+    #         ylabel = LaTeXString("here we go fellas"),
+    #         title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
+    #         xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+    #     )
+    #     # plot to the axis
+    #     heatmap!(ax, Makie.peaks())
 
-        @test_nowarn save_test("integrated_axis", fig)
+    #     @test_nowarn save_test("integrated_axis", fig)
 
-        @test true
-    end
+    #     @test true
+    # end
 
     @testset "Links" begin
         td = TeXDocument(raw"""
@@ -197,69 +197,69 @@ end
         @test_nowarn save_test("link", fig)
     end
 
-    @testset "Text override" begin
-        @testset "Font scaling" begin
-            @test_nowarn begin
-                fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
-            """), textsize=16); fig
-            end
-        end
-        @testset "Theming" begin
-            @test_nowarn begin
-                fig = with_theme(theme_dark()) do
-                    fig = Figure(fontsize = 12, resolution = (300, 300))
-                    ax = Axis(
-                        fig[1,1];
-                        xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
-                        ylabel = LaTeXString("here we go fellas"),
-                        title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
-                        xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
-                    )
-                    # plot to the axis
-                    heatmap!(ax, Makie.peaks(); colormap = :inferno)
-                    fig
-                end
-                @test_nowarn save_test("theming", fig)
-            end
-        end
+    # @testset "Text override" begin
+    #     @testset "Font scaling" begin
+    #         @test_nowarn begin
+    #             fig = Figure(); l = l = Label(fig[1, 1], Makie.LaTeXString(raw"""A function that is convex is \raisebox{-2pt}{\tikz{\draw[line width=1pt, >->] (0, 0) arc (-180:0:8pt);}}
+    #         """), textsize=16); fig
+    #         end
+    #     end
+    #     @testset "Theming" begin
+    #         @test_nowarn begin
+    #             fig = with_theme(theme_dark()) do
+    #                 fig = Figure(fontsize = 12, resolution = (300, 300))
+    #                 ax = Axis(
+    #                     fig[1,1];
+    #                     xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
+    #                     ylabel = LaTeXString("here we go fellas"),
+    #                     title  = LaTeXString(raw"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}"),
+    #                     xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+    #                 )
+    #                 # plot to the axis
+    #                 heatmap!(ax, Makie.peaks(); colormap = :inferno)
+    #                 fig
+    #             end
+    #             @test_nowarn save_test("theming", fig)
+    #         end
+    #     end
 
-        @testset "Rotated alignment for axis label" begin
-            fig = Figure(; figure_padding = 100)
-            ax1 = Axis(
-                fig[1, 1];
-                xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
-                ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
-                #ylabelpadding = 15
-            )
-            heatmap!(ax1, Makie.peaks())
-            scatter!(ax1.blockscene, ax1.blockscene.plots[end-6].plots[1].plots[1][1]; markersize = 10, color = :steelblue)
+    #     @testset "Rotated alignment for axis label" begin
+    #         fig = Figure(; figure_padding = 100)
+    #         ax1 = Axis(
+    #             fig[1, 1];
+    #             xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
+    #             ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
+    #             #ylabelpadding = 15
+    #         )
+    #         heatmap!(ax1, Makie.peaks())
+    #         scatter!(ax1.blockscene, ax1.blockscene.plots[end-6].plots[1].plots[1][1]; markersize = 10, color = :steelblue)
 
-            @test_nowarn save_test("axislabel_align", fig)
+    #         @test_nowarn save_test("axislabel_align", fig)
 
-        end
+    #     end
 
-        @testset "Rotation" begin
+    #     @testset "Rotation" begin
 
-            fig = Figure()
-            ax = fig[1, 1] = Axis(fig)
-            pos = (500, 500)
-            posis = Point2f[]
-            scatter!(ax, posis, markersize=10)
-            for r in range(0, stop=2pi, length=20)
-                p = pos .+ (sin(r) * 100.0, cos(r) * 100)
-                push!(posis, p)
-                text!(ax, L"test",
-                    position=p,
-                    textsize=50,
-                    rotation=1.5pi - r,
-                    align=(:center, :center)
-                )
-            end
-            fig
+    #         fig = Figure()
+    #         ax = fig[1, 1] = Axis(fig)
+    #         pos = (500, 500)
+    #         posis = Point2f[]
+    #         scatter!(ax, posis, markersize=10)
+    #         for r in range(0, stop=2pi, length=20)
+    #             p = pos .+ (sin(r) * 100.0, cos(r) * 100)
+    #             push!(posis, p)
+    #             text!(ax, L"test",
+    #                 position=p,
+    #                 textsize=50,
+    #                 rotation=1.5pi - r,
+    #                 align=(:center, :center)
+    #             )
+    #         end
+    #         fig
 
-            @test_nowarn save_test("rotation", fig)
-        end
+    #         @test_nowarn save_test("rotation", fig)
+    #     end
 
-    end
+    # end
 
 end

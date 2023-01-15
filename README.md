@@ -8,8 +8,6 @@ MakieTeX allows you to draw and visualize arbitrary TeX documents in Makie!  You
 
 It works by compiling a stand-alone <img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="20" align = "center"></a> document to PDF.  For CairoMakie, the PDF is read and rendered directly, and a raster image is rendered in GLMakie.
 
-When loaded, MakieTeX will replace the handling of LaTeXStrings, which Makie natively performs with [`MathTeXEngine.jl`](https://github.com/Kolaru/MathTeXEngine.jl), with the MakieTeX pipeline.  This is significantly more time-consuming, so be warned - try not to `MakieTeX` for the axes of plots which you want to interact with!  Other things, which don't update as often, are fine.
-
 ### Quick start
 ```julia
 using Makie, MakieTeX
@@ -21,9 +19,6 @@ l1 = Label(
 )
 ax1 = Axis(
     fig[2, 1];
-    xtickformat = x -> latexstring.("a_{" .* string.(x) .* "}"),
-    ytickformat = x -> latexstring.(string.(x)),
-    ylabel = L"\displaystyle \Phi(\vec x) = f(\vec x) + g(V)",
 )
 heatmap!(ax1, Makie.peaks())
 fig
@@ -31,11 +26,7 @@ fig
 <img src="https://user-images.githubusercontent.com/32143268/170724177-d7cf9d16-8feb-4f6e-bb22-68fa8269066c.svg" height=300></img>
 
 
-Also note that as of Makie 0.17, you cannot _change_ the text rendering mode; this is to say, assigning a LaTeXString or TeXDocument to a `text` plot to which you have passed a String will not work as expected.  Consequently, you must provide any LaTeX you want to render _at construction_.  This is the reason why we have set the axis attributes within the constructor call.
-
 You need not install anything for MakieTeX to work, since we ship a minimal TeX renderer called [`tectonic`](https://tectonic-typesetting.github.io/en-US/) (based on XeLaTeX).  This will download any missing packages when it encounters them the first time.  However, it will likely not know about any local packages or TEXMF paths, nor will it be able to render advanced features like TikZ graphs which require LuaTeX.  The latexmk/lualatex combination will also likely be faster, and able to use advanced features like calling to other languages with `pythontex` (oh, the heresy!)
-
-MakieTeX also renders TeX in accordance with the theme - specifically, if one changes the text color or textsize, it will be reflected in the rendered TeX.  Wrapping the above code with `with_theme(theme_dark()) do ... end` yields:
 
 <img src="https://user-images.githubusercontent.com/32143268/170724393-727fd7f3-277d-46c2-9616-9fcc988e8715.svg" height=300></img>
 
