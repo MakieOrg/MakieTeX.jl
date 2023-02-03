@@ -214,3 +214,38 @@ function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.Screen, img::T) w
     end
 
 end
+
+"""
+    tex_annotation!(axis::Axis, lstring, x, y; mainfont = nothing, mathfont = nothing, scale_factor=1)
+
+Add TeX annotation to an existing Makie Axis. Under the hood, it does a few things:
+
+1. via `mathspec` LaTeX package, we set the `mainfont` and `mathfont`
+2. Render it using `tectonic_jll` and convert to an image matrix.
+3. call `Makie.scatter!` and using the image as `marker`, scale the image by `scale_factor` while preserving aspec ratio.
+
+    !!! note
+You can use `\textcolor` from `xcolor` inside the latex string.
+"""
+function tex_annotation!(axis::Axis, lstring, x, y; mainfont = nothing, mathfont = nothing, scale_factor=1)
+    texdoc = TeXDocument(
+        String(lstring), true;
+        requires = "\\RequirePackage{luatex85}",
+        preamble = """
+        \\usepackage{amsmath, xcolor}
+        \\usepackage{mathspec}
+        \\pagestyle{empty}
+        $(isnothing(mainfont) ? "" :
+        "\\setmainfont{$mainfont}[Scale=MatchLowercase, Ligatures=TeX]"
+       )
+        $(isnothing(mathfont) ? "" :
+        "\\setmathfont(Digits,Latin)[Scale=MatchLowercase]{$mathfont}"
+       )
+        """,
+        class = "standalone",
+        classoptions = "preview, tightpage, 12pt"
+    )
+    tex = CachedTeX(texdoc)
+    marker = MakieTeX.rotl90(MakieTeX.recordsurf2img(tex, 4))
+    scatter!(axis, x, y; marker, markersize=tex.dims .* scale_factor)
+end
