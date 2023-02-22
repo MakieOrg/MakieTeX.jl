@@ -19,12 +19,16 @@ end
 
 function Makie.boundingbox(x::T) where T <: TeXImg
     Makie.boundingbox(
-        x[1][],
+        x[1][] isa CachedTeX ? [x[1][]] : x[1][],
         to_ndim.(Point3f, x.position[], 0),
         x.rotations[],
         x.scale[],
         x.align[]
     )
+end
+
+function Makie.data_limits(x::T) where T <: TeXImg
+    Makie.boundingbox(x)
 end
 
 function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
@@ -59,7 +63,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
     # We always want to draw this at a 1:1 ratio, so increasing scale or
     # changing dpi should rerender
     plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
-        to_array(firstpage2img.(cachedtex; render_density = render_density * scale))
+        to_array(firstpage2img((cachedtex); render_density = render_density * scale))
     end
 
     scatter_images    = Observable(plottable_images[])

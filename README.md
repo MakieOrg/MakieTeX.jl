@@ -13,7 +13,7 @@ It works by compiling a stand-alone <img src="https://upload.wikimedia.org/wikip
 using Makie, MakieTeX
 using CairoMakie # or whichever other backend
 fig = Figure()
-l1 = Label(
+l1 = LTeX(
     fig[1, 1], L"A \emph{convex} function $f \in C$ is \textcolor{blue}{denoted} as \tikz{\draw[line width=1pt, >->] (0, -2pt) arc (-180:0:8pt);}";
     tellwidth = false, tellheight = true
 )

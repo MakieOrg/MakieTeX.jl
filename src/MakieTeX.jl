@@ -1,7 +1,10 @@
 module MakieTeX
-using Makie, CairoMakie, Makie.MakieLayout
+using Makie, CairoMakie
 using Cairo
 using Colors, LaTeXStrings
+
+# patch for Makie.jl block macro error
+using Makie: CURRENT_DEFAULT_THEME
 
 using Makie.GeometryBasics: origin, widths
 using Makie.Observables
