@@ -63,7 +63,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
     # We always want to draw this at a 1:1 ratio, so increasing scale or
     # changing dpi should rerender
     plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
-        to_array(firstpage2img((cachedtex); render_density = render_density * scale))
+        to_array(firstpage2img.((cachedtex); render_density = render_density * scale))
     end
 
     scatter_images    = Observable(plottable_images[])
@@ -77,7 +77,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
     onany(plottable_images, plot.position, plot.rotations, plot.align, plot.scale) do images, pos, rotations, align, scale
         if length(images) != length(pos)
             # skip this update and let the next one propagate
-            @debug "Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
+            @debug "TexImg: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
             return
         end
 
@@ -94,7 +94,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
         notify(scatter_rotations)
     end
 
-    plot.position[] = plot.position[]
+    notify(plot.position) # trigger the first update
 
     scatter!(
         plot,
@@ -112,7 +112,6 @@ end
 # CairoMakie direct drawing method
 function draw_tex(scene::Scene, screen::CairoMakie.Screen, cachedtex::CachedTeX, position::VecTypes, scale::VecTypes, rotation::Real, align::Tuple{Symbol, Symbol})
     # establish some initial values
-    x0, y0 = 0.0, 0.0
     w, h = cachedtex.dims
     ctx = screen.context
     # First we center the position with respect to the center of the image,
@@ -124,21 +123,22 @@ function draw_tex(scene::Scene, screen::CairoMakie.Screen, cachedtex::CachedTeX,
     # Then, we find the appropriate "marker offset" w.r.t. alignment.
     # This is separate because of Cairo's reversed y-axis.
     halign, valign = align
-    pos = Point2f(0)
-    pos = if halign == :left
-        pos .- (-scale[1] / 2, 0)
+    offset_pos = Point2f(0)
+    # First, we handle the horizontal alignment
+    offset_pos = if halign == :left
+        offset_pos .- (-scale[1] / 2, 0)
     elseif halign == :center
-        pos .- (0, 0)
+        offset_pos .- (0, 0)
     elseif halign == :right
-        pos .- (scale[1] / 2, 0)
+        offset_pos .- (scale[1] / 2, 0)
     end
-
-    pos = if valign == :top
-        pos .+ (0, scale[2]/2)
+    # and then the vertical alignment.
+    offset_pos = if valign == :top
+        offset_pos .+ (0, scale[2]/2)
     elseif valign == :center
-        pos .+ (0, 0)
+        offset_pos .+ (0, 0)
     elseif valign == :bottom
-        pos .- (0, scale[2]/2)
+        offset_pos .- (0, scale[2]/2)
     end
 
     # Calculate, with respect to the rotation, where the rotated center of the image
@@ -161,7 +161,7 @@ function draw_tex(scene::Scene, screen::CairoMakie.Screen, cachedtex::CachedTeX,
     #compensate for that with previously calculated values
     Cairo.translate(ctx, cx, cy)
     # apply "marker offset" to implement/simulate alignment
-    Cairo.translate(ctx, pos[1], pos[2])
+    Cairo.translate(ctx, offset_pos[1], offset_pos[2])
     # scale the marker appropriately
     Cairo.scale(
         ctx,
@@ -197,6 +197,10 @@ function draw_tex(scene::Scene, screen::CairoMakie.Screen, cachedtex::CachedTeX,
     # restore context and end
     Cairo.restore(ctx)
 end
+
+# Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
+# instead of auto-decomposing into its component scatter plot.
+CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
 
 function CairoMakie.draw_plot(scene::Scene, screen::CairoMakie.Screen, img::T) where T <: MakieTeX.TeXImg
 

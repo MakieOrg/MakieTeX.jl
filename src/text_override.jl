@@ -149,6 +149,8 @@ to_array(f::AbstractVector) = f
 to_array(f::T) where T <: Makie.VecTypes = T[f]
 to_array(f::T) where T = T[f]
 
+# We use Makie's spec-API to redirect text calls with our input to 
+
 ### WARNING: deprecated code lies below
 # this was rendered invalid by the text refactor, which 
 # simplified all of the text calls into a central call
