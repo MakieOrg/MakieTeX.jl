@@ -100,6 +100,14 @@ These are primarily:
 
 The constructor stores the following fields:
 $(FIELDS)
+
+!!! note
+    This is a `mutable struct` because the pointer to the Poppler handle can change.
+    TODO: make this an immutable struct with a Ref to the handle??  OR maybe even the surface itself...
+
+!!! note
+    It is also possible to manually construct a `CachedTeX` with `nothing` in the `doc` field, 
+    if you just want to insert a pre-rendered PDF into your figure.
 """
 function CachedTeX(doc::TeXDocument; kwargs...)
 
