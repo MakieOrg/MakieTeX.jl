@@ -26,7 +26,7 @@ const TEXT_RENDER_DENSITY = Ref(5)
 include("types.jl")
 include("rendering.jl")
 include("recipe.jl")
-include("text_override.jl")
+include("text_utils.jl")
 include("layoutable.jl")
 
 export TeXDocument, CachedTeX

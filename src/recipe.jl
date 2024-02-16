@@ -2,6 +2,22 @@
 # scale::Real
 # render_density::Real
 # rotations::Vector{Real}
+"""
+    teximg(tex; position, ...)
+    teximg!(ax_or_scene, tex; position, ...)
+
+This recipe plots rendered `TeX` to your Figure or Scene.  
+
+There are three types of input you can provide:
+- Any `String`, which is rendered to LaTeX cognizant of the figure's overall theme,
+- A [`TeXDocument`](@ref) object, which is rendered to LaTeX directly, and can be customized by the user,
+- A [`CachedTeX`](@ref) object, which is a pre-rendered LaTeX document.
+
+`tex` may be a single one of these objects, or an array of them.
+
+## Attributes
+$(Makie.ATTRIBUTES)
+"""
 @recipe(TeXImg, tex) do scene
     merge(
         default_theme(scene),
