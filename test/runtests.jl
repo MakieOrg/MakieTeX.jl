@@ -72,8 +72,8 @@ end
 
             fig = Figure()
 
-            # @test_warn r"The PDF has more than 1 page!  Choosing the first page." LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
-            @test_nowarn LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            @test_warn r"There were 7 pages in the document!  Selecting first page." LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            # @test_nowarn LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
 
             resize_to_layout!(fig)
 
