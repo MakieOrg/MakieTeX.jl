@@ -20,7 +20,7 @@ function render_texample(url)
 
     fig = Figure()
 
-    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String))))
+    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String), false)))
 
     @test true
 
@@ -28,7 +28,7 @@ function render_texample(url)
 
     filename = splitdir(splitext(url)[1])[2]
 
-    save_test(joinpath(texample, filename), fig)
+    save_test(joinpath("texample", filename), fig)
 
     @test true
 
@@ -72,7 +72,8 @@ end
 
             fig = Figure()
 
-            @test_warn r"The PDF has more than 1 page!  Choosing the first page." Label(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            # @test_warn r"The PDF has more than 1 page!  Choosing the first page." LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            @test_nowarn LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
 
             resize_to_layout!(fig)
 

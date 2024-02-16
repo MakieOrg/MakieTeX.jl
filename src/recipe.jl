@@ -33,6 +33,34 @@ $(Makie.ATTRIBUTES)
     )
 end
 
+# First, handle the case of one or more abstract strings passed in!
+# These are themable.
+
+# Makie.used_attributes(::Type{<: TeXImg}, string_s::Union{<: AbstractString, AbstractVector{<: AbstractString}}) = (:font, :fontsize, :justification, :color, :word_wrap_width, :lineheight)
+# Makie.convert_arguments(::Type{<: TeXImg}, string::AbstractString) = Makie.convert_arguments(TeXImg, [string])
+
+# function Makie.convert_arguments(
+#     ::Type{<: TeXImg},
+#     strings::AbstractVector{<: AbstractString};
+#     font = Makie.texfont(), 
+#     fontsize = 14, 
+#     justification = Makie.automatic, 
+#     color = :black, 
+#     word_wrap_width = -1,
+#     lineheight = 1.0,
+#     )
+
+#     # This function will convert the strings to CachedTeX, so that it can track changes in attributes.
+#     # It will have to handle the case where the parameters given are for all strings in an array, or per string,
+#     # using Makie's `broadcast_foreach` function.
+
+#     # First, we need to convert the strings to CachedTeX.
+#     # This is done by using the `CachedTeX` constructor, which will render the LaTeX and store it in a CachedTeX object.
+#     # This is then stored in an array, which is then returned.
+
+
+# end
+
 function Makie.boundingbox(x::T) where T <: TeXImg
     Makie.boundingbox(
         x[1][] isa CachedTeX ? [x[1][]] : x[1][],

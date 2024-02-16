@@ -63,31 +63,35 @@ function __init__()
         Defaulting to the bundled `tectonic` renderer for now.
         """
         CURRENT_TEX_ENGINE[] = `tectonic`
-    end
-
-    t1 = try_tex_engine(CURRENT_TEX_ENGINE[])
-    if isnothing(t1)
-
-        @warn("""
-            The specified TeX engine $(CURRENT_TEX_ENGINE[]) is not available.
-            Trying pdflatex:
-            """
-        )
-
-        CURRENT_TEX_ENGINE[] = `pdflatex`
     else
-        return
+        t1 = try_tex_engine(CURRENT_TEX_ENGINE[]) # by default `lualatex`
+
+        if !isnothing(t1)
+
+            @warn("""
+                The specified TeX engine $(CURRENT_TEX_ENGINE[]) is not available.
+                Trying pdflatex:
+                """
+            )
+    
+            CURRENT_TEX_ENGINE[] = `pdflatex`
+        else
+            return
+        end
+    
+        t2 = try_tex_engine(CURRENT_TEX_ENGINE[])
+        if !isnothing(t2)
+    
+            @warn "Could not find a TeX engine; defaulting to bundled `tectonic`"
+            CURRENT_TEX_ENGINE[] = `tectonic`
+        else
+            return
+        end
+    
     end
 
-    t2 = try_tex_engine(CURRENT_TEX_ENGINE[])
-    if isnothing(t2)
-
-        @warn "Could not find a TeX engine; defaulting to bundled `tectonic`"
-        CURRENT_TEX_ENGINE[] = `tectonic`
-    else
-        return
-    end
-
+    
+    
     # TODO: Once the correct tex engine is found, load the rendering extensions
     # (currently CairoMakie, but we may do WGLMakie in the future since it can display SVG)
     

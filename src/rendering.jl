@@ -17,7 +17,7 @@ end
 function compile_latex(
         document::AbstractString;
         tex_engine = CURRENT_TEX_ENGINE[],
-        options = `-file-line-error -halt-on-error`
+        options = `-file-line-error`
     )
 
     use_tex_engine=tex_engine
@@ -46,7 +46,7 @@ function compile_latex(
                     	run(pipeline(ignorestatus(`$bin temp.tex`), stdout=out, stderr=err))
                     end
                 else # latexmk
-                    latex_cmd = `latexmk $options --shell-escape -$use_tex_engine -cd -interaction=nonstopmode temp.tex`
+                    latex_cmd = `latexmk $options --shell-escape -cd -$use_tex_engine -interaction=nonstopmode temp.tex`
                     run(pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err))
                 end
                 suc = success(latex)
@@ -80,7 +80,7 @@ function compile_latex(
                     redirect_stdout(devnull) do
                         Ghostscript_jll.gs() do gs_exe
                             mtperl() do perl_exe
-                                run(`$perl_exe $pdfcrop --margin $crop_margins $() --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                                run(`$perl_exe $pdfcrop --margin $crop_margins --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
                                 return read("temp_cropped.pdf", String)
                             end
                         end
