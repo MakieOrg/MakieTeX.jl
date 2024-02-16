@@ -20,7 +20,7 @@ function render_texample(url)
 
     fig = Figure()
 
-    lt = Label(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String))))
+    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String), false)))
 
     @test true
 
@@ -28,7 +28,7 @@ function render_texample(url)
 
     filename = splitdir(splitext(url)[1])[2]
 
-    save_test(joinpath(texample, filename), fig)
+    save_test(joinpath("texample", filename), fig)
 
     @test true
 
@@ -38,7 +38,7 @@ end
 @testset "MakieTeX.jl" begin
 
     can_access_texample = try
-        Downloads.download("https://texample.net/media/tikz/examples/TEX/rotated_triangle.tex")
+        Downloads.download("https://texample.net/media/tikz/examples/TEX/rotated-triangle.tex")
         true
     catch e
         false
@@ -72,7 +72,8 @@ end
 
             fig = Figure()
 
-            @test_warn r"The PDF has more than 1 page!  Choosing the first page." Label(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            @test_warn r"There were 7 pages in the document!  Selecting first page." LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
+            # @test_nowarn LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download("https://texample.net/media/tikz/examples/TEX/mandala.tex"), String))))
 
             resize_to_layout!(fig)
 
@@ -102,7 +103,7 @@ end
 
     #     mkpath(joinpath(example_path, "aligns"))
 
-    #     f = Figure(resolution = (200, 200))
+    #     f = Figure(size = (200, 200))
     #     lt = Label(f[1, 1], LaTeXString("Hello from Makie\\TeX{}!"))
     #     teximg = lt.blockscene.plots[1]
 
@@ -119,8 +120,8 @@ end
     @testset "Layouting" begin
 
         @testset "Logo" begin
-            fig = Figure(figure_padding = 1, resolution = (1, 1))
-            @test_nowarn Label(fig[1, 1], LaTeXString("Makie\\TeX.jl"))
+            fig = Figure(figure_padding = 1, size = (1, 1))
+            @test_nowarn LTeX(fig[1, 1], LaTeXString("Makie\\TeX.jl"))
             @test_nowarn resize_to_layout!(fig)
 
             save_test("logo", fig)
@@ -132,7 +133,7 @@ end
 
     @testset "Corrupting Axis" begin
 
-        fig = Figure(fontsize = 12, resolution = (300, 300))
+        fig = Figure(fontsize = 12, size = (300, 300))
         # Create a GridLayout for the axis and labels
         gl = fig[1, 1] = GridLayout()
         # Create the Axis within this layout, leave space for the title and labels
@@ -155,7 +156,7 @@ end
     end
 
     # @testset "Integrating with Axis" begin
-    #     fig = Figure(fontsize = 12, resolution = (300, 300))
+    #     fig = Figure(fontsize = 12, size = (300, 300))
     #     ax = Axis(
     #         fig[1,1];
     #         xlabel = LaTeXString("time (\$t\$) in arbitrary units"),
@@ -192,7 +193,7 @@ end
         """)
 
         fig = Figure()
-        @test_nowarn lab = Label(fig[1, 1], td)
+        @test_nowarn lab = LTeX(fig[1, 1], td)
 
         @test_nowarn save_test("link", fig)
     end
@@ -207,7 +208,7 @@ end
     #     @testset "Theming" begin
     #         @test_nowarn begin
     #             fig = with_theme(theme_dark()) do
-    #                 fig = Figure(fontsize = 12, resolution = (300, 300))
+    #                 fig = Figure(fontsize = 12, size = (300, 300))
     #                 ax = Axis(
     #                     fig[1,1];
     #                     xlabel = LaTeXString("time (\$t\$) in arbitrary units"),

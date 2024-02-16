@@ -17,7 +17,7 @@ end
 function compile_latex(
         document::AbstractString;
         tex_engine = CURRENT_TEX_ENGINE[],
-        options = `-file-line-error -halt-on-error`
+        options = `-file-line-error`
     )
 
     use_tex_engine=tex_engine
@@ -46,7 +46,7 @@ function compile_latex(
                     	run(pipeline(ignorestatus(`$bin temp.tex`), stdout=out, stderr=err))
                     end
                 else # latexmk
-                    latex_cmd = `latexmk $options --shell-escape -$use_tex_engine -cd -interaction=nonstopmode temp.tex`
+                    latex_cmd = `latexmk $options --shell-escape -cd -$use_tex_engine -interaction=nonstopmode temp.tex`
                     run(pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err))
                 end
                 suc = success(latex)
@@ -80,7 +80,7 @@ function compile_latex(
                     redirect_stdout(devnull) do
                         Ghostscript_jll.gs() do gs_exe
                             mtperl() do perl_exe
-                                run(`$perl_exe $pdfcrop --margin $crop_margins $() --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                                run(`$perl_exe $pdfcrop --margin $crop_margins --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
                                 return read("temp_cropped.pdf", String)
                             end
                         end
@@ -104,6 +104,17 @@ latex2pdf(args...; kwargs...) = compile_latex(args...; kwargs...)
 
 # Pure poppler pipeline - directly from PDF to Cairo surface.
 
+"""
+    load_pdf(pdf::String)::Ptr{Cvoid}
+    load_pdf(pdf::Vector{UInt8})::Ptr{Cvoid}
+
+Loads a PDF file into a Poppler document handle.
+
+Input may be either a String or a `Vector{UInt8}`, each representing the PDF file in memory.  
+
+!!! warn
+    The String input does **NOT** represent a filename!
+"""
 load_pdf(pdf::String) = load_pdf(Vector{UInt8}(pdf))
 
 function load_pdf(pdf::Vector{UInt8})::Ptr{Cvoid} # Poppler document handle
@@ -144,6 +155,13 @@ end
 
 # Rendering functions for the resulting Cairo surfaces and images
 
+"""
+    page2img(tex::CachedTeX, page::Int; scale = 1, render_density = 1)
+
+Renders the `page` of the given `CachedTeX` object to an image, with the given `scale` and `render_density`.
+
+This function reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
+"""
 function page2img(tex::CachedTeX, page::Int; scale = 1, render_density = 1)
     document = tex.ptr
     page = ccall(
@@ -168,7 +186,7 @@ function page2img(tex::CachedTeX, page::Int; scale = 1, render_density = 1)
     Cairo.set_antialias(ctx, Cairo.ANTIALIAS_BEST)
 
     Cairo.save(ctx)
-    # Render the page to the surface
+    # Render the page to the surface using Poppler
     ccall(
         (:poppler_page_render, Poppler_jll.libpoppler_glib),
         Cvoid,
@@ -255,7 +273,11 @@ end
 
 
 # Utility functions
+"""
+    pdf_num_pages(filename::String)::Int
 
+Returns the number of pages in a PDF file located at `filename`, using the Poppler executable.
+"""
 function pdf_num_pages(filename::String)
     metadata = Poppler_jll.pdfinfo() do exe
         read(`$exe $filename`, String)
@@ -270,6 +292,11 @@ function pdf_num_pages(filename::String)
     return parse(Int, split(pageinfo, ' ')[end])
 end
 
+"""
+    pdf_num_pages(document::Ptr{Cvoid})::Int
+
+`document` must be a Poppler document handle.  Returns the number of pages in the document.
+"""
 function pdf_num_pages(document::Ptr{Cvoid})
     ccall(
         (:poppler_document_get_n_pages, Poppler_jll.libpoppler_glib),
@@ -305,7 +332,18 @@ function pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)
     return (width[], height[])
 end
 
-"Split an in memory PDF and return a vector of its pages"
+"""
+    split_pdf(pdf::Union{Vector{UInt8}, String})::Vector{UInt8}
+
+Splits a PDF into its constituent pages, returning a Vector of UInt8 arrays, each representing a page.
+
+The input must be a PDF file, either as a String or as a Vector{UInt8} of the PDF's bytes.
+
+!!! warn
+    The input String does **NOT** represent a filename!
+
+This uses Ghostscript to actually split the PDF and return PDF files.  If you just want to render the PDF, use [`load_pdf`](@ref) and [`page2img`](@ref) instead.
+"""
 function split_pdf(pdf::Union{Vector{UInt8}, String})
     mktempdir() do dir
         cd(dir) do

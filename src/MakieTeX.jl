@@ -26,7 +26,7 @@ const TEXT_RENDER_DENSITY = Ref(5)
 include("types.jl")
 include("rendering.jl")
 include("recipe.jl")
-include("text_override.jl")
+include("text_utils.jl")
 include("layoutable.jl")
 
 export TeXDocument, CachedTeX
@@ -51,6 +51,8 @@ end
 
 "Checks whether the default latex engine is correct"
 function __init__()
+
+    # First, determine latex engine support
     latexmk = Sys.which("latexmk")
     if isnothing(latexmk)
         @warn """
@@ -61,25 +63,39 @@ function __init__()
         Defaulting to the bundled `tectonic` renderer for now.
         """
         CURRENT_TEX_ENGINE[] = `tectonic`
-        return
+    else
+        t1 = try_tex_engine(CURRENT_TEX_ENGINE[]) # by default `lualatex`
+
+        if !isnothing(t1)
+
+            @warn("""
+                The specified TeX engine $(CURRENT_TEX_ENGINE[]) is not available.
+                Trying pdflatex:
+                """
+            )
+    
+            CURRENT_TEX_ENGINE[] = `pdflatex`
+        else
+            return
+        end
+    
+        t2 = try_tex_engine(CURRENT_TEX_ENGINE[])
+        if !isnothing(t2)
+    
+            @warn "Could not find a TeX engine; defaulting to bundled `tectonic`"
+            CURRENT_TEX_ENGINE[] = `tectonic`
+        else
+            return
+        end
+    
     end
 
-    t1 = try_tex_engine(CURRENT_TEX_ENGINE[])
-    isnothing(t1) && return
+    
+    
+    # TODO: Once the correct tex engine is found, load the rendering extensions
+    # (currently CairoMakie, but we may do WGLMakie in the future since it can display SVG)
+    
 
-    @warn("""
-        The specified TeX engine $(CURRENT_TEX_ENGINE[]) is not available.
-        Trying pdflatex:
-        """
-    )
-
-    CURRENT_TEX_ENGINE[] = `pdflatex`
-
-    t2 = try_tex_engine(CURRENT_TEX_ENGINE[])
-    isnothing(t1) && return
-
-    @warn "Could not find a TeX engine; defaulting to bundled `tectonic`"
-    CURRENT_TEX_ENGINE[] = `tectonic`
     return
 end
 
