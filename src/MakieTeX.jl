@@ -1,9 +1,9 @@
 module MakieTeX
-using Makie, CairoMakie
+using Makie
 using Cairo
 using Colors, LaTeXStrings
 
-# patch for Makie.jl block macro error
+# Patch for Makie.jl `@Block` macro error
 using Makie: CURRENT_DEFAULT_THEME
 
 using Makie.GeometryBasics: origin, widths
@@ -11,8 +11,9 @@ using Makie.Observables
 using DocStringExtensions
 
 using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll, tectonic_jll
+using Rsvg, Cairo
 
-# define some constants for configuration
+# Define some constants for configuration
 "Render with Poppler pipeline (true) or Cairo pipeline (false)"
 const RENDER_EXTRASAFE = Ref(false)
 "The current `TeX` engine which MakieTeX uses."
@@ -24,12 +25,17 @@ const TEXT_RENDER_DENSITY = Ref(5)
 
 
 include("types.jl")
-include("rendering.jl")
 include("recipe.jl")
 include("text_utils.jl")
 include("layoutable.jl")
 
+include("rendering/tex.jl")
+include("rendering/pdf.jl")
+include("rendering/svg.jl")
+
 export TeXDocument, CachedTeX
+export PDFDocument, CachedPDF
+export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
 export LTeX
@@ -89,12 +95,6 @@ function __init__()
         end
     
     end
-
-    
-    
-    # TODO: Once the correct tex engine is found, load the rendering extensions
-    # (currently CairoMakie, but we may do WGLMakie in the future since it can display SVG)
-    
 
     return
 end

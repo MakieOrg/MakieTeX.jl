@@ -1,5 +1,43 @@
+abstract type AbstractDocument end
+abstract type AbstractCachedDocument <: AbstractDocument end
 
-struct TeXDocument
+function rasterize end
+function draw_to_cairo_surface end
+
+"""
+    SVGDocument(svg::AbstractString)
+
+A document type which stores an SVG string.
+
+Is converted to [`CachedSVG`](@ref) for use in plotting.
+"""
+struct SVGDocument <: AbstractDocument
+    svg::String
+end
+
+"""
+    PDFDocument(pdf::AbstractString)
+
+A document type which holds a raw PDF as a string.
+
+Is converted to [`CachedPDF`](@ref) for use in plotting.
+"""
+struct PDFDocument <: AbstractDocument
+    pdf::String
+end
+
+"""
+    EPSDocument(eps::AbstractString)
+
+A document type which holds an EPS string.
+
+Is converted to [`CachedPDF`](@ref) for use in plotting.
+"""
+struct EPSDocument <: AbstractDocument
+    eps::String
+end
+
+struct TeXDocument <: AbstractDocument
     contents::String
 end
 
@@ -72,7 +110,7 @@ function Base.convert(::Type{String}, doc::TeXDocument)
     return Base.convert(String, doc.contents)
 end
 
-mutable struct CachedTeX
+mutable struct CachedTeX <: AbstractCachedDocument
     "The original `TeXDocument` which is compiled."
     doc::Union{TeXDocument, Nothing}
     "The resulting compiled PDF"
@@ -83,6 +121,51 @@ mutable struct CachedTeX
     surf::CairoSurface
     "The dimensions of the PDF page, for ease of access."
     dims::Tuple{Float64, Float64}
+end
+
+"""
+    CachedPDF(pdf::PDFDocument)
+
+
+
+## Usage
+```julia
+CachedPDF(read("path/to/pdf.pdf"), [page = 0])
+CachedPDF(read("path/to/pdf.pdf", String), [page = 0])
+CachedPDF(PDFDocument(...), [page = 0])
+```
+"""
+struct CachedPDF <: AbstractCachedDocument
+    "A reference to the `PDFDocument` which is cached here."
+    pdf::PDFDocument
+    "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
+    poppler::Ref{Ptr{Cvoid}}
+    "The dimensions of the PDF page in points, for ease of access."
+    dims::Tuple{Float64, Float64}
+    "A Cairo surface to which Poppler has drawn the PDF.  Permanent and cached."
+    surf::CairoSurface
+    "A cache for a (rendered_image, scale_factor) pair.  This is used to avoid re-rendering the PDF."
+    image_cache::Ref{Tuple{Matrix{ARGB32}, Float64}}
+end
+
+function CachedPDF(pdf::PDFDocument, poppler_handle::Ptr{Cvoid}, dims::Tuple{Float64, Float64}, surf::CairoSurface)
+    return CachedPDF(pdf, Ref(poppler_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
+end
+
+function CachedPDF(pdf::PDFDocument, page::Int = 0)
+    pdf = Vector{UInt8}(pdf.pdf)
+    ptr = load_pdf(pdf)
+    surf = page2recordsurf(ptr, page)
+    dims = pdf_get_page_size(ptr, page)
+
+    return CachedPDF(pdf, Ref(ptr), dims, surf)
+end
+
+struct CachedSVG <: AbstractCachedDocument
+    svg::SVGDocument
+    handle::Ref{Rsvg.RsvgHandle}
+    dims::Tuple{Float64, Float64}
+    surf::CairoSurface
 end
 
 """
@@ -204,11 +287,36 @@ end
 
 # Define bounding box methods for CachedTex
 
+"""
+Calculate an approximation of a tight rectangle around a 2D rectangle rotated by `angle` radians.
+This is not perfect but works well enough. Check an A vs X to see the difference.
+"""
+function rotatedrect(rect::Rect{2, T}, angle)::Rect{2, T} where T
+    ox, oy = rect.origin
+    wx, wy = rect.widths
+    points = Makie.Mat{2, 4, T}(
+        ox, oy,
+        ox, oy+wy,
+        ox+wx, oy,
+        ox+wx, oy+wy
+    )
+    mrot = Makie.Mat{2, 2, T}(
+        cos(angle), -sin(angle),
+        sin(angle), cos(angle)
+    )
+    rotated = mrot * points
+
+    rmins = minimum(rotated; dims=2)
+    rmaxs = maximum(rotated; dims=2)
+
+    return Rect2(rmins..., (rmaxs .- rmins)...)
+end
+
 function Makie.boundingbox(cachedtex::CachedTeX, position, rotation, scale,
     align)
     origin = offset_from_align(align, cachedtex.dims)
     box = Rect2f(Point2f(origin), Vec2f(cachedtex.dims) * scale)
-    rect = Makie.rotatedrect(box, rotation)
+    rect = rotatedrect(box, rotation)
     new_origin = Point3f(rect.origin..., 0)
     new_widths = Vec3f(rect.widths..., 0)
     return Rect3f(new_origin + position, new_widths)
