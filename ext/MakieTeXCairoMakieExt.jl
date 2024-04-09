@@ -6,7 +6,7 @@ using MakieTeX.Makie.MakieCore
 using MakieTeX.Poppler_jll
 using MakieTeX.Cairo
 using MakieTeX.Colors
-using MakieTeX.Base64
+using MakieTeX.Rsvg
 
 # CairoMakie direct drawing method
 function draw_tex(scene, screen::CairoMakie.Screen, cachedtex::MakieTeX.CachedTeX, position::VecTypes, scale::VecTypes, rotation::Real, align::Tuple{Symbol, Symbol})
@@ -122,28 +122,38 @@ function CairoMakie.draw_plot(scene::Makie.Scene, screen::CairoMakie.Screen, img
 
 end
 
+function cairo_pattern_get_rgba(pattern::CairoPattern)
+    r, g, b, a = (Ref(0.0) for _ in 1:4)
+    @ccall Cairo.Cairo_jll.libcairo.cairo_pattern_get_rgba(pattern.ptr::Ptr{Cvoid}, r::Ptr{Cdouble}, g::Ptr{Cdouble}, b::Ptr{Cdouble}, a::Ptr{Cdouble})::Cint
+    return RGBA{Float64}(r[], g[], b[], a[])
+end
+
 function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
     strokecolor #= unused =#, strokewidth #= unused =#,
     marker_offset, rotation) 
-
-    # convert marker to Cairo compatible image data
-    marker_surf = marker.surf
-
-    w, h = marker.dims
-
+    Cairo.save(ctx)
+    # Obtain the initial color from the pattern.  
+    # This allows us to support marker coloring by CSS themes.
     pattern = Cairo.get_source(ctx)
-    r, g, b, a = (Ref(0.0) for _ in 1:4)
-    cairo_status_for_get_rgba = @ccall Cairo.Cairo_jll.libcairo.cairo_pattern_get_rgba(pattern.ptr::Ptr{Cvoid}, r::Ptr{Cdouble}, g::Ptr{Cdouble}, b::Ptr{Cdouble}, a::Ptr{Cdouble})::Cint
-    color_hex = Colors.hex(RGBAf(r[], g[], b[], a[]))
-    style_string = "color:#$color_hex; stroke:#$(Colors.hex(strokecolor)); stroke-width:$strokewidth;"
-    #rsvg_handle_success = @ccall Rsvg.Librsvg_jll.librsvg.rsvg_handle_set_stylesheet(handle.ptr::Ptr{Cvoid}, style_string::Cstring, length(style_string)::Csize_t, C_NULL::Ptr{Cvoid})::Bool
+    color_hex = Colors.hex(cairo_pattern_get_rgba(pattern))
+    # Generate a CSS style string for the SVG.
+    style_string = """fill: #$color_hex; stroke: #$(Colors.hex(strokecolor)); stroke-width: $strokewidth;"""
+    @show style_string
+    # Set the stylesheet for the Rsvg handle
+    # Here, we generate the Rsvg handle from the original SVG document, and don't use the cached version.
+    # This is because I'm not sure whether the repeated setting of the stylesheeet will affect the cached version.
+    # If it does not, then we can simply replace this line with `marker.handle[]`,
+    # and go about our merry way.
+    handle = MakieTeX.svg2rsvg(marker.doc.doc)
+    rsvg_handle_success = @ccall Rsvg.Librsvg_jll.librsvg.rsvg_handle_set_stylesheet(handle.ptr::Ptr{Cvoid}, style_string::Cstring, length(style_string)::Csize_t, C_NULL::Ptr{Cvoid})::Bool
+    rsvg_handle_success || @warn("MakieTeX: Failed to set stylesheet for Rsvg handle.")
+    # Begin the drawing process
     Cairo.translate(ctx,
-                    scale[1]/2 + pos[1] + marker_offset[1],
-                    scale[2]/2 + pos[2] + marker_offset[2])
+                    pos[1] #= the initial marker position =# + marker_offset[1] #= the marker offset =# - scale[1]#= center of the marker =#,
+                    pos[2] #= the initial marker position =# + marker_offset[2] #= the marker offset =# - scale[2]#= center of the marker =#,)
     Cairo.rotate(ctx, CairoMakie.to_2d_rotation(rotation))
-    Cairo.scale(ctx, scale[1] / w, scale[2] / h)
-    Cairo.set_source_surface(ctx, marker_surf, -w/2, -h/2)
-    Cairo.paint(ctx)
+    MakieTeX.handle_render_document(ctx, handle, MakieTeX._RsvgRectangle(scale[2], scale[1], scale[1], scale[2]))
+    Cairo.restore(ctx)
 end
 
 

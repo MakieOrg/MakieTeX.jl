@@ -15,7 +15,16 @@ function CachedPDF(pdf::PDFDocument, page::Int = 0)
     return CachedPDF(pdf, Ref(ptr), dims, surf)
 end
 
+function rasterize(pdf::CachedPDF, scale::Real = 1)
+    if last(pdf.image_cache[]) == scale
+        return first(pdf.image_cache[])
+    else
+        img = pdf2img(pdf, page; scale)
+        pdf.image_cache[] = (img, scale)
+        return img
+    end
 
+end
 # Pure poppler pipeline - directly from PDF to Cairo surface.
 
 """

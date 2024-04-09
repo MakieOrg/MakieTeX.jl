@@ -9,7 +9,7 @@ Finally, it implements the MakieTeX cached-document API.
 =#
 
 function CachedSVG(svg::SVGDocument)
-    handle = svg2rsvg(svg.svg)
+    handle = svg2rsvg(svg.doc)
     surf, ctx = rsvg2recordsurf(handle)
     dh = Rsvg.handle_get_dimensions(handle)
     dims = Float64.((dh.width, dh.height))
@@ -26,6 +26,30 @@ function rasterize(ct::CachedSVG, scale::Real = 1)
     end
 end
 
+# First, fill in missing parts of the `Rsvg.jl` API which allow us to use new and approve Rsvg primitives.
+
+"""
+RsvgRectangle is a simple struct of:
+    height::Float64
+    width::Float64
+    x::Float64
+    y::Float64
+"""
+struct _RsvgRectangle
+    height::Float64
+    width::Float64
+    x::Float64 # origin
+    y::Float64 # origin
+end
+
+"""
+handle_render_document(cr::CairoContext, handle::RsvgHandle, viewport::_RsvgRectangle)
+"""
+function handle_render_document(cr::CairoContext, handle::RsvgHandle, viewport::_RsvgRectangle)
+	ccall((:rsvg_handle_render_document, Rsvg.Librsvg_jll.librsvg), Bool,
+        (Rsvg.RsvgHandle, Ptr{Nothing}, Ref{_RsvgRectangle}, Ptr{Nothing}), handle, cr.ptr, Ref(viewport), C_NULL)
+end
+
 function svg2rsvg(svg::String, dpi = 72.0)
     handle = Rsvg.handle_new_from_data(svg)
     Rsvg.handle_set_dpi(handle, Float64(dpi))
@@ -35,7 +59,8 @@ end
 function rsvg2recordsurf(handle::Rsvg.RsvgHandle)
     surf = Cairo.CairoRecordingSurface()
     ctx  = Cairo.CairoContext(surf)
-    Rsvg.handle_render_cairo(ctx, handle)
+    d = Rsvg.handle_get_dimensions(handle)
+    handle_render_document(ctx, handle, _RsvgRectangle(d.height, d.width, 0, 0))
     return (surf, ctx)
 end
 

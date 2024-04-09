@@ -1,8 +1,50 @@
+"""
+    abstract type AbstractDocument
+
+"""
 abstract type AbstractDocument end
+
+"""
+    abstract type AbstractCachedDocument
+
+"""
 abstract type AbstractCachedDocument <: AbstractDocument end
 
+"""
+    rasterize(doc::AbstractCachedDocument, scale::Real = 1)
+
+Render a `CachedDocument` to an image at a given scale.  This is a convenience function which
+calls the appropriate rendering function for the document type.  Returns an image as a `Matrix{ARGB32}`.
+"""
 function rasterize end
+"""
+    draw_to_cairo_surface(doc::AbstractCachedDocument, surf::CairoSurface)
+
+Render a `CachedDocument` to a Cairo surface.  This is a convenience function which
+calls the appropriate rendering function for the document type.
+"""
 function draw_to_cairo_surface end
+
+"""
+    Cached(doc::AbstractDocument)::AbstractCachedDocument
+
+Generic interface to cache a document and return it.
+"""
+function Cached end
+
+# Define Makie conversion functions which keep these types in the pipeline.
+# The backend-specific functions and rasterizers are kept in the backends' extensions.
+Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker") = x
+Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker", ::Makie.key"scatter") = x
+Makie.to_spritemarker(x::AbstractCachedDocument) = Cached(x)
+
+Makie.convert_attribute(x::AbstractDocument, ::Makie.key"marker") = Cached(x)
+Makie.convert_attribute(x::AbstractDocument, ::Makie.key"marker", ::Makie.key"scatter") = Cached(x)
+Makie.to_spritemarker(x::AbstractDocument) = Cached(x) # this should never be called
+
+#=
+Now, we define the structs which hold the documents and their cached versions.
+=#
 
 """
     SVGDocument(svg::AbstractString)
@@ -12,8 +54,9 @@ A document type which stores an SVG string.
 Is converted to [`CachedSVG`](@ref) for use in plotting.
 """
 struct SVGDocument <: AbstractDocument
-    svg::String
+    doc::String
 end
+Cached(x::SVGDocument) = CachedSVG(x)
 
 """
     PDFDocument(pdf::AbstractString)
@@ -23,8 +66,11 @@ A document type which holds a raw PDF as a string.
 Is converted to [`CachedPDF`](@ref) for use in plotting.
 """
 struct PDFDocument <: AbstractDocument
-    pdf::String
+    doc::String
+    page::Union{Nothing, Int}
 end
+PDFDocument(doc::String) = PDFDocument(doc, 0)
+Cached(x::PDFDocument) = CachedPDF(x)
 
 """
     EPSDocument(eps::AbstractString)
@@ -34,12 +80,15 @@ A document type which holds an EPS string.
 Is converted to [`CachedPDF`](@ref) for use in plotting.
 """
 struct EPSDocument <: AbstractDocument
-    eps::String
+    doc::String
 end
+Cached(x::EPSDocument) = CachedPDF(x)
+
 
 struct TeXDocument <: AbstractDocument
     contents::String
 end
+Cached(x::TeXDocument) = CachedTeX(x)
 
 """
     TeXDocument(contents::AbstractString, add_defaults::Bool; requires, preamble, class, classoptions)
@@ -137,9 +186,9 @@ CachedPDF(PDFDocument(...), [page = 0])
 """
 struct CachedPDF <: AbstractCachedDocument
     "A reference to the `PDFDocument` which is cached here."
-    pdf::PDFDocument
+    doc::PDFDocument
     "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
-    poppler::Ref{Ptr{Cvoid}}
+    ptr::Ref{Ptr{Cvoid}}
     "The dimensions of the PDF page in points, for ease of access."
     dims::Tuple{Float64, Float64}
     "A Cairo surface to which Poppler has drawn the PDF.  Permanent and cached."
@@ -156,7 +205,7 @@ end
 
 struct CachedSVG <: AbstractCachedDocument
     "The original `SVGDocument` which is cached here, i.e., the text of that SVG."
-    svg::SVGDocument
+    doc::SVGDocument
     "A pointer to the Rsvg handle of the SVG.  May be randomly GC'ed by Rsvg, so is stored as a `Ref` in case it has to be refreshed."
     handle::Ref{Rsvg.RsvgHandle}
     "The dimensions of the SVG in points, for ease of access."
@@ -167,9 +216,7 @@ struct CachedSVG <: AbstractCachedDocument
     image_cache::Ref{Tuple{Matrix{ARGB32}, Float64}}
 end
 
-Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker") = x
-Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker", ::Makie.key"scatter") = x
-Makie.to_spritemarker(x::AbstractCachedDocument) = x
+
 
 function CachedSVG(svg::SVGDocument, rsvg_handle::Rsvg.RsvgHandle, dims::Tuple{Float64, Float64}, surf::CairoSurface)
     return CachedSVG(svg, Ref(rsvg_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
