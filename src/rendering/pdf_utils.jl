@@ -111,23 +111,23 @@ Get the bounding box of a PDF file using Ghostscript.
 Returns a tuple representing the (xmin, ymin, xmax, ymax) of the bounding box.
 """
 function get_pdf_bbox(path::String)
+    !isfile(path) && error("File $(path) does not exist!")
     out = Pipe()
     err = Pipe()
-    Ghostscript_jll.gs() do gs_exe
-        run(pipeline(`$gs_exe -q -dBATCH -dNOPAUSE -sDEVICE=bbox $path`, stdout=out, stderr=err))
-    end
+    succ = success(pipeline(`$(Ghostscript_jll.gs()) -q -dBATCH -dNOPAUSE -sDEVICE=bbox $path`, stdout=out, stderr=err))
+
     close(out.in)
     close(err.in)
     result = read(err, String)
-    # if !ret
-    #     println("Ghostscript failed to get the bounding box of $path!")
-    #     println("Files in temp directory are:\n" * join(readdir(), ','))
-    #     printstyled("Stdout\n", bold=true, color = :blue)
-    #     println(result)
-    #     printstyled("Stderr\n", bold=true, color = :red)
-    #     println(read(err, String))
-    #     error()
-    # end
+    if !succ
+        println("Ghostscript failed to get the bounding box of $(path)!")
+        println("Files in temp directory are:\n" * join(readdir(), ','))
+        printstyled("Stdout\n", bold=true, color = :blue)
+        println(result)
+        printstyled("Stderr\n", bold=true, color = :red)
+        println(read(err, String))
+        error()
+    end
     bbox_match = match(r"%%BoundingBox: ([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+)", result)
     return parse.(Int, (
         bbox_match.captures[1],

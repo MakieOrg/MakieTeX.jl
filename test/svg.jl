@@ -11,20 +11,39 @@ using Rsvg, Cairo
     @test_nowarn cbvsvg = CachedSVG(bvsvg)
     @test_nowarn cwsvg = CachedSVG(wsvg)
 
-    f, a, p = scatter(Point2f(1); marker = csvg, markersize = 60, axis = (; limits = (0,2,0,2)))
+    @test_nowarn f, a, p = scatter(Point2f(1); marker = csvg, markersize = 60, axis = (; limits = (0,2,0,2)))
     p.color = :red
     p.strokecolor = :blue
     p.strokewidth = 2
-    save(joinpath(@__DIR__, "test_images", "gopher.svg"), f)
-    save(joinpath(@__DIR__, "test_images", "gopher.png"), f)
-    save(joinpath(@__DIR__, "test_images", "gopher.pdf"), f)
+    @test_nowarn save_test("gopher", f; backend = CairoMakie)
 
     ys = rand(10)
-    f, a, p1 = scatter(ys; marker = wsvg, markersize = 30)
-    p2 = scatter!(ys; marker = Circle, markersize = 30)
-    translate!(p2, 0,0,-1)
-    save(joinpath(@__DIR__, "test_images", "wikipedia.svg"), f)
-    save(joinpath(@__DIR__, "test_images", "wikipedia.png"), f)
-    save(joinpath(@__DIR__, "test_images", "wikipedia.pdf"), f)
-    
+    @test_nowarn f, a, p1 = scatter(ys; marker = wsvg, markersize = 30)
+    @test_nowarn p2 = scatter!(ys; marker = Circle, markersize = 30)
+    @test_nowarn translate!(p2, 0,0,-1)
+    @test_nowarn save_test("wikipedia", f; backend = CairoMakie)
+
+    @testset "SVG theming via CSS" begin
+        # Test that the color is correct
+        svg = SVGDocument(raw"""
+        <svg width="300" height="130" xmlns="http://www.w3.org/2000/svg">
+         <rect width="300" height="130" x="0" y="0" rx="20" ry="20"/>
+        </svg>
+        """)
+        f, a, p = scatter(Point2f(1); marker = svg, markersize = 600, axis = (; limits = (0,2,0,2)))
+        img = Makie.colorbuffer(f; backend = CairoMakie)
+        if Colors.red(img[end÷ 2, end÷ 2]) > 0.5
+            @test false
+        else
+            @test true
+        end
+        p.strokewidth = 600
+        p.strokecolor = :red
+        img = Makie.colorbuffer(f; backend = CairoMakie)
+        if Colors.blue(img[end÷ 2, end÷ 2]) > 0.5
+            @test false
+        else
+            @test true
+        end
+    end
 end
