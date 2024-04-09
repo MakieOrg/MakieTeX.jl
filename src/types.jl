@@ -152,21 +152,29 @@ function CachedPDF(pdf::PDFDocument, poppler_handle::Ptr{Cvoid}, dims::Tuple{Flo
     return CachedPDF(pdf, Ref(poppler_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 end
 
-function CachedPDF(pdf::PDFDocument, page::Int = 0)
-    pdf = Vector{UInt8}(pdf.pdf)
-    ptr = load_pdf(pdf)
-    surf = page2recordsurf(ptr, page)
-    dims = pdf_get_page_size(ptr, page)
 
-    return CachedPDF(pdf, Ref(ptr), dims, surf)
-end
 
 struct CachedSVG <: AbstractCachedDocument
+    "The original `SVGDocument` which is cached here, i.e., the text of that SVG."
     svg::SVGDocument
+    "A pointer to the Rsvg handle of the SVG.  May be randomly GC'ed by Rsvg, so is stored as a `Ref` in case it has to be refreshed."
     handle::Ref{Rsvg.RsvgHandle}
+    "The dimensions of the SVG in points, for ease of access."
     dims::Tuple{Float64, Float64}
+    "A Cairo surface to which Rsvg has drawn the SVG.  Permanent and cached."
     surf::CairoSurface
+    "A cache for a (rendered_image, scale_factor) pair.  This is used to avoid re-rendering the PDF."
+    image_cache::Ref{Tuple{Matrix{ARGB32}, Float64}}
 end
+
+Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker") = x
+Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker", ::Makie.key"scatter") = x
+Makie.to_spritemarker(x::AbstractCachedDocument) = x
+
+function CachedSVG(svg::SVGDocument, rsvg_handle::Rsvg.RsvgHandle, dims::Tuple{Float64, Float64}, surf::CairoSurface)
+    return CachedSVG(svg, Ref(rsvg_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
+end
+
 
 """
     CachedTeX(doc::TeXDocument; kwargs...)

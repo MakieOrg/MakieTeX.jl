@@ -12,8 +12,18 @@ function CachedSVG(svg::SVGDocument)
     handle = svg2rsvg(svg.svg)
     surf, ctx = rsvg2recordsurf(handle)
     dh = Rsvg.handle_get_dimensions(handle)
-    dims = round.(Int, (dh.width, dh.height))
-    return CachedSVG(svg, Ref(handle), dims, surf)
+    dims = Float64.((dh.width, dh.height))
+    return CachedSVG(svg, handle, dims, surf)
+end
+
+function rasterize(ct::CachedSVG, scale::Real = 1)
+    if last(ct.image_cache[]) == scale
+        return first(ct.image_cache[])
+    else
+        img = rsvg2img(ct.handle[], scale)
+        ct.image_cache[] = (img, scale)
+        return img
+    end
 end
 
 function svg2rsvg(svg::String, dpi = 72.0)
