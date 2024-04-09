@@ -137,7 +137,7 @@ end
 function rsvg_handle_set_stylesheet(handle::RsvgHandle, style_string::String)
     gerror_hhandle = Ref(C_NULL)
     ret = @ccall Rsvg.Librsvg_jll.librsvg.rsvg_handle_set_stylesheet(handle.ptr::Ptr{Cvoid}, style_string::Cstring, length(style_string)::Csize_t, gerror_hhandle::Ptr{Cvoid})::Bool
-    if gerror_handle[] != C_NULL
+    if gerror_hhandle[] != C_NULL
         @warn("MakieTeX: Failed to set stylesheet for Rsvg handle.")
         # there was some error, so handle it
     end

@@ -55,7 +55,7 @@ function Makie.initialize_block!(l::LTeX)
     textbb = Ref(BBox(0, 1, 0, 1))
 
     onany(l.tex, l.scale, l.rotation, l.padding) do tex, scale, rotation, padding
-        textbb[] = Makie.rotatedrect(Makie.Rect2f(0,0,(t[1][][1].dims .* scale)...), rotation)
+        textbb[] = rotatedrect(Makie.Rect2f(0,0,(t[1][][1].dims .* scale)...), rotation)
         autowidth = Makie.width(textbb[]) + padding[1] + padding[2]
         autoheight = Makie.height(textbb[]) + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)

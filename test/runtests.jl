@@ -18,3 +18,4 @@ end
 
 include("tex.jl")
 include("svg.jl")
+include("pdf.jl")
