@@ -2,20 +2,8 @@
 # TeX rendering
 =#
 
-# Since `perl_jll` doesn't build for windows, we check for this, and try to substitute in the system's `perl` executable if possible.
-@static if Sys.iswindows() # !hasproperty(Perl_jll, :perl)
-    if isnothing(Sys.which("perl"))
-        @warn "Perl not found!  MakieTeX will skip the cropping step during compilation!"
-        mtperl(f) = nothing
-    else
-        function mtperl(f)
-                f(`perl`)
-        end
-    end
-else
-    mtperl(f) = Perl_jll.perl(f)
+function render(ct::CachedTeX, scale::Float64 = 1)
 end
-
 
 # The main compilation method - compiles arbitrary LaTeX documents
 """
@@ -77,30 +65,41 @@ function compile_latex(
                 # end
 
                 # Generate the cropping margins
-                crop_margins = join(_PDFCROP_DEFAULT_MARGINS[], ' ')
+                bbox = get_pdf_bbox("temp.pdf")
+                crop_box = (
+                    bbox[1] - _PDFCROP_DEFAULT_MARGINS[][1],
+                    bbox[2] - _PDFCROP_DEFAULT_MARGINS[][2],
+                    bbox[3] + _PDFCROP_DEFAULT_MARGINS[][3],
+                    bbox[4] + _PDFCROP_DEFAULT_MARGINS[][4],
+                )
+                crop_cmd = join(crop_box, " ")
 
-                # Convert engine from Latex to TeX - for example,
-                # Lua*LA*TeX => LuaTeX, ...
-                crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
-                crop_engine == `tectonic` && return read("temp.pdf", String)
 
-                pdfcrop = joinpath(dirname(@__DIR__), "pdfcrop.pl")
-                new_pdf = redirect_stderr(devnull) do
-                    redirect_stdout(devnull) do
-                        Ghostscript_jll.gs() do gs_exe
-                            mtperl() do perl_exe
-                                # run(`$perl_exe $pdfcrop --margin $crop_margins --gscmd $gs_exe ./temp.pdf ./temp_cropped.pdf`)
-                                cp("temp.pdf", "temp_cropped.pdf")
-                                return read("temp_cropped.pdf", String)
+                out = Pipe()
+                err = Pipe()
+                try
+                    redirect_stderr(err) do
+                        redirect_stdout(out) do
+                            Ghostscript_jll.gs() do gs_exe
+                                run(`$gs_exe -o temp_cropped.pdf -sDEVICE=pdfwrite -c "[/CropBox [$crop_cmd]" -c "/PAGES pdfmark" -f temp.pdf`)
                             end
                         end
                     end
+                catch e
+                finally
+                close(out.in)
+                close(err.in)
+                if !isfile("temp_cropped.pdf")
+                    println("`gs` failed to crop the PDF!")
+                    println("Files in temp directory are:\n" * join(readdir(), ','))
+                    printstyled("Stdout\n", bold=true, color = :blue)
+                    println(read(out, String))
+                    printstyled("Stderr\n", bold=true, color = :red)
+                    println(read(err, String))
+                    error()
                 end
-                if isnothing(new_pdf)
-                    return read("temp.pdf", String)
-                else
-                    return new_pdf
-                end
+            end
+                return isfile("temp_cropped.pdf") ? read("temp_cropped.pdf", String) : read("temp.pdf", String)
             end
         end
     end

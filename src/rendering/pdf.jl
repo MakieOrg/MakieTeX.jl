@@ -76,7 +76,7 @@ Renders the `page` of the given `CachedTeX` object to an image, with the given `
 
 This function reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
 """
-function page2img(tex::CachedTeX, page::Int; scale = 1, render_density = 1)
+function page2img(tex::Union{CachedTeX, CachedPDF}, page::Int; scale = 1, render_density = 1)
     document = tex.ptr
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
@@ -182,104 +182,4 @@ function render_surface(ctx::CairoContext, surf)
 
     Cairo.restore(ctx)
     return
-end
-
-
-
-# Utility functions
-"""
-    pdf_num_pages(filename::String)::Int
-
-Returns the number of pages in a PDF file located at `filename`, using the Poppler executable.
-"""
-function pdf_num_pages(filename::String)
-    metadata = Poppler_jll.pdfinfo() do exe
-        read(`$exe $filename`, String)
-    end
-
-    infos = split(metadata, '\n')
-
-    ind = findfirst(x -> contains(x, "Pages"), infos)
-
-    pageinfo = infos[ind]
-
-    return parse(Int, split(pageinfo, ' ')[end])
-end
-
-"""
-    pdf_num_pages(document::Ptr{Cvoid})::Int
-
-`document` must be a Poppler document handle.  Returns the number of pages in the document.
-"""
-function pdf_num_pages(document::Ptr{Cvoid})
-    ccall(
-        (:poppler_document_get_n_pages, Poppler_jll.libpoppler_glib),
-        Cint,
-        (Ptr{Cvoid},),
-        document
-    )
-end
-
-"""
-    pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)::Tuple{Float64, Float64}
-
-`document` must be a Poppler document handle.  Returns a tuple of `width, height`.
-"""
-function pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)
-
-    page = ccall(
-        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
-        Ptr{Cvoid},
-        (Ptr{Cvoid}, Cint),
-        document, page_number # page 0 is first page
-    )
-
-    if page == C_NULL
-        error("Poppler was unable to read the page with index $page_number!  Please check your PDF.")
-    end
-
-    width = Ref{Cdouble}(0.0)
-    height = Ref{Cdouble}(0.0)
-
-    ccall((:poppler_page_get_size, Poppler_jll.libpoppler_glib), Cvoid, (Ptr{Cvoid}, Ptr{Cdouble}, Ptr{Cdouble}), page, width, height)
-
-    return (width[], height[])
-end
-
-"""
-    split_pdf(pdf::Union{Vector{UInt8}, String})::Vector{UInt8}
-
-Splits a PDF into its constituent pages, returning a Vector of UInt8 arrays, each representing a page.
-
-The input must be a PDF file, either as a String or as a Vector{UInt8} of the PDF's bytes.
-
-!!! warn
-    The input String does **NOT** represent a filename!
-
-This uses Ghostscript to actually split the PDF and return PDF files.  If you just want to render the PDF, use [`load_pdf`](@ref) and [`page2img`](@ref) instead.
-"""
-function split_pdf(pdf::Union{Vector{UInt8}, String})
-    mktempdir() do dir
-        cd(dir) do
-            write("temp.pdf", pdf)
-
-            num_pages = pdf_num_pages("temp.pdf")
-
-            pdfs = Vector{UInt8}[]
-            sizehint!(pdfs, num_pages)
-            redirect_stderr(devnull) do
-                redirect_stdout(devnull) do
-                    for i in 1:num_pages
-                        Ghostscript_jll.gs() do gs
-                            run(`$gs -q -dBATCH -dNOPAUSE -dFirstPage=$i -dLastPage=$i -sOutputFile=temp_$(lpad(i, 4, '0')).pdf -sDEVICE=pdfwrite temp.pdf`)
-                            push!(pdfs, read("temp_$(lpad(i, 4, '0')).pdf"))
-                            rm("temp_$(lpad(i, 4, '0')).pdf")
-                        end
-                    end
-                end
-            end
-
-            return pdfs
-        end
-    end
 end

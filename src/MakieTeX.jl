@@ -13,7 +13,7 @@ using Makie.GeometryBasics: origin, widths
 using Makie.Observables
 using DocStringExtensions
 
-using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll, tectonic_jll
+using Poppler_jll, Ghostscript_jll, Glib_jll, tectonic_jll
 using Rsvg, Cairo
 
 # Define some constants for configuration
@@ -32,10 +32,12 @@ include("recipe.jl")
 include("text_utils.jl")
 include("layoutable.jl")
 
+include("rendering/pdf_utils.jl")
 include("rendering/tex.jl")
 include("rendering/pdf.jl")
 include("rendering/svg.jl")
 
+export Cached
 export TeXDocument, CachedTeX
 export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
