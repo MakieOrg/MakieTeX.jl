@@ -17,6 +17,7 @@ Render a `CachedDocument` to an image at a given scale.  This is a convenience f
 calls the appropriate rendering function for the document type.  Returns an image as a `Matrix{ARGB32}`.
 """
 function rasterize end
+
 """
     draw_to_cairo_surface(doc::AbstractCachedDocument, surf::CairoSurface)
 
@@ -36,8 +37,8 @@ function Cached end
 # The backend-specific functions and rasterizers are kept in the backends' extensions.
 Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker") = x
 Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker", ::Makie.key"scatter") = x
-Makie.to_spritemarker(x::AbstractCachedDocument) = Cached(x)
-Makie.marker_to_sdf_shape(::AbstractCachedDocument) = Makie.RECTANGLE
+Makie.to_spritemarker(x::AbstractCachedDocument) = x
+Makie.marker_to_sdf_shape(::AbstractCachedDocument) = Makie.RECTANGLE # this is the same result as the dispatch for `::AbstractMatrix`.
 Makie.el32convert(x::AbstractCachedDocument) = rasterize(x)
 
 Makie.convert_attribute(x::AbstractDocument, ::Makie.key"marker") = Cached(x)
@@ -202,6 +203,7 @@ end
 function CachedPDF(pdf::PDFDocument, poppler_handle::Ptr{Cvoid}, dims::Tuple{Float64, Float64}, surf::CairoSurface)
     return CachedPDF(pdf, Ref(poppler_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 end
+CachedPDF(pdf::String) = CachedPDF(PDFDocument(pdf))
 
 
 
@@ -217,13 +219,10 @@ struct CachedSVG <: AbstractCachedDocument
     "A cache for a (rendered_image, scale_factor) pair.  This is used to avoid re-rendering the PDF."
     image_cache::Ref{Tuple{Matrix{ARGB32}, Float64}}
 end
-
-
-
 function CachedSVG(svg::SVGDocument, rsvg_handle::Rsvg.RsvgHandle, dims::Tuple{Float64, Float64}, surf::CairoSurface)
     return CachedSVG(svg, Ref(rsvg_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 end
-
+CachedSVG(svg::String) = CachedSVG(SVGDocument(svg))
 
 """
     CachedTeX(doc::TeXDocument; kwargs...)

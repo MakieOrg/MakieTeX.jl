@@ -1,2 +1,13 @@
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DataToolkit = "dc83c90b-d41d-4e55-bdb7-0fc919659999"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
+KangarooTwelve = "2a5dabf5-6a39-42aa-818d-ce8a58d1b312"
+MakieTeX = "6d554a22-29e7-47bd-aee5-0c5f06619414"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+SwarmMakie = "0b1c068e-6a84-4e66-8136-5c95cafa83ed"
+YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
