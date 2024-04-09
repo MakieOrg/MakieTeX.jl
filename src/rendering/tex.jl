@@ -84,12 +84,12 @@ function compile_latex(
                 crop_engine = replace(string(tex_engine)[2:end-1], "la" => "")
                 crop_engine == `tectonic` && return read("temp.pdf", String)
 
-                pdfcrop = joinpath(@__DIR__, "pdfcrop.pl")
+                pdfcrop = joinpath(dirname(@__DIR__), "pdfcrop.pl")
                 new_pdf = redirect_stderr(devnull) do
                     redirect_stdout(devnull) do
                         Ghostscript_jll.gs() do gs_exe
                             mtperl() do perl_exe
-                                # run(`$perl_exe $pdfcrop --margin $crop_margins --gscmd $gs_exe temp.pdf temp_cropped.pdf`)
+                                # run(`$perl_exe $pdfcrop --margin $crop_margins --gscmd $gs_exe ./temp.pdf ./temp_cropped.pdf`)
                                 cp("temp.pdf", "temp_cropped.pdf")
                                 return read("temp_cropped.pdf", String)
                             end

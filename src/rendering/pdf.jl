@@ -1,3 +1,20 @@
+#=
+# PDF rendering
+
+This file contains the functions necessary to render PDF files using Poppler and Cairo.
+
+It implements the MakieTeX cached-document API.
+=#
+
+function CachedPDF(pdf::PDFDocument, page::Int = 0)
+    pdf = Vector{UInt8}(pdf.pdf)
+    ptr = load_pdf(pdf)
+    surf = page2recordsurf(ptr, page)
+    dims = pdf_get_page_size(ptr, page)
+
+    return CachedPDF(pdf, Ref(ptr), dims, surf)
+end
+
 
 # Pure poppler pipeline - directly from PDF to Cairo surface.
 
