@@ -43,7 +43,7 @@ We provide a layoutable object, `LTeX`, which aims to solve this.  `LTeX`s are f
 An example follows:
 
 ```julia
-fig = Figure(resolution = (400, 300));
+fig = Figure(size = (400, 300));
 tex1 = LTeX(fig[1, 1], L"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", scale=1);
 tex2 = LTeX(fig[2, 1], L"\int \mathbf E \cdot d\mathbf a = \frac{Q_{encl}}{4\pi\epsilon_0}", scale=2);
 fig

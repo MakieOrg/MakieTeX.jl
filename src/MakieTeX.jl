@@ -1,7 +1,10 @@
 module MakieTeX
+
 using Makie
-using Cairo
+using Makie.MakieCore
+
 using Colors, LaTeXStrings
+using Base64
 
 # Patch for Makie.jl `@Block` macro error
 using Makie: CURRENT_DEFAULT_THEME

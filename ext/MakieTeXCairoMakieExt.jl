@@ -6,6 +6,7 @@ using MakieTeX.Makie.MakieCore
 using MakieTeX.Poppler_jll
 using MakieTeX.Cairo
 using MakieTeX.Colors
+using MakieTeX.Base64
 
 # CairoMakie direct drawing method
 function draw_tex(scene, screen::CairoMakie.Screen, cachedtex::MakieTeX.CachedTeX, position::VecTypes, scale::VecTypes, rotation::Real, align::Tuple{Symbol, Symbol})
@@ -130,10 +131,16 @@ function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
 
     w, h = marker.dims
 
+    pattern = Cairo.get_source(ctx)
+    r, g, b, a = (Ref(0.0) for _ in 1:4)
+    cairo_status_for_get_rgba = @ccall Cairo.Cairo_jll.libcairo.cairo_pattern_get_rgba(pattern.ptr::Ptr{Cvoid}, r::Ptr{Cdouble}, g::Ptr{Cdouble}, b::Ptr{Cdouble}, a::Ptr{Cdouble})::Cint
+    color_hex = Colors.hex(RGBAf(r[], g[], b[], a[]))
+    style_string = "color:#$color_hex; stroke:#$(Colors.hex(strokecolor)); stroke-width:$strokewidth;"
+    #rsvg_handle_success = @ccall Rsvg.Librsvg_jll.librsvg.rsvg_handle_set_stylesheet(handle.ptr::Ptr{Cvoid}, style_string::Cstring, length(style_string)::Csize_t, C_NULL::Ptr{Cvoid})::Bool
     Cairo.translate(ctx,
                     scale[1]/2 + pos[1] + marker_offset[1],
                     scale[2]/2 + pos[2] + marker_offset[2])
-    Cairo.rotate(ctx, to_2d_rotation(rotation))
+    Cairo.rotate(ctx, CairoMakie.to_2d_rotation(rotation))
     Cairo.scale(ctx, scale[1] / w, scale[2] / h)
     Cairo.set_source_surface(ctx, marker_surf, -w/2, -h/2)
     Cairo.paint(ctx)
