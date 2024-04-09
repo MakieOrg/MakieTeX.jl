@@ -37,6 +37,8 @@ function Cached end
 Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker") = x
 Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker", ::Makie.key"scatter") = x
 Makie.to_spritemarker(x::AbstractCachedDocument) = Cached(x)
+Makie.marker_to_sdf_shape(::AbstractCachedDocument) = Makie.RECTANGLE
+Makie.el32convert(x::AbstractCachedDocument) = rasterize(x)
 
 Makie.convert_attribute(x::AbstractDocument, ::Makie.key"marker") = Cached(x)
 Makie.convert_attribute(x::AbstractDocument, ::Makie.key"marker", ::Makie.key"scatter") = Cached(x)

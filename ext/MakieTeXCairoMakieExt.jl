@@ -1,12 +1,20 @@
 module MakieTeXCairoMakieExt
 
 using CairoMakie, MakieTeX
-using MakieTeX.Makie
-using MakieTeX.Makie.MakieCore
-using MakieTeX.Poppler_jll
-using MakieTeX.Cairo
-using MakieTeX.Colors
-using MakieTeX.Rsvg
+using Makie
+using Makie.MakieCore
+using Poppler_jll
+using Cairo
+using Colors
+using Rsvg
+using Base64
+
+# # Teximg
+
+# Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
+# instead of auto-decomposing into its component scatter plot.
+CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
+
 
 # CairoMakie direct drawing method
 function draw_tex(scene, screen::CairoMakie.Screen, cachedtex::MakieTeX.CachedTeX, position::VecTypes, scale::VecTypes, rotation::Real, align::Tuple{Symbol, Symbol})
@@ -97,10 +105,6 @@ function draw_tex(scene, screen::CairoMakie.Screen, cachedtex::MakieTeX.CachedTe
     Cairo.restore(ctx)
 end
 
-# Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
-# instead of auto-decomposing into its component scatter plot.
-CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
-
 function CairoMakie.draw_plot(scene::Makie.Scene, screen::CairoMakie.Screen, img::T) where T <: MakieTeX.TeXImg
 
     broadcast_foreach(img[1][], img.position[], img.scale[], CairoMakie.remove_billboard(img.rotation[]), img.align[]) do cachedtex, position, scale, rotation, align
@@ -122,10 +126,22 @@ function CairoMakie.draw_plot(scene::Makie.Scene, screen::CairoMakie.Screen, img
 
 end
 
+# # Scatter markers
+
 function cairo_pattern_get_rgba(pattern::CairoPattern)
     r, g, b, a = (Ref(0.0) for _ in 1:4)
     @ccall Cairo.Cairo_jll.libcairo.cairo_pattern_get_rgba(pattern.ptr::Ptr{Cvoid}, r::Ptr{Cdouble}, g::Ptr{Cdouble}, b::Ptr{Cdouble}, a::Ptr{Cdouble})::Cint
     return RGBA{Float64}(r[], g[], b[], a[])
+end
+
+function rsvg_handle_set_stylesheet(handle::RsvgHandle, style_string::String)
+    gerror_hhandle = Ref(C_NULL)
+    ret = @ccall Rsvg.Librsvg_jll.librsvg.rsvg_handle_set_stylesheet(handle.ptr::Ptr{Cvoid}, style_string::Cstring, length(style_string)::Csize_t, gerror_hhandle::Ptr{Cvoid})::Bool
+    if gerror_handle[] != C_NULL
+        @warn("MakieTeX: Failed to set stylesheet for Rsvg handle.")
+        # there was some error, so handle it
+    end
+    return ret
 end
 
 function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
@@ -135,17 +151,24 @@ function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
     # Obtain the initial color from the pattern.  
     # This allows us to support marker coloring by CSS themes.
     pattern = Cairo.get_source(ctx)
-    color_hex = Colors.hex(cairo_pattern_get_rgba(pattern))
+    color = cairo_pattern_get_rgba(pattern)
     # Generate a CSS style string for the SVG.
-    style_string = """fill: #$color_hex; stroke: #$(Colors.hex(strokecolor)); stroke-width: $strokewidth;"""
-    @show style_string
+    style_string = """
+        svg { 
+            fill: #$(Colors.hex(Colors.color(color))); 
+            fill-opacity: $(Colors.alpha(color)); 
+            stroke: #$(Colors.hex(Colors.color(strokecolor))); 
+            stroke-opacity: $(Colors.alpha(strokecolor)); 
+            stroke-width: $strokewidth; 
+    }"""
     # Set the stylesheet for the Rsvg handle
     # Here, we generate the Rsvg handle from the original SVG document, and don't use the cached version.
     # This is because I'm not sure whether the repeated setting of the stylesheeet will affect the cached version.
     # If it does not, then we can simply replace this line with `marker.handle[]`,
     # and go about our merry way.
-    handle = MakieTeX.svg2rsvg(marker.doc.doc)
-    rsvg_handle_success = @ccall Rsvg.Librsvg_jll.librsvg.rsvg_handle_set_stylesheet(handle.ptr::Ptr{Cvoid}, style_string::Cstring, length(style_string)::Csize_t, C_NULL::Ptr{Cvoid})::Bool
+    svg_string = marker.doc.doc
+    handle = MakieTeX.svg2rsvg(svg_string)
+    rsvg_handle_success = rsvg_handle_set_stylesheet(handle, style_string)
     rsvg_handle_success || @warn("MakieTeX: Failed to set stylesheet for Rsvg handle.")
     # Begin the drawing process
     Cairo.translate(ctx,
