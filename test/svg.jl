@@ -1,17 +1,21 @@
 using MakieTeX, CairoMakie
 using Downloads
 using Rsvg, Cairo
+using CairoMakie.Colors
 
 @testset "SVG rendering" begin
     svg = SVGDocument(read(Base.download("https://raw.githubusercontent.com/file-icons/icons/master/svg/Go-Old.svg"), String));
     bvsvg = SVGDocument(read(Base.download("https://upload.wikimedia.org/wikipedia/commons/6/6b/Bitmap_VS_SVG.svg"), String));
     wsvg = SVGDocument(read(Base.download("https://upload.wikimedia.org/wikipedia/en/8/80/Wikipedia-logo-v2.svg"), String));
 
-    @test_nowarn csvg = CachedSVG(svg)
-    @test_nowarn cbvsvg = CachedSVG(bvsvg)
-    @test_nowarn cwsvg = CachedSVG(wsvg)
+    @test_nowarn CachedSVG(svg)
+    csvg = CachedSVG(svg)
+    @test_nowarn CachedSVG(bvsvg)
+    cbvsvg = CachedSVG(bvsvg)
+    @test_nowarn CachedSVG(wsvg)
+    cwsvg = CachedSVG(wsvg)
 
-    @test_nowarn f, a, p = scatter(Point2f(1); marker = csvg, markersize = 60, axis = (; limits = (0,2,0,2)))
+    f, a, p = scatter(Point2f(1); marker = csvg, markersize = 60, axis = (; limits = (0,2,0,2)))
     p.color = :red
     p.strokecolor = :blue
     p.strokewidth = 2
@@ -19,8 +23,11 @@ using Rsvg, Cairo
 
     ys = rand(10)
     @test_nowarn f, a, p1 = scatter(ys; marker = wsvg, markersize = 30)
+    f, a, p1 = scatter(ys; marker = wsvg, markersize = 30)
     @test_nowarn p2 = scatter!(ys; marker = Circle, markersize = 30)
+    p2 = scatter!(ys; marker = Circle, markersize = 30)
     @test_nowarn translate!(p2, 0,0,-1)
+    translate!(p2, 0,0,-1)
     @test_nowarn save_test("wikipedia", f; backend = CairoMakie)
 
     @testset "SVG theming via CSS" begin
@@ -32,18 +39,10 @@ using Rsvg, Cairo
         """)
         f, a, p = scatter(Point2f(1); marker = svg, markersize = 600, axis = (; limits = (0,2,0,2)))
         img = Makie.colorbuffer(f; backend = CairoMakie)
-        if Colors.red(img[end÷ 2, end÷ 2]) > 0.5
-            @test false
-        else
-            @test true
-        end
-        p.strokewidth = 600
+        @test Colors.red(img[end ÷ 2, end ÷ 2]) < 0.6
+        p.strokewidth = 60
         p.strokecolor = :red
         img = Makie.colorbuffer(f; backend = CairoMakie)
-        if Colors.blue(img[end÷ 2, end÷ 2]) > 0.5
-            @test false
-        else
-            @test true
-        end
+        @test Colors.blue(img[end ÷ 4, end ÷ 2]) < 0.6
     end
 end
