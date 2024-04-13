@@ -70,7 +70,7 @@ Is converted to [`CachedPDF`](@ref) for use in plotting.
 """
 struct PDFDocument <: AbstractDocument
     doc::String
-    page::Union{Nothing, Int}
+    page::Int
 end
 PDFDocument(doc::String) = PDFDocument(doc, 0)
 Cached(x::PDFDocument) = CachedPDF(x)
@@ -84,7 +84,9 @@ Is converted to [`CachedPDF`](@ref) for use in plotting.
 """
 struct EPSDocument <: AbstractDocument
     doc::String
+    page::Int
 end
+EPSDocument(doc::String, page::Int = 0) = EPSDocument(doc, page)
 Cached(x::EPSDocument) = CachedPDF(x)
 
 
@@ -178,14 +180,21 @@ end
 """
     CachedPDF(pdf::PDFDocument)
 
-
+Holds a PDF document along with a Poppler handle and a Cairo surface to which it has already 
+been rendered.
 
 ## Usage
+
 ```julia
 CachedPDF(read("path/to/pdf.pdf"), [page = 0])
 CachedPDF(read("path/to/pdf.pdf", String), [page = 0])
 CachedPDF(PDFDocument(...), [page = 0])
 ```
+
+## Fields
+
+$(FIELDS)
+
 """
 struct CachedPDF <: AbstractCachedDocument
     "A reference to the `PDFDocument` which is cached here."
@@ -206,7 +215,24 @@ end
 CachedPDF(pdf::String) = CachedPDF(PDFDocument(pdf))
 
 
+"""
+    CachedSVG(svg::SVGDocument)
 
+Holds an SVG document along with an Rsvg handle and a Cairo surface to which it has already
+been rendered.
+
+## Usage
+
+```julia
+CachedSVG(read("path/to/svg.svg"))
+CachedSVG(read("path/to/svg.svg", String))
+CachedSVG(SVGDocument(...))
+```
+
+## Fields
+
+$(FIELDS)
+"""
 struct CachedSVG <: AbstractCachedDocument
     "The original `SVGDocument` which is cached here, i.e., the text of that SVG."
     doc::SVGDocument

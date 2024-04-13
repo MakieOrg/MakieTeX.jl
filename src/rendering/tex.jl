@@ -2,7 +2,7 @@
 # TeX rendering
 =#
 
-function render(ct::CachedTeX, scale::Float64 = 1)
+function rasterize(ct::CachedTeX, scale::Float64 = 1)
 end
 
 # The main compilation method - compiles arbitrary LaTeX documents

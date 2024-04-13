@@ -145,7 +145,7 @@ function rsvg_handle_set_stylesheet(handle::RsvgHandle, style_string::String)
 end
 
 function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
-    strokecolor #= unused =#, strokewidth #= unused =#,
+    strokecolor #= used =#, strokewidth #= used =#,
     marker_offset, rotation) 
     Cairo.save(ctx)
     # Obtain the initial color from the pattern.  
@@ -180,5 +180,47 @@ function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
 end
 
 
+function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedPDF, pos, scale,
+    strokecolor #= unused =#, strokewidth #= unused =#,
+    marker_offset, rotation) 
+    Cairo.save(ctx)
+    Cairo.translate(ctx,
+                    pos[1] #= the initial marker position =# + marker_offset[1] #= the marker offset =# - scale[1]#= center of the marker =#,
+                    pos[2] #= the initial marker position =# + marker_offset[2] #= the marker offset =# - scale[2]#= center of the marker =#,)
+    Cairo.rotate(ctx, CairoMakie.to_2d_rotation(rotation))
+    Cairo.scale(
+        ctx,
+        scale[1] / w,
+        scale[2] / h
+    )
+    # the rendering pipeline
+    # first is the "safe" Poppler pipeline, with better results in PDF
+    # and PNG, especially when rotated.
+    if !(MakieTeX.RENDER_EXTRASAFE[])
+        # retrieve a new Poppler document pointer
+        document = MakieTeX.update_pointer!(marker)
+        # retrieve the first page
+        page = ccall(
+            (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
+            Ptr{Cvoid},
+            (Ptr{Cvoid}, Cint),
+            document, marker.doc.page # page 0 is first page
+        )
+        # Render the page to the surface
+        ccall(
+            (:poppler_page_render, Poppler_jll.libpoppler_glib),
+            Cvoid,
+            (Ptr{Cvoid}, Ptr{Cvoid}),
+            page, ctx.ptr
+        )
+    else # "extra-safe" Cairo pipeline, also somewhat faster.
+        # render the cached CairoSurface to the screen.
+        # bad with PNG output though.
+        Cairo.set_source(ctx, marker.surf, 0, 0)
+        Cairo.paint(ctx)
+    end
+    # restore context and end
+    Cairo.restore(ctx)
+end
 
 end

@@ -23,8 +23,8 @@ function rasterize(pdf::CachedPDF, scale::Real = 1)
         pdf.image_cache[] = (img, scale)
         return img
     end
-
 end
+
 # Pure poppler pipeline - directly from PDF to Cairo surface.
 
 """
