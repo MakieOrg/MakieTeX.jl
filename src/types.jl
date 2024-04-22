@@ -1,14 +1,71 @@
+#=
+# MakieTeX types
+
+This file defines types and APIs for MakieTeX.  
+
+The API starts with the `AbstractDocument` type, which is the supertype of all vector documents.  
+An `AbstractDocument` must contain a document as a String or Vector{UInt8} of the full contents 
+of whichever file it is using.  It may contain additional fields - for example, `PDFDocument`s 
+contain a page number to indicate which page to display, in the case where a PDF has multiple pages.
+
+Cached documents are "loaded" versions of AbstractDocuments, and store a pointer/reference to the 
+loaded version of the document (a Poppler handle for PDFs, or Rsvg handle for SVGs).  
+
+They also contain a Cairo surface to which the document has been rendered, as well as a cache of a 
+rasterized PNG and its scale for performance reasons.  See the documentation of [`rasterize`](@ref)
+for more.
+=#
+
 """
     abstract type AbstractDocument
 
+An `AbstractDocument` must contain a document as a String or Vector{UInt8} of the full contents 
+of whichever file it is using.  It may contain additional fields - for example, `PDFDocument`s 
+contain a page number to indicate which page to display, in the case where a PDF has multiple pages.
+        
+`AbstractDocument`s must implement the following functions:
+- `getdoc(doc::AbstractDocument)::Union{Vector{UInt8}, String}`
+- `mimetype(doc::AbstractDocument)::Base.MIME`
+- `Cached(doc::AbstractDocument)::AbstractCachedDocument`
 """
 abstract type AbstractDocument end
 
 """
-    abstract type AbstractCachedDocument
+    getdoc(doc::AbstractDocument)::Union{Vector{UInt8}, String}
+
+Return the document data (contents of the file) as a `Vector{UInt8}` or `String`.
+This must be the full file, i.e., if it was saved, the file should be immediately openable.
+"""
+function getdoc end
+"""
+    mimetype(::AbstractDocument)::Base.MIME
+
+Return the MIME type of the document.  For example, `mimetype(::SVGDocument) == MIME("image/svg+xml")`.
+"""
+function mimetype end
+"""
+    Cached(doc::AbstractDocument)::AbstractCachedDocument
+
+Generic interface to cache a document and return it.
+"""
+function Cached end
 
 """
+    abstract type AbstractCachedDocument
+
+Cached documents are "loaded" versions of AbstractDocuments, and store a pointer/reference to the 
+loaded version of the document (a Poppler handle for PDFs, or Rsvg handle for SVGs).  
+
+They also contain a Cairo surface to which the document has been rendered, as well as a cache of a 
+rasterized PNG and its scale for performance reasons.  See the documentation of [`rasterize`](@ref)
+for more.
+
+`AbstractCachedDocument`s must implement the [`AbstractDocument`](@ref) API, as well as the following:
+- `rasterize(doc::AbstractCachedDocument, [scale::Real = 1])::Matrix{ARGB32}`
+- `draw_to_cairo_surface(doc::AbstractCachedDocument, surf::CairoSurface)`
+"""
 abstract type AbstractCachedDocument <: AbstractDocument end
+
 
 """
     rasterize(doc::AbstractCachedDocument, scale::Real = 1)
@@ -26,12 +83,6 @@ calls the appropriate rendering function for the document type.
 """
 function draw_to_cairo_surface end
 
-"""
-    Cached(doc::AbstractDocument)::AbstractCachedDocument
-
-Generic interface to cache a document and return it.
-"""
-function Cached end
 
 # Define Makie conversion functions which keep these types in the pipeline.
 # The backend-specific functions and rasterizers are kept in the backends' extensions.
@@ -60,6 +111,8 @@ struct SVGDocument <: AbstractDocument
     doc::String
 end
 Cached(x::SVGDocument) = CachedSVG(x)
+getdoc(doc::SVGDocument) = doc.doc
+mimetype(::SVGDocument) = MIME"image/svg+xml"()
 
 """
     PDFDocument(pdf::AbstractString)
@@ -74,9 +127,11 @@ struct PDFDocument <: AbstractDocument
 end
 PDFDocument(doc::String) = PDFDocument(doc, 0)
 Cached(x::PDFDocument) = CachedPDF(x)
+getdoc(doc::PDFDocument) = doc.doc
+mimetype(::PDFDocument) = MIME"application/pdf"()
 
 """
-    EPSDocument(eps::AbstractString)
+    EPSDocument(eps::AbstractString, [page = 0])
 
 A document type which holds an EPS string.
 
@@ -86,14 +141,21 @@ struct EPSDocument <: AbstractDocument
     doc::String
     page::Int
 end
-EPSDocument(doc::String, page::Int = 0) = EPSDocument(doc, page)
+EPSDocument(doc::String) = EPSDocument(doc, 0) # default page is 0
 Cached(x::EPSDocument) = CachedPDF(x)
+getdoc(doc::EPSDocument) = doc.doc
+mimetype(::EPSDocument) = MIME"application/postscript"()
 
 
 struct TeXDocument <: AbstractDocument
     contents::String
+    page::Int
 end
+TeXDocument(contents) = TeXDocument(contents, 0)
 Cached(x::TeXDocument) = CachedTeX(x)
+getdoc(doc::TeXDocument) = doc.doc
+mimetype(::TeXDocument) = MIME"application/x-tex"()
+
 
 """
     TeXDocument(contents::AbstractString, add_defaults::Bool; requires, preamble, class, classoptions)
