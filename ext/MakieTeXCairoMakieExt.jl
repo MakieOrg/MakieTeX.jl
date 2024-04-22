@@ -80,7 +80,7 @@ function draw_tex(scene, screen::CairoMakie.Screen, cachedtex::MakieTeX.CachedTe
     # and PNG, especially when rotated.
     if !(MakieTeX.RENDER_EXTRASAFE[])
         # retrieve a new Poppler document pointer
-        document = MakieTeX.update_pointer!(cachedtex)
+        document = MakieTeX.update_handle!(cachedtex)
         # retrieve the first page
         page = ccall(
             (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
@@ -198,7 +198,7 @@ function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedPDF, pos, scale,
     # and PNG, especially when rotated.
     if !(MakieTeX.RENDER_EXTRASAFE[])
         # retrieve a new Poppler document pointer
-        document = MakieTeX.update_pointer!(marker)
+        document = MakieTeX.update_handle!(marker)
         # retrieve the first page
         page = ccall(
             (:poppler_document_get_page, Poppler_jll.libpoppler_glib),

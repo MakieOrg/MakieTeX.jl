@@ -270,20 +270,9 @@ Available keyword arguments are:
 texdoc(contents; kwargs...) = TeXDocument(contents, true; kwargs...)
 
 
-
-mutable struct CachedTeX <: AbstractCachedDocument
-    "The original `TeXDocument` which is compiled."
-    doc::Union{TeXDocument, Nothing}
-    "The resulting compiled PDF"
-    pdf::Vector{UInt8}
-    "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
-    ptr::Ptr{Cvoid} # Poppler handle
-    "A surface to which Poppler has drawn the PDF.  Permanent and cached."
-    surf::CairoSurface
-    "The dimensions of the PDF page, for ease of access."
-    dims::Tuple{Float64, Float64}
-end
-
+#=
+# Cached documents
+=#
 """
     CachedPDF(pdf::PDFDocument)
 
@@ -356,6 +345,23 @@ function CachedSVG(svg::SVGDocument, rsvg_handle::Rsvg.RsvgHandle, dims::Tuple{F
     return CachedSVG(svg, Ref(rsvg_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 end
 CachedSVG(svg::String) = CachedSVG(SVGDocument(svg))
+getdoc(doc::CachedSVG) = getdoc(doc.doc)
+mimetype(::CachedSVG) = MIME"image/svg+xml"()
+
+
+
+struct CachedTeX <: AbstractCachedDocument
+    "The original `TeXDocument` which is compiled."
+    doc::Union{TeXDocument, Nothing}
+    "The resulting compiled PDF"
+    pdf::Vector{UInt8}
+    "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
+    ptr::Ref{Ptr{Cvoid}} # Poppler handle
+    "A surface to which Poppler has drawn the PDF.  Permanent and cached."
+    surf::CairoSurface
+    "The dimensions of the PDF page, for ease of access."
+    dims::Tuple{Float64, Float64}
+end
 
 """
     CachedTeX(doc::TeXDocument; kwargs...)
@@ -391,7 +397,7 @@ function CachedTeX(doc::TeXDocument; kwargs...)
     ct = CachedTeX(
         doc,
         pdf,
-        ptr,
+        Ref(ptr),
         surf,
         dims# .+ (1, 1),
     )
@@ -420,7 +426,7 @@ function CachedTeX(pdf::Vector{UInt8}; kwargs...)
     ct = CachedTeX(
         nothing,
         pdf,
-        ptr,
+        Ref(ptr),
         surf,
         dims# .+ (1, 1),
     )
@@ -430,9 +436,9 @@ end
 # do not rerun the pipeline on CachedTeX
 CachedTeX(ct::CachedTeX) = ct
 
-function update_pointer!(ct::CachedTeX)
-    ct.ptr = load_pdf(ct.pdf)
-    return ct.ptr
+function update_handle!(ct::CachedTeX)
+    ct.ptr[] = load_pdf(ct.pdf)
+    return ct.ptr[]
 end
 
 function Base.show(io::IO, ct::CachedTeX)
