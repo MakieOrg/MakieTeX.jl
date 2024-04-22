@@ -63,6 +63,7 @@ for more.
 `AbstractCachedDocument`s must implement the [`AbstractDocument`](@ref) API, as well as the following:
 - `rasterize(doc::AbstractCachedDocument, [scale::Real = 1])::Matrix{ARGB32}`
 - `draw_to_cairo_surface(doc::AbstractCachedDocument, surf::CairoSurface)`
+- `update_handle!(doc::AbstractCachedDocument)::<some_handle_type>`
 """
 abstract type AbstractCachedDocument <: AbstractDocument end
 
@@ -83,9 +84,49 @@ calls the appropriate rendering function for the document type.
 """
 function draw_to_cairo_surface end
 
+"""
+    update_handle!(doc::AbstractCachedDocument)
 
-# Define Makie conversion functions which keep these types in the pipeline.
-# The backend-specific functions and rasterizers are kept in the backends' extensions.
+Update the internal handle/pointer to the loaded document in a `CachedDocument`, and returns it.
+
+This function is used to refresh the handle/pointer to the loaded document in case it has been
+garbage collected or invalidated. It should return the updated handle/pointer.
+
+For example, in `CachedPDF`, this function would reload the PDF document using the `doc.doc` field
+and update the `ptr` field with the new Poppler handle, **if it is found to be invalid**.
+
+Note that this function needs to be implemented for each concrete subtype of `AbstractCachedDocument`,
+as the handle/pointer type and the method to load/update it will be different for different document
+types (e.g., PDF, SVG, etc.).
+"""
+function update_handle! end
+
+#=
+
+## Generic dispatches for documents
+
+Define generic functions for all AbstractDocuments, with special emphasis on Makie 
+compatibility and conversions.
+
+### Generic dispatches
+
+=#
+
+Base.convert(::Type{String}, doc::AbstractDocument) = Base.convert(String, getdoc(doc))
+Base.convert(::Type{UInt8}, doc::AbstractDocument) = Vector{UInt8}(Base.convert(String, doc))
+
+Base.convert(::Type{Matrix{T}}, doc::AbstractDocument) where T <: Colors.Color = T.(Base.convert(Matrix{ARGB32}, doc))
+Base.convert(::Type{Matrix{ARGB32}}, doc::AbstractDocument) = Base.convert(Matrix{ARGB32}, Cached(doc))
+Base.convert(::Type{Matrix{ARGB32}}, cached::AbstractCachedDocument) = rasterize(doc)
+
+
+#=
+
+### Makie.jl function definitions
+The backend-specific functions and rasterizers are kept in the backends' extensions.
+
+These functions are generic to the Makie API.
+=#
 Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker") = x
 Makie.convert_attribute(x::AbstractCachedDocument, ::Makie.key"marker", ::Makie.key"scatter") = x
 Makie.to_spritemarker(x::AbstractCachedDocument) = x
@@ -97,7 +138,11 @@ Makie.convert_attribute(x::AbstractDocument, ::Makie.key"marker", ::Makie.key"sc
 Makie.to_spritemarker(x::AbstractDocument) = Cached(x) # this should never be called
 
 #=
+## Concrete type definitions
+
 Now, we define the structs which hold the documents and their cached versions.
+
+### Raw documents
 =#
 
 """
@@ -115,7 +160,7 @@ getdoc(doc::SVGDocument) = doc.doc
 mimetype(::SVGDocument) = MIME"image/svg+xml"()
 
 """
-    PDFDocument(pdf::AbstractString)
+    PDFDocument(pdf::AbstractString, [page = 0])
 
 A document type which holds a raw PDF as a string.
 
@@ -146,16 +191,18 @@ Cached(x::EPSDocument) = CachedPDF(x)
 getdoc(doc::EPSDocument) = doc.doc
 mimetype(::EPSDocument) = MIME"application/postscript"()
 
-
-struct TeXDocument <: AbstractDocument
+# This will be documented elsewhere in the package.
+struct TEXDocument <: AbstractDocument
     contents::String
     page::Int
 end
-TeXDocument(contents) = TeXDocument(contents, 0)
-Cached(x::TeXDocument) = CachedTeX(x)
-getdoc(doc::TeXDocument) = doc.doc
-mimetype(::TeXDocument) = MIME"application/x-tex"()
+TEXDocument(contents) = TEXDocument(contents, 0)
+Cached(x::TEXDocument) = CachedTeX(x)
+getdoc(doc::TEXDocument) = doc.doc
+mimetype(::TEXDocument) = MIME"application/x-tex"()
 
+const TeXDocument = TEXDocument
+Base.@deprecate TeXDocument TEXDocument # To keep consistency, we deprecate the TeX in favour of TEX.  This will require a large refactor everywhere, but should be worth it.
 
 """
     TeXDocument(contents::AbstractString, add_defaults::Bool; requires, preamble, class, classoptions)
@@ -222,9 +269,7 @@ Available keyword arguments are:
 """
 texdoc(contents; kwargs...) = TeXDocument(contents, true; kwargs...)
 
-function Base.convert(::Type{String}, doc::TeXDocument)
-    return Base.convert(String, doc.contents)
-end
+
 
 mutable struct CachedTeX <: AbstractCachedDocument
     "The original `TeXDocument` which is compiled."
