@@ -1,7 +1,7 @@
 name = "MakieTeX"
 uuid = "6d554a22-29e7-47bd-aee5-0c5f06619414"
-authors = ["Anshul Singhvi"]
-version = "0.3.2"
+authors = ["Anshul Singhvi <anshulsinghvi@gmail.com>, and contributors"]
+version = "0.4.0"
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -14,6 +14,7 @@ LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
 Rsvg = "c4c386cf-5103-5370-be45-f3a111cca3b8"
+Typst_jll = "eb4b1da6-20f6-5c66-9826-fdb8ad410d0e"
 tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
 
 [weakdeps]
@@ -31,10 +32,15 @@ Cairo = "1.0.5"
 CairoMakie = "0.11, 0.12"
 Colors = "0.9, 0.10, 0.11, 0.12"
 DocStringExtensions = "0.8, 0.9"
+Ghostscript_jll = "9"
+Glib_jll = "2"
 LaTeXStrings = "1"
 Makie = "0.20, 0.21"
 Poppler_jll = "21.9, 22, 23"
-julia = "1"
+Rsvg = "1"
+julia = "1.9"
+Typst_jll = "0"
+tectonic_jll = "0"
 
 [extras]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
