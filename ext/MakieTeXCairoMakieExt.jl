@@ -18,6 +18,9 @@ function CairoMakie.cairo_scatter_marker(marker::MakieTeX.AbstractCachedDocument
     return marker
 end
 
+CairoMakie.cairo_scatter_marker(v::AbstractArray{<: MakieTeX.AbstractDocument}) = CairoMakie.cairo_scatter_marker.(v)
+CairoMakie.cairo_scatter_marker(v::NTuple{N, <: MakieTeX.AbstractDocument}) where N = CairoMakie.cairo_scatter_marker.(v)
+
 # # Teximg
 
 # Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
