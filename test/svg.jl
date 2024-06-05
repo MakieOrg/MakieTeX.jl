@@ -8,12 +8,12 @@ using CairoMakie.Colors
     bvsvg = SVGDocument(read(Base.download("https://upload.wikimedia.org/wikipedia/commons/6/6b/Bitmap_VS_SVG.svg"), String));
     wsvg = SVGDocument(read(Base.download("https://upload.wikimedia.org/wikipedia/en/8/80/Wikipedia-logo-v2.svg"), String));
 
-    @test_nowarn CachedSVG(svg)
-    csvg = CachedSVG(svg)
-    @test_nowarn CachedSVG(bvsvg)
-    cbvsvg = CachedSVG(bvsvg)
-    @test_nowarn CachedSVG(wsvg)
-    cwsvg = CachedSVG(wsvg)
+    @test_nowarn CachedSVG(svg);
+    csvg = CachedSVG(svg);
+    @test_nowarn CachedSVG(bvsvg);
+    cbvsvg = CachedSVG(bvsvg);
+    @test_nowarn CachedSVG(wsvg);
+    cwsvg = CachedSVG(wsvg);
 
     f, a, p = scatter(Point2f(1); marker = csvg, markersize = 60, axis = (; limits = (0,2,0,2)))
     p.color = :red

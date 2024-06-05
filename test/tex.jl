@@ -11,7 +11,7 @@ function render_texample(url)
 
     filename = splitdir(splitext(url)[1])[2]
 
-    save_test(joinpath("texample", filename), fig)
+    save_test(joinpath(@__DIR__, "texample", filename), fig)
 
     @test true
 
