@@ -192,6 +192,8 @@ end
 function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedPDF, pos, scale,
     strokecolor #= unused =#, strokewidth #= unused =#,
     marker_offset, rotation) 
+    # get dimensions
+    w, h = marker.dims
     Cairo.save(ctx)
     Cairo.translate(ctx,
                     pos[1] #= the initial marker position =# + marker_offset[1] #= the marker offset =# - scale[1]#= center of the marker =#,

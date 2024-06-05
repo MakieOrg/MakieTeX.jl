@@ -7,22 +7,29 @@ It implements the MakieTeX cached-document API.
 =#
 
 function CachedPDF(pdf::PDFDocument, page::Int = 0)
-    pdf = Vector{UInt8}(pdf.pdf)
-    ptr = load_pdf(pdf)
+    pdf_bytes = Vector{UInt8}(getdoc(pdf))
+    ptr = load_pdf(pdf_bytes)
     surf = page2recordsurf(ptr, page)
     dims = pdf_get_page_size(ptr, page)
 
-    return CachedPDF(pdf, Ref(ptr), dims, surf)
+    return CachedPDF(pdf, Ref(ptr), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 end
 
 function rasterize(pdf::CachedPDF, scale::Real = 1)
     if last(pdf.image_cache[]) == scale
         return first(pdf.image_cache[])
     else
-        img = pdf2img(pdf, page; scale)
+        img = page2img(pdf, pdf.doc.page; scale)
         pdf.image_cache[] = (img, scale)
         return img
     end
+end
+
+function update_handle!(pdf::CachedPDF)
+    pdf_bytes = Vector{UInt8}(getdoc(pdf))
+    ptr = load_pdf(pdf_bytes)
+    pdf.ptr[] = ptr
+    return ptr
 end
 
 # Pure poppler pipeline - directly from PDF to Cairo surface.
@@ -86,7 +93,7 @@ Renders the `page` of the given `CachedTeX` object to an image, with the given `
 This function reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
 """
 function page2img(tex::Union{CachedTeX, CachedPDF}, page::Int; scale = 1, render_density = 1)
-    document = tex.ptr
+    document = update_handle!(tex)
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
         Ptr{Cvoid},

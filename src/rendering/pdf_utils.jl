@@ -54,7 +54,7 @@ function pdf_get_page_size(document::Ptr{Cvoid}, page_number::Int)
     )
 
     if page == C_NULL
-        error("Poppler was unable to read the page with index $page_number!  Please check your PDF.")
+        error("Poppler was unable to read the page with index $(page_number)!  Please check your PDF.")
     end
 
     width = Ref{Cdouble}(0.0)
