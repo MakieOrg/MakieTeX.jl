@@ -1,35 +1,48 @@
 module MakieTeX
-using Makie, CairoMakie
-using Cairo
-using Colors, LaTeXStrings
 
-# patch for Makie.jl block macro error
+using Makie
+using Makie.MakieCore
+
+using Colors, LaTeXStrings
+using Base64
+
+# Patch for Makie.jl `@Block` macro error
 using Makie: CURRENT_DEFAULT_THEME
 
 using Makie.GeometryBasics: origin, widths
 using Makie.Observables
 using DocStringExtensions
 
-using Poppler_jll, Perl_jll, Ghostscript_jll, Glib_jll, tectonic_jll
+using Poppler_jll, Ghostscript_jll, Glib_jll, tectonic_jll
+using Rsvg, Cairo
 
-# define some constants for configuration
+# Define some constants for configuration
 "Render with Poppler pipeline (true) or Cairo pipeline (false)"
 const RENDER_EXTRASAFE = Ref(false)
 "The current `TeX` engine which MakieTeX uses."
 const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
-"Default margins for `pdfcrop`"
+"Default margins for `pdfcrop`.  Private, try not to touch!"
 const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
-"Default density when rendering from calls to `text`"
-const TEXT_RENDER_DENSITY = Ref(5)
+"Default density when rendering images"
+const RENDER_DENSITY = Ref(3)
+
+@deprecate TEXT_RENDER_DENSITY RENDER_DENSITY
 
 
 include("types.jl")
-include("rendering.jl")
 include("recipe.jl")
 include("text_utils.jl")
 include("layoutable.jl")
 
+include("rendering/pdf_utils.jl")
+include("rendering/tex.jl")
+include("rendering/pdf.jl")
+include("rendering/svg.jl")
+
+export Cached
 export TeXDocument, CachedTeX
+export PDFDocument, CachedPDF
+export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
 export LTeX
@@ -89,12 +102,6 @@ function __init__()
         end
     
     end
-
-    
-    
-    # TODO: Once the correct tex engine is found, load the rendering extensions
-    # (currently CairoMakie, but we may do WGLMakie in the future since it can display SVG)
-    
 
     return
 end

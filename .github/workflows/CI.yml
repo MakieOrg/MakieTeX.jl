@@ -1,4 +1,3 @@
-
 name: CI
 on:
   pull_request:
@@ -8,45 +7,76 @@ on:
     branches:
       - master
     tags: '*'
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Tests, Julia ${{ matrix.version }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1' # Leave this line unchanged. '1' will automatically expand to the latest stable 1.x release of Julia.
-          - 'nightly'
+          - '1'
         os:
           - ubuntu-latest
+          - windows
+          - macos
         arch:
           - x64
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      # Cancel ongoing CI test runs if pushing to branch again before the previous tests
+      # have finished
+      - name: Cancel ongoing test runs for previous commits
+        uses: styfle/cancel-workflow-action@0.12.1
+        with:
+          access_token: ${{ github.token }}
+
+      # Do tests
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: actions/cache@v1
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
-      - name: Install latex
-        run: sudo apt-get update && sudo apt-get install -y texlive-full texlive-luatex latexmk
-      - name: Install master branch of Makie et al
-        run: julia --project=@. -e 'using Pkg; pkg"add Makie CairoMakie MakieCore"'
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
-      - uses: actions/upload-artifact@v3
+        env: 
+          DISPLAY: ':0'
+        with: 
+          prefix: xvfb-run -s '-screen 0 1024x768x24'
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test_images
-          path: test/test_images/
+          path: test_images/
+  docs:
+    name: Build and deploy documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install binary dependencies
+        run: sudo apt-get update && sudo apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+      - uses: actions/checkout@v4
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v4
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v2
+      - name: Install documentation dependencies
+        run: |
+          xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            # Pkg.add([PackageSpec(name = "DocumenterVitepress", rev = "master"), PackageSpec(name = "Makie", rev = "master"), PackageSpec(name = "MakieCore", rev = "master"), PackageSpec(name = "CairoMakie", rev = "master")])
+            Pkg.instantiate()'
+        env:
+          DISPLAY: ':0'
+      - name: Build and deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # If authenticating with SSH deploy key
+          DISPLAY: ':0'
+        run: xvfb-run -s '-screen 0 1024x768x24' julia --project=docs/ docs/make.jl deploy
