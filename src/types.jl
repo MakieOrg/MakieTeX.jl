@@ -121,6 +121,7 @@ Base.convert(::Type{Matrix{T}}, doc::AbstractDocument) where T <: Colors.Color =
 Base.convert(::Type{Matrix{ARGB32}}, doc::AbstractDocument) = Base.convert(Matrix{ARGB32}, Cached(doc))
 Base.convert(::Type{Matrix{ARGB32}}, cached::AbstractCachedDocument) = rasterize(doc)
 
+Base.size(cached::AbstractCachedDocument) = cached.dims
 
 #=
 
@@ -391,7 +392,7 @@ $(FIELDS)
     It is also possible to manually construct a `CachedTeX` with `nothing` in the `doc` field, 
     if you just want to insert a pre-rendered PDF into your figure.
 """
-function CachedTeX(doc::TeXDocument; kwargs...)
+function CachedTEX(doc::TeXDocument; kwargs...)
 
     pdf = Vector{UInt8}(latex2pdf(convert(String, doc); kwargs...))
     ptr = load_pdf(pdf)
@@ -409,25 +410,25 @@ function CachedTeX(doc::TeXDocument; kwargs...)
     return ct
 end
 
-function CachedTeX(str::String; kwargs...)
-    return CachedTeX(implant_text(str); kwargs...)
+function CachedTEX(str::String; kwargs...)
+    return CachedTEX(implant_text(str); kwargs...)
 end
 
-function CachedTeX(x::LaTeXString; kwargs...)
+function CachedTEX(x::LaTeXString; kwargs...)
     x = convert(String, x)
     return if first(x) == "\$" && last(x) == "\$"
-        CachedTeX(implant_math(x[2:end-1]); kwargs...)
+        CachedTEX(implant_math(x[2:end-1]); kwargs...)
     else
-        CachedTeX(implant_text(x); kwargs...)
+        CachedTEX(implant_text(x); kwargs...)
     end
 end
 
-function CachedTeX(pdf::Vector{UInt8}; kwargs...)
+function CachedTEX(pdf::Vector{UInt8}; kwargs...)
     ptr = load_pdf(pdf)
     surf = firstpage2recordsurf(ptr)
     dims = pdf_get_page_size(ptr, 0)
 
-    ct = CachedTeX(
+    ct = CachedTEX(
         nothing,
         pdf,
         Ref(ptr),
@@ -437,21 +438,21 @@ function CachedTeX(pdf::Vector{UInt8}; kwargs...)
     return ct
 end
 
-# do not rerun the pipeline on CachedTeX
-CachedTeX(ct::CachedTeX) = ct
+# do not rerun the pipeline on CachedTEX
+CachedTEX(ct::CachedTEX) = ct
 
-function update_handle!(ct::CachedTeX)
+function update_handle!(ct::CachedTEX)
     ct.ptr[] = load_pdf(ct.pdf)
     return ct.ptr[]
 end
 
-function Base.show(io::IO, ct::CachedTeX)
+function Base.show(io::IO, ct::CachedTEX)
     if isnothing(doc)
-        println(io, "CachedTeX(no document, $(ct.ptr), $(ct.dims))")
+        println(io, "CachedTEX(no document, $(ct.ptr), $(ct.dims))")
     elseif length(ct.doc.contents) > 1000
-        println(io, "CachedTeX(TexDocument(...), $(ct.ptr), $(ct.dims))")
+        println(io, "CachedTEX(TexDocument(...), $(ct.ptr), $(ct.dims))")
     else
-        println(io, "CachedTeX($(ct.doc), $(ct.ptr), $(ct.dims))")
+        println(io, "CachedTEX($(ct.doc), $(ct.ptr), $(ct.dims))")
     end
 end
 
