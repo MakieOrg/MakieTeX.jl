@@ -1,15 +1,11 @@
 # Available formats
 
-```@eval main
-using MakieTeX, CairoMakie
-nothing
-```
-
 MakieTeX allows rendering PDF, SVG, and TeX documents in Makie.  The easiest way to construct these is to use the constructors of the form:
 
 ## TeX
 
 ```@example main
+using MakieTeX, CairoMakie
 # Any of the below things could be used in place of the other.
 # However, `scatter` will not accept LaTeXStrings as markers.
 latex_string = L"\int_0^\pi \sin(x)^2 dx"
@@ -28,6 +24,7 @@ fig
 
 You can also pass a full LaTeX document if you wish:
 ```@example main
+using MakieTeX, CairoMakie
 doc = raw"""
 % A Venn diagram with PDF blending
 % Author: Stefan Kottwitz
@@ -64,6 +61,7 @@ fig
 ## PDF
 
 ```@example main
+using MakieTeX, CairoMakie
 pdf_doc = PDFDocument(read(download("https://upload.wikimedia.org/wikipedia/commons/0/05/Wikipedia-logo-big-fr.pdf")));
 fig = Figure()
 # use the teximg recipe
@@ -83,6 +81,7 @@ However, if you are using scatter in CairoMakie, then the SVG will be colored by
 
 See below for an example:
 ```@example main
+using MakieTeX, CairoMakie
 svg = SVGDocument(read(download("https://raw.githubusercontent.com/file-icons/icons/master/svg/Go-Old.svg"), String));
 fig = Figure()
 scatter(fig[1, 1], rand(10), rand(10), marker=Cached(svg), markersize = 50)
