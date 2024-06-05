@@ -10,7 +10,7 @@ Finally, it implements the MakieTeX cached-document API.
 
 function CachedSVG(svg::SVGDocument)
     handle = svg2rsvg(svg.doc)
-    surf, ctx = rsvg2recordsurf(handle)
+    surf, _ctx = rsvg2recordsurf(handle)
     dh = Rsvg.handle_get_dimensions(handle)
     dims = Float64.((dh.width, dh.height))
     return CachedSVG(svg, handle, dims, surf)

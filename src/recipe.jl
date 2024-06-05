@@ -102,12 +102,19 @@ function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
     return Vec2f(x, y)
 end
 
+_bc_if_array(f, x) = f(x)
+_bc_if_array(f, x::AbstractArray) = f.(x)
+
 # scatter: marker size, rotations to determine everything
 function Makie.plot!(plot::T) where T <: TeXImg
     # We always want to draw this at a 1:1 ratio, so increasing scale or
     # changing dpi should rerender
     plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
-        to_array(firstpage2img.(cachedtex; render_density = render_density * scale))
+        if cachedtex isa AbstractString || cachedtex isa AbstractArray{<: AbstractString}
+            to_array(_bc_if_array(CachedTeX, cachedtex))
+        else
+            to_array(_bc_if_array(Cached, cachedtex))
+        end
     end
 
     scatter_images    = Observable(plottable_images[])
@@ -127,7 +134,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
 
         scatter_images.val    = images
         scatter_positions.val = pos
-        scatter_sizes.val     = reverse.(Vec2f.(size.(images))) ./  plot.render_density[]
+        scatter_sizes.val     = reverse.(Vec2f.(size.(images)))
         scatter_offsets.val   = offset_from_align.(Ref(align), scatter_sizes.val)
         scatter_rotations.val = rotations
 
