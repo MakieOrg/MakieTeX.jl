@@ -43,15 +43,16 @@ function Makie.initialize_block!(l::LTeX)
     topscene = l.blockscene
     layoutobservables = l.layoutobservables
 
-    textpos = Observable(Point3f[(0, 0, 0)])
+    textpos = Observable([Point3f(0, 0, 0)])
+    scale = Observable([Vec2f(1.0, 1.0)])
 
     cached_tex = lift(collect ∘ tuple ∘ _to_cachedtex, l.tex)
 
     t = teximg!(
         topscene, cached_tex; position = textpos, visible = l.visible,
-        scale = l.scale, render_density = l.render_density, align = (:center, :center),
-        rotations=l.rotation,
-        markerspace = :screen,
+        scale = scale, align = (:bottom, :left),
+        rotations = l.rotation,
+        markerspace = :pixel,
         inspectable = false
     )
 
@@ -75,7 +76,8 @@ function Makie.initialize_block!(l::LTeX)
         tx = box + padding[1] + 0.5 * tw
         ty = boy + padding[3] + 0.5 * th
 
-        textpos[] = Makie.Point3f[(tx, ty, 0)]
+        textpos[] = [Makie.Point3f(tx, ty, 0)]
+        scale[] = [(bbox.widths ./ textbb[].widths)]
     end
 
 
