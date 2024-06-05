@@ -35,6 +35,9 @@ end
 
 LTeX(x, tex; kwargs...) = LTeX(x; tex = tex, kwargs...)
 
+_to_cachedtex(x) = CachedTeX(x)
+_to_cachedtex(x::AbstractDocument) = Cached(x)
+
 function Makie.initialize_block!(l::LTeX)
 
     topscene = l.blockscene
@@ -42,7 +45,7 @@ function Makie.initialize_block!(l::LTeX)
 
     textpos = Observable(Point3f[(0, 0, 0)])
 
-    cached_tex = lift(collect ∘ tuple ∘ CachedTeX, l.tex)
+    cached_tex = lift(collect ∘ tuple ∘ _to_cachedtex, l.tex)
 
     t = teximg!(
         topscene, cached_tex; position = textpos, visible = l.visible,
