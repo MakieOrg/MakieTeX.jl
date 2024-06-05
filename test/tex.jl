@@ -1,3 +1,5 @@
+using CairoMakie, MakieTeX
+using Test, Downloads
 
 function render_texample(url)
 
@@ -6,12 +8,14 @@ function render_texample(url)
     lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String), false)))
 
     @test true
+    display(fig)
 
     resize_to_layout!(fig)
 
     filename = splitdir(splitext(url)[1])[2]
 
-    save_test(joinpath(@__DIR__, "texample", filename), fig)
+    save_test(joinpath(@__DIR__, "test_images", "texample", filename), fig)
+
 
     @test true
 
