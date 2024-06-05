@@ -15,3 +15,10 @@ makedocs(;
     authors="Anshul Singhvi",
     warnonly = true,
 )
+
+deploydocs(; 
+    repo = "github.com/JuliaPlots/MakieTeX.jl", 
+    target = "build", 
+    push_preview = true, 
+    forcepush = true
+)
