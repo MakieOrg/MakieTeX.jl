@@ -127,11 +127,11 @@ The backend-specific functions and rasterizers are kept in the backends' extensi
 
 These functions are generic to the Makie API.
 =#
-Makie.to_spritemarker(x::AbstractCachedDocument) = rasterize(x)
+Makie.to_spritemarker(x::AbstractCachedDocument) = rasterize(x, MakieTeX.RENDER_DENSITY[])
 Makie.marker_to_sdf_shape(::AbstractCachedDocument) = Makie.RECTANGLE # this is the same result as the dispatch for `::AbstractMatrix`.
-Makie.el32convert(x::AbstractCachedDocument) = rasterize(x)
+Makie.el32convert(x::AbstractCachedDocument) = rasterize(x, MakieTeX.RENDER_DENSITY[])
 
-Makie.to_spritemarker(x::AbstractDocument) = rasterize(Cached(x)) # this should never be called
+Makie.to_spritemarker(x::AbstractDocument) = rasterize(Cached(x), MakieTeX.RENDER_DENSITY[]) # this should never be called
 
 #=
 ## Concrete type definitions

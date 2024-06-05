@@ -26,6 +26,8 @@ const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
 "Default density when rendering images"
 const RENDER_DENSITY = Ref(3)
 
+@deprecate TEXT_RENDER_DENSITY RENDER_DENSITY
+
 
 include("types.jl")
 include("recipe.jl")
