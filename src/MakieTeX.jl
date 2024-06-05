@@ -21,10 +21,10 @@ using Rsvg, Cairo
 const RENDER_EXTRASAFE = Ref(false)
 "The current `TeX` engine which MakieTeX uses."
 const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
-"Default margins for `pdfcrop`"
+"Default margins for `pdfcrop`.  Private, try not to touch!"
 const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
-"Default density when rendering from calls to `text`"
-const TEXT_RENDER_DENSITY = Ref(5)
+"Default density when rendering images"
+const RENDER_DENSITY = Ref(3)
 
 
 include("types.jl")
