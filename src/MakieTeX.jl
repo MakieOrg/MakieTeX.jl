@@ -41,6 +41,7 @@ include("rendering/svg.jl")
 
 export Cached
 export TeXDocument, CachedTeX
+export TEXDocument, CachedTEX
 export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg

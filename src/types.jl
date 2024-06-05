@@ -170,6 +170,7 @@ struct PDFDocument <: AbstractDocument
     page::Int
 end
 PDFDocument(doc::String) = PDFDocument(doc, 0)
+PDFDocument(doc::Vector{UInt8}) = PDFDocument(String(doc))
 Cached(x::PDFDocument) = CachedPDF(x)
 getdoc(doc::PDFDocument) = doc.doc
 mimetype(::PDFDocument) = MIME"application/pdf"()
@@ -196,17 +197,16 @@ struct TEXDocument <: AbstractDocument
     page::Int
 end
 TEXDocument(contents) = TEXDocument(contents, 0)
-Cached(x::TEXDocument) = CachedTeX(x)
+Cached(x::TEXDocument) = CachedTEX(x)
 getdoc(doc::TEXDocument) = doc.contents
 mimetype(::TEXDocument) = MIME"application/x-tex"()
 
-const TeXDocument = TEXDocument
 Base.@deprecate TeXDocument TEXDocument # To keep consistency, we deprecate the TeX in favour of TEX.  This will require a large refactor everywhere, but should be worth it.
 
 """
-    TeXDocument(contents::AbstractString, add_defaults::Bool; requires, preamble, class, classoptions)
+    TEXDocument(contents::AbstractString, add_defaults::Bool; requires, preamble, class, classoptions)
 
-This constructor function creates a `struct` of type `TeXDocument` which can be passed to `teximg`.
+This constructor function creates a `struct` of type `TEXDocument` which can be passed to `teximg`.
 All arguments are to be passed as strings.
 
 If `add_defaults` is `false`, then we will *not* automatically add document structure.
@@ -219,9 +219,9 @@ Available keyword arguments are:
 - `classoptions`: the options you should pass to the class, i.e., `\\documentclass[\$classoptions]{\$class}`.  Default: `"preview, tightpage, 12pt"`.
 - `preamble`: arbitrary code for the preamble (between `\\documentclass` and `\\begin{document}`).  Default: `raw"\\usepackage{amsmath, xcolor} \\pagestyle{empty}"`.
 
-See also [`CachedTeX`](@ref), [`compile_latex`](@ref), etc.
+See also [`CachedTEX`](@ref), [`compile_latex`](@ref), etc.
 """
-function TeXDocument(
+function TEXDocument(
             contents::AbstractString,
             add_defaults::Bool;
             requires::AbstractString = raw"\RequirePackage{luatex85}",
@@ -233,7 +233,7 @@ function TeXDocument(
                         """,
         )
         if add_defaults
-            return TeXDocument(
+            return TEXDocument(
                 """
                 $(requires)
 
@@ -249,14 +249,16 @@ function TeXDocument(
                 """
             )
         else
-            return TeXDocument(contents)
+            return TEXDocument(contents)
         end
 end
+# Define dispatches for things known to be LaTeX in nature
+TEXDocument(l::LaTeXString) = TEXDocument(l, true)
 
 """
     texdoc(contents::AbstractString; kwargs...)
 
-A shorthand for `TeXDocument(contents, add_defaults=true; kwargs...)`.
+A shorthand for `TEXDocument(contents, add_defaults=true; kwargs...)`.
 
 Available keyword arguments are:
 
@@ -266,7 +268,7 @@ Available keyword arguments are:
 - `preamble`: arbitrary code for the preamble (between `\\documentclass` and `\\begin{document}`).  Default: `raw"\\usepackage{amsmath, xcolor} \\pagestyle{empty}"`.
 
 """
-texdoc(contents; kwargs...) = TeXDocument(contents, true; kwargs...)
+texdoc(contents; kwargs...) = TEXDocument(contents, true; kwargs...)
 
 
 #=
@@ -353,8 +355,8 @@ mimetype(::CachedSVG) = MIME"image/svg+xml"()
 # TODO: document, that you should use PDFDocument/CachedPDF.
 # TeX is only special cased as a cached thing because it can be themed.
 struct CachedTEX <: AbstractCachedDocument
-    "The original `TeXDocument` which is compiled."
-    doc::TeXDocument
+    "The original `TEXDocument` which is compiled."
+    doc::TEXDocument
     "The resulting compiled PDF"
     pdf::Vector{UInt8}
     "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
@@ -369,11 +371,11 @@ getdoc(doc::CachedTEX) = getdoc(doc.doc)
 mimetype(::CachedTEX) = MIME"application/x-tex"()
 
 """
-    CachedTeX(doc::TeXDocument; kwargs...)
+    CachedTEX(doc::TEXDocument; kwargs...)
 
-Compile a `TeXDocument`, compile it and return the cached TeX object.
+Compile a `TEXDocument`, compile it and return the cached TeX object.
 
-A `CachedTeX` struct stores the document and its compiled form, as well as some
+A `CachedTEX` struct stores the document and its compiled form, as well as some
 pointers to in-program versions of it.  It also stores the page dimensions.
 
 In `kwargs`, one can pass anything which goes to the internal function `compile_latex`.
@@ -389,17 +391,17 @@ $(FIELDS)
     TODO: make this an immutable struct with a Ref to the handle??  OR maybe even the surface itself...
 
 !!! note
-    It is also possible to manually construct a `CachedTeX` with `nothing` in the `doc` field, 
+    It is also possible to manually construct a `CachedTEX` with `nothing` in the `doc` field, 
     if you just want to insert a pre-rendered PDF into your figure.
 """
-function CachedTEX(doc::TeXDocument; kwargs...)
+function CachedTEX(doc::TEXDocument; kwargs...)
 
     pdf = Vector{UInt8}(latex2pdf(convert(String, doc); kwargs...))
     ptr = load_pdf(pdf)
     surf = page2recordsurf(ptr, doc.page)
     dims = (pdf_get_page_size(ptr, doc.page))
 
-    ct = CachedTeX(
+    ct = CachedTEX(
         doc,
         pdf,
         Ref(ptr),
@@ -460,7 +462,7 @@ function Base.show(io::IO, ct::CachedTEX)
 end
 
 function implant_math(str)
-    return TeXDocument(
+    return TEXDocument(
         """\\(\\displaystyle $str\\)""", true;
         requires = "\\RequirePackage{luatex85}",
         preamble = """
@@ -474,7 +476,7 @@ function implant_math(str)
 end
 
 function implant_text(str)
-    return TeXDocument(
+    return TEXDocument(
         String(str), true;
         requires = "\\RequirePackage{luatex85}",
         preamble = """
@@ -515,7 +517,7 @@ function rotatedrect(rect::Rect{2, T}, angle)::Rect{2, T} where T
     return Rect2(rmins..., (rmaxs .- rmins)...)
 end
 
-function Makie.boundingbox(cachedtex::CachedTeX, position, rotation, scale,
+function Makie.boundingbox(cachedtex::CachedTEX, position, rotation, scale,
     align)
     origin = offset_from_align(align, cachedtex.dims)
     box = Rect2f(Point2f(origin), Vec2f(cachedtex.dims) * scale)
@@ -526,7 +528,7 @@ function Makie.boundingbox(cachedtex::CachedTeX, position, rotation, scale,
 end
 
 # this method copied from Makie.jl
-function Makie.boundingbox(cachedtexs::AbstractVector{CachedTeX}, positions, rotations, scale,
+function Makie.boundingbox(cachedtexs::AbstractVector{CachedTEX}, positions, rotations, scale,
     align)
 
     isempty(cachedtexs) && (return Rect3f((0, 0, 0), (0, 0, 0)))
