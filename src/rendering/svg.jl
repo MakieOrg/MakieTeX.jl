@@ -64,7 +64,7 @@ function rsvg2recordsurf(handle::Rsvg.RsvgHandle)
     return (surf, ctx)
 end
 
-function rsvg2img(handle::Rsvg.RsvgHandle, scale::Float64; dpi = 72.0)
+function rsvg2img(handle::Rsvg.RsvgHandle, scale::Real = 1.0; dpi = 72.0)
     @assert scale > 0.0 "Scale must be positive"
     Rsvg.handle_set_dpi(handle, Float64(dpi))
 
@@ -80,12 +80,12 @@ function rsvg2img(handle::Rsvg.RsvgHandle, scale::Float64; dpi = 72.0)
 
     # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
     surface = Cairo.CairoImageSurface(img)
-    ctx = Cairo.CairoContext(cs)
+    ctx = Cairo.CairoContext(surface)
     Cairo.scale(ctx, w/d.width, h/d.height)
     # Render the parsed SVG to a Cairo context
-    Rsvg.handle_render_cairo(c, handle)
+    Rsvg.handle_render_cairo(ctx, handle)
 
     # The image is rendered transposed, so we need to flip it.
-    return rotr90(permutedims(img))
+    return permutedims(img)
 end
 

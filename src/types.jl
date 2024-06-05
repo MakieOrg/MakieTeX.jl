@@ -198,7 +198,7 @@ struct TEXDocument <: AbstractDocument
 end
 TEXDocument(contents) = TEXDocument(contents, 0)
 Cached(x::TEXDocument) = CachedTeX(x)
-getdoc(doc::TEXDocument) = doc.doc
+getdoc(doc::TEXDocument) = doc.contents
 mimetype(::TEXDocument) = MIME"application/x-tex"()
 
 const TeXDocument = TEXDocument
@@ -309,6 +309,8 @@ function CachedPDF(pdf::PDFDocument, poppler_handle::Ptr{Cvoid}, dims::Tuple{Flo
     return CachedPDF(pdf, Ref(poppler_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 end
 CachedPDF(pdf::String) = CachedPDF(PDFDocument(pdf))
+getdoc(doc::CachedPDF) = getdoc(doc.doc)
+mimetype(::CachedPDF) = MIME"application/pdf"()
 
 
 """
@@ -349,10 +351,11 @@ getdoc(doc::CachedSVG) = getdoc(doc.doc)
 mimetype(::CachedSVG) = MIME"image/svg+xml"()
 
 
-
-struct CachedTeX <: AbstractCachedDocument
+# TODO: document, that you should use PDFDocument/CachedPDF.
+# TeX is only special cased as a cached thing because it can be themed.
+struct CachedTEX <: AbstractCachedDocument
     "The original `TeXDocument` which is compiled."
-    doc::Union{TeXDocument, Nothing}
+    doc::TeXDocument
     "The resulting compiled PDF"
     pdf::Vector{UInt8}
     "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
@@ -362,6 +365,9 @@ struct CachedTeX <: AbstractCachedDocument
     "The dimensions of the PDF page, for ease of access."
     dims::Tuple{Float64, Float64}
 end
+const CachedTeX = CachedTEX
+getdoc(doc::CachedTEX) = getdoc(doc.doc)
+mimetype(::CachedTEX) = MIME"application/x-tex"()
 
 """
     CachedTeX(doc::TeXDocument; kwargs...)
@@ -391,8 +397,8 @@ function CachedTeX(doc::TeXDocument; kwargs...)
 
     pdf = Vector{UInt8}(latex2pdf(convert(String, doc); kwargs...))
     ptr = load_pdf(pdf)
-    surf = firstpage2recordsurf(ptr)
-    dims = (pdf_get_page_size(ptr, 0))
+    surf = page2recordsurf(ptr, doc.page)
+    dims = (pdf_get_page_size(ptr, doc.page))
 
     ct = CachedTeX(
         doc,
