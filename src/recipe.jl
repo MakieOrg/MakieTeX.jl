@@ -91,7 +91,7 @@ _bc_if_array(f, x) = f(x)
 _bc_if_array(f, x::AbstractArray) = f.(x)
 
 # scatter: marker size, rotations to determine everything
-function Makie.plot!(plot::T) where T <: TeXImg
+function Makie.plot!(plot::TeXImg)
     # We always want to draw this at a 1:1 ratio, so increasing scale or
     # changing dpi should rerender
     plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
@@ -102,7 +102,7 @@ function Makie.plot!(plot::T) where T <: TeXImg
         end
     end
 
-    scatter_images    = Observable(plottable_images[])
+    scatter_images    = Observable{Vector{Any}}(plottable_images[])
     scatter_positions = Observable{Vector{Point2f}}()
     scatter_sizes     = Observable{Vector{Vec2f}}()
     scatter_offsets   = Observable{Vector{Vec2f}}()
@@ -113,14 +113,14 @@ function Makie.plot!(plot::T) where T <: TeXImg
     onany(plottable_images, plot.position, plot.rotation, plot.align, plot.scale) do images, pos, rotations, align, scale
         if length(images) != length(pos)
             # skip this update and let the next one propagate
-            @debug "TexImg: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
+            @debug "TeXImg: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
             return
         end
 
         scatter_images.val    = images
         scatter_positions.val = pos
         scatter_sizes.val     = reverse.(Vec2f.(size.(images)))
-        scatter_offsets.val   = offset_from_align.(Ref(align), scatter_sizes.val)
+        scatter_offsets.val   = offset_from_align.((align,), scatter_sizes.val)
         scatter_rotations.val = rotations
 
         notify(scatter_images)
