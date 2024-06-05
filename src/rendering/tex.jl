@@ -2,7 +2,8 @@
 # TeX rendering
 =#
 
-function rasterize(ct::CachedTeX, scale::Float64 = 1)
+function rasterize(ct::CachedTeX, scale::Int64 = 1)
+    return page2img(ct, ct.doc.page; scale)
 end
 
 # The main compilation method - compiles arbitrary LaTeX documents
