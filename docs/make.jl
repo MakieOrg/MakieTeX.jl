@@ -11,7 +11,6 @@ makedocs(;
         "Home" => "index.md",
         "API reference" => "api.md",
     ],
-    edit_link="https://github.com/JuliaPlots/MakieTeX.jl/blob/{commit}{path}#L{line}",
     sitename="MakieTeX.jl",
     authors="Anshul Singhvi",
     warnonly = true,
