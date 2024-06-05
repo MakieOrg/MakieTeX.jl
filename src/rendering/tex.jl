@@ -105,6 +105,6 @@ function compile_latex(
 end
 
 
-compile_latex(document::TeXDocument; kwargs...) = compile_latex(convert(String, document); kwargs...)
+compile_latex(document::TeXDocument; kwargs...) = compile_latex(doc.doc; kwargs...)
 
 latex2pdf(args...; kwargs...) = compile_latex(args...; kwargs...)
