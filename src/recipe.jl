@@ -59,22 +59,7 @@ end
 #     # This is then stored in an array, which is then returned.
 
 
-# end
-
-function Makie.boundingbox(x::T) where T <: TeXImg
-    Makie.boundingbox(
-        x[1][] isa CachedTeX ? [x[1][]] : x[1][],
-        to_ndim.(Point3f, x.position[], 0),
-        x.rotation[],
-        x.scale[],
-        x.align[]
-    )
-end
-
-function Makie.data_limits(x::T) where T <: TeXImg
-    Makie.boundingbox(x)
-end
-
+# EPSDocument
 function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
 
     (halign::Symbol, valign::Symbol) = align
