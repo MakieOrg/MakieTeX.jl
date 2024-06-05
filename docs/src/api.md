@@ -3,10 +3,10 @@
 ## Constants
 
 ```@docs
-RENDER_DENSITY
-RENDER_EXTRASAFE
-CURRENT_TEX_ENGINE
-_PDFCROP_DEFAULT_MARGINS
+MakieTeX.RENDER_DENSITY
+MakieTeX.RENDER_EXTRASAFE
+MakieTeX.CURRENT_TEX_ENGINE
+MakieTeX._PDFCROP_DEFAULT_MARGINS
 ```
 
 ## Interfaces
@@ -14,19 +14,19 @@ _PDFCROP_DEFAULT_MARGINS
 ### `AbstractDocument`
 
 ```@docs
-AbstractDocument
-getdoc
-mimetype
-Cached
+MakieTeX.AbstractDocument
+MakieTeX.getdoc
+MakieTeX.mimetype
+MakieTeX.Cached
 ```
 
 ### `AbstractCachedDocument`
 
 ```@docs
-AbstractCachedDocument
-rasterize
-draw_to_cairo_surface
-update_handle!
+MakieTeX.AbstractCachedDocument
+MakieTeX.rasterize
+MakieTeX.draw_to_cairo_surface
+MakieTeX.update_handle!
 ```
 
 ## Document types
