@@ -110,15 +110,15 @@ function Makie.plot!(plot::TeXImg)
 
     # Rect to draw in
     # This is mostly aligning
-    onany(plottable_images, plot.position, plot.rotation, plot.align, plot.scale) do images, pos, rotations, align, scale
-        if length(images) != length(pos)
+    onany(plot, plottable_images, plot.position, plot.rotation, plot.align, plot.scale) do images, pos, rotations, align, scale
+        if length(images) != length(pos) && !(pos isa Makie.VecTypes)
             # skip this update and let the next one propagate
             @debug "TeXImg: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
             return
         end
 
         scatter_images.val    = images
-        scatter_positions.val = pos
+        scatter_positions.val = pos isa Makie.VecTypes{N, <: Number} where N ? [pos] : collect(pos)
         scatter_sizes.val     = (Vec2f.(size.(images))) .* scale
         scatter_offsets.val   = offset_from_align.((align,), scatter_sizes.val)
         scatter_rotations.val = rotations
