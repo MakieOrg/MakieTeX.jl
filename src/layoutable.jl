@@ -65,7 +65,7 @@ function Makie.initialize_block!(l::LTeX)
         layoutobservables.autosize[] = (autowidth, autoheight)
     end
 
-    onany(layoutobservables.computedbbox, l.padding) do bbox, padding
+    onany(layoutobservables.computedbbox, l.padding, l.scale) do bbox, padding, _scale
 
         tw = Makie.width(textbb[])
         th = Makie.height(textbb[])
@@ -77,7 +77,7 @@ function Makie.initialize_block!(l::LTeX)
         ty = boy + padding[3] + 0.5 * th
 
         textpos[] = [Makie.Point3f(tx, ty, 0)]
-        scale[] = [(bbox.widths ./ textbb[].widths)]
+        scale[] = [(bbox.widths ./ textbb[].widths) .* _scale]
     end
 
 
