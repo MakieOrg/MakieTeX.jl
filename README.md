@@ -9,7 +9,7 @@
 <img src="https://user-images.githubusercontent.com/32143268/169671023-4d4c8cf7-eb3d-4ee1-8634-8b73fa38d31c.svg" height=400></img>
 
 
-MakieTeX allows you to draw and visualize arbitrary TeX documents in Makie!  You can insert anything from a single line of math to a large and complex TikZ diagram.
+MakieTeX allows you to draw and visualize arbitrary vector documents (TEX, PDF, SVG) in Makie!  You can insert anything from a single line of math to a large and complex TikZ diagram.
 
 It works by compiling a stand-alone <img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="20" align = "center"></a> document to PDF.  For CairoMakie, the PDF is read and rendered directly, and a raster image is rendered in GLMakie.
 
@@ -30,6 +30,14 @@ fig
 ```
 <img src="https://user-images.githubusercontent.com/32143268/170724177-d7cf9d16-8feb-4f6e-bb22-68fa8269066c.svg" height=300></img>
 
+You can also plot SVGs and PDFs in a similar manner using the `SVGDocument` and `PDFDocument` types.  The easiest way to construct these is to use constructors of the form:
+```julia
+SVGDocument(read("file.svg", String))
+PDFDocument(read("file.pdf", String))
+```
+and you can pass them in the same places you would pass CachedTeX.
+
+Some examples of using PDF and SVG are in the documentation linked at the top of the README, as well as in other packages like SwarmMakie.
 
 You need not install anything for MakieTeX to work, since we ship a minimal TeX renderer called [`tectonic`](https://tectonic-typesetting.github.io/en-US/) (based on XeLaTeX).  This will download any missing packages when it encounters them the first time.  However, it will likely not know about any local packages or TEXMF paths, nor will it be able to render advanced features like TikZ graphs which require LuaTeX.  The latexmk/lualatex combination will also likely be faster, and able to use advanced features like calling to other languages with `pythontex` (oh, the heresy!)
 
@@ -95,7 +103,7 @@ This example is from [Texample.net](https://texample.net/tikz/examples/title-gra
 using MakieTeX, CairoMakie, Makie
 td = TeXDocument(read(download("https://texample.net/media/tikz/examples/TEX/title-graphics.tex"), String))
 fig = Figure()
-lt = Label(fig[1, 1], td; tellheight=false)
+lt = LTeX(fig[1, 1], td; tellheight=false)
 ax = Axis(fig[1, 2])
 lines!(ax, rand(10); color = 1:10)
 fig
