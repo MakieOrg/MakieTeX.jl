@@ -94,6 +94,10 @@ This function reads the PDF using Poppler and renders it to a Cairo surface, whi
 """
 function page2img(tex::Union{CachedTeX, CachedPDF}, page::Int; scale = 1, render_density = 1)
     document = update_handle!(tex)
+    page2img(document, page, size(tex); scale, render_density)
+end
+
+function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; scale = 1, render_density = 1)
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
         Ptr{Cvoid},
@@ -101,8 +105,8 @@ function page2img(tex::Union{CachedTeX, CachedPDF}, page::Int; scale = 1, render
         document, page # page 0 is first page
     )
 
-    w = ceil(Int, tex.dims[1] * render_density)
-    h = ceil(Int, tex.dims[2] * render_density)
+    w = ceil(Int, tex_dims[1] * render_density)
+    h = ceil(Int, tex_dims[2] * render_density)
 
     img = fill(Colors.ARGB32(1,1,1,0), w, h)
 
