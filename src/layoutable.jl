@@ -35,7 +35,7 @@ end
 
 LTeX(x, tex; kwargs...) = LTeX(x; tex = tex, kwargs...)
 
-_to_cachedtex(x) = CachedTeX(x)
+_to_cachedtex(x) = CachedTEX(x)
 _to_cachedtex(x::AbstractDocument) = Cached(x)
 
 function Makie.initialize_block!(l::LTeX)

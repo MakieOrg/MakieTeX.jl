@@ -2,7 +2,7 @@
 # TeX rendering
 =#
 
-function rasterize(ct::CachedTeX, scale::Int64 = 1)
+function rasterize(ct::CachedTEX, scale::Int64 = 1)
     return page2img(ct, ct.doc.page; scale)
 end
 
@@ -105,6 +105,6 @@ function compile_latex(
 end
 
 
-compile_latex(document::TeXDocument; kwargs...) = compile_latex(doc.doc; kwargs...)
+compile_latex(document::TEXDocument; kwargs...) = compile_latex(String(doc.doc); kwargs...)
 
 latex2pdf(args...; kwargs...) = compile_latex(args...; kwargs...)

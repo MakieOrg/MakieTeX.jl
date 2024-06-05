@@ -48,7 +48,7 @@ function to_texdoc(lstr, font, textsize, lineheight, color)
     \\color{maincolor}
     """ *  String(lstr)
 
-    return TeXDocument(
+    return TEXDocument(
         string, true;
         requires = requires,
         preamble = preamble,
@@ -58,7 +58,7 @@ function to_texdoc(lstr, font, textsize, lineheight, color)
 end
 
 function to_plottable_cachedtex(lstr, font, textsize, lineheight, color)
-    return CachedTeX(to_texdoc(lstr, font, textsize, lineheight, color))
+    return CachedTEX(to_texdoc(lstr, font, textsize, lineheight, color))
 end
 
 function _plottable_cachedtex_from_array(lstrs::AbstractVector{<: AbstractString}, fonts, textsizes, lineheights, colors)
@@ -113,7 +113,7 @@ function _plottable_cachedtex_from_array(lstrs::AbstractVector{<: AbstractString
         i += 1
     end
 
-    doc = TeXDocument(
+    doc = TEXDocument(
         contents, true;
         requires = requires,
         preamble = preamble,
@@ -129,7 +129,7 @@ function _plottable_cachedtex_from_array(lstrs::AbstractVector{<: AbstractString
 
     pdfs = split_pdf(full_pdf)
 
-    return CachedTeX.(pdfs)
+    return CachedTEX.(pdfs)
 end
 
 

@@ -96,7 +96,7 @@ function Makie.plot!(plot::TeXImg)
     # changing dpi should rerender
     plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
         if cachedtex isa AbstractString || cachedtex isa AbstractArray{<: AbstractString}
-            to_array(_bc_if_array(CachedTeX, cachedtex))
+            to_array(_bc_if_array(CachedTEX, cachedtex))
         else
             to_array(_bc_if_array(Cached, cachedtex))
         end
