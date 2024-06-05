@@ -19,17 +19,13 @@ tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
 
 [weakdeps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [extensions]
 MakieTeXCairoMakieExt = "CairoMakie"
-MakieTeXGLMakieExt = "GLMakie"
-MakieTeXWGLMakieExt = "WGLMakie"
 
 [compat]
 Cairo = "1.0.5"
-CairoMakie = "0.11, 0.12"
+CairoMakie = "0.11.11, 0.12"
 Colors = "0.9, 0.10, 0.11, 0.12"
 DocStringExtensions = "0.8, 0.9"
 Ghostscript_jll = "9"
