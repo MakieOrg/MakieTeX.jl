@@ -40,9 +40,7 @@ function compile_latex(
 
             try
                 latex = if tex_engine == `tectonic`
-                    tectonic_jll.tectonic() do bin
-                        run(pipeline(ignorestatus(`$bin temp.tex`), stdout=out, stderr=err))
-                    end
+                    run(pipeline(ignorestatus(`$(tectonic_jll.tectonic) temp.tex`), stdout=out, stderr=err))
                 else # latexmk
                     latex_cmd = `latexmk $options --shell-escape -cd -$use_tex_engine -interaction=nonstopmode temp.tex`
                     run(pipeline(ignorestatus(latex_cmd), stdout=out, stderr=err))
