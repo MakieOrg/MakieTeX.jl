@@ -9,6 +9,7 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Formats" => "formats.md",
         "API reference" => "api.md",
     ],
     sitename="MakieTeX.jl",
