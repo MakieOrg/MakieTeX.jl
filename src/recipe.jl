@@ -102,7 +102,7 @@ function Makie.plot!(plot::TeXImg)
         end
     end
 
-    scatter_images    = Observable{Vector{Any}}(plottable_images[])
+    scatter_images    = Observable(plottable_images[])
     scatter_positions = Observable{Vector{Point2f}}()
     scatter_sizes     = Observable{Vector{Vec2f}}()
     scatter_offsets   = Observable{Vector{Vec2f}}()
@@ -119,7 +119,7 @@ function Makie.plot!(plot::TeXImg)
 
         scatter_images.val    = images
         scatter_positions.val = pos
-        scatter_sizes.val     = reverse.(Vec2f.(size.(images)))
+        scatter_sizes.val     = (Vec2f.(size.(images))) .* scale
         scatter_offsets.val   = offset_from_align.((align,), scatter_sizes.val)
         scatter_rotations.val = rotations
 
