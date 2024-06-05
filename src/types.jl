@@ -101,6 +101,8 @@ types (e.g., PDF, SVG, etc.).
 """
 function update_handle! end
 
+Cached(doc::AbstractCachedDocument) = doc
+
 #=
 
 ## Generic dispatches for documents
