@@ -446,8 +446,11 @@ function update_handle!(ct::CachedTEX)
     return ct.ptr[]
 end
 
+Base.convert(::Type{CachedPDF}, ct::CachedTEX) = CachedPDF(PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page), ct.ptr, ct.dims, ct.surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
+Base.convert(::Type{PDFDocument}, ct::CachedTEX) = PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page)
+
 function Base.show(io::IO, ct::CachedTEX)
-    if isnothing(doc)
+    if isnothing(ct.doc)
         println(io, "CachedTEX(no document, $(ct.ptr), $(ct.dims))")
     elseif length(ct.doc.contents) > 1000
         println(io, "CachedTEX(TexDocument(...), $(ct.ptr), $(ct.dims))")
