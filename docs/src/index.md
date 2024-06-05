@@ -2,10 +2,19 @@
 
 MakieTeX is a package that allows users to plot vector images - PDF, SVG, and TeX (which compiles to PDF) directly in Makie.  It exposes two approaches: the `teximg` recipe which plots any LaTeX-like object, and the `CachedDocument` API which allows users to plot documents directly as `scatter` markers.
 
+To see a list of all exported functions, types, and macros, see the [API](@ref api) page.
 
+```@example LTeX
+using MakieTeX, CairoMakie
 
-```@index
+teximg(raw"""
+\begin{align*}
+\frac{1}{2} \times \frac{1}{2} = \frac{1}{4}
+\end{align*}
+""")
 ```
+
+
 ## Principle of operation
 
 ### Rendering
