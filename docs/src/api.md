@@ -1,5 +1,14 @@
 # API documentation
 
+## Constants
+
+```@docs
+RENDER_DENSITY
+RENDER_EXTRASAFE
+CURRENT_TEX_ENGINE
+_PDFCROP_DEFAULT_MARGINS
+```
+
 ## Interfaces
 
 ### `AbstractDocument`
