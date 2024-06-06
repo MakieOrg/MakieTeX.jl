@@ -1,3 +1,40 @@
+```@raw html
+---
+# https://vitepress.dev/reference/default-theme-home-page
+layout: home
+
+hero:
+  name: "MakieTeX"
+  text: ""
+  tagline: Plotting vector images in Makie
+  image:
+    src: /logo.png
+    alt: MakieTeX logo
+  actions:
+    - theme: brand
+      text: Introduction
+      link: /index
+    - theme: alt
+      text: View on Github
+      link: https://github.com/JuliaPlots/MakieTeX.jl
+    - theme: alt
+      text: Available formats
+      link: /formats
+
+features:
+  - icon: <img width="64" height="64" src="https://rawcdn.githack.com/JuliaLang/julia-logo-graphics/f3a09eb033b653970c5b8412e7755e3c7d78db9e/images/juliadots.iconset/icon_512x512.png" alt="Julia code"/>
+    title: TeX, PDF, SVG
+    details: Renders vector formats like TeX, PDF and SVG with no external dependencies
+    link: /formats
+---
+
+
+<p style="margin-bottom:2cm"></p>
+
+<div class="vp-doc" style="width:80%; margin:auto">
+
+```
+
 # MakieTeX.jl
 
 MakieTeX is a package that allows users to plot vector images - PDF, SVG, and TeX (which compiles to PDF) directly in Makie.  It exposes two approaches: the `teximg` recipe which plots any LaTeX-like object, and the `CachedDocument` API which allows users to plot documents directly as `scatter` markers.
@@ -30,3 +67,7 @@ A hypothetical future Typst backend would likely also be a Typst -> PDF -> Poppl
 When rendering to Makie, MakieTeX rasterizes the document to a bitmap by default via the Makie attribute conversion pipeline (specifically `Makie.to_spritemarker`), and then Makie treats it like a general image scatter marker.
 
 **HOWEVER**, when rendering with CairoMakie, there is a function hook to get the correct marker for *Cairo* specifically, ignoring the default Makie conversion pipeline.  This is `CairoMakie.cairo_scatter_marker`, and we overload it in `MakieTeX.MakieTeXCairoMakieExt` to get the correct marker.  This also allows us to apply styling to SVG elements, but again **ONLY IN CAIROMAKIE**!  This is a bit of an incompatibility and a breaking of the implicit promise from Makie that rendering should be the same across backends, but the tradeoff is (to me, at least) worth it.
+
+```@raw html
+</div>
+```
