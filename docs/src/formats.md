@@ -9,8 +9,8 @@ using MakieTeX, CairoMakie
 # Any of the below things could be used in place of the other.
 # However, `scatter` will not accept LaTeXStrings as markers.
 latex_string = L"\int_0^\pi \sin(x)^2 dx"
-tex_document = TeXDocument(latex_string)
-cached_tex = CachedTeX(tex_document)
+tex_document = TEXDocument(latex_string)
+cached_tex = CachedTEX(tex_document)
 
 fig = Figure()
 # use the teximg recipe
@@ -46,7 +46,7 @@ doc = raw"""
 \end{document}
 """
 
-tex_document = TeXDocument(doc)
+tex_document = TEXDocument(doc)
 
 fig = Figure()
 # use the teximg recipe

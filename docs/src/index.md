@@ -7,9 +7,6 @@ hero:
   name: "MakieTeX"
   text: ""
   tagline: Plotting vector images in Makie
-  image:
-    src: /logo.png
-    alt: MakieTeX logo
   actions:
     - theme: brand
       text: Introduction
