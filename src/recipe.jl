@@ -40,7 +40,7 @@ end
 This recipe plots rendered `Typst` to your Figure or Scene.
 
 There are three types of input you can provide:
-- Any `String`, which is rendered to LaTeX cognizant of the figure's overall theme,
+- Any `String`, which is rendered to Typst cognizant of the figure's overall theme,
 - A [`TypstDocument`](@ref) object, which is rendered to Typst directly, and can be customized by the user,
 - A [`CachedTypst`](@ref) object, which is a pre-rendered Typst document.
 
