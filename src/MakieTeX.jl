@@ -47,8 +47,7 @@ export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
-export typstimg, typstimg!, TypstImg
-export LTeX, LTypst
+export LTeX
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 export Typstry, TypstString, @typst_str

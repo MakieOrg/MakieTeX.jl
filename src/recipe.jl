@@ -33,37 +33,6 @@ $(Makie.ATTRIBUTES)
     )
 end
 
-"""
-    typstimg(typst; position, ...)
-    typstimg!(ax_or_scene, tex; position, ...)
-
-This recipe plots rendered `Typst` to your Figure or Scene.
-
-There are three types of input you can provide:
-- Any `String`, which is rendered to Typst cognizant of the figure's overall theme,
-- A [`TypstDocument`](@ref) object, which is rendered to Typst directly, and can be customized by the user,
-- A [`CachedTypst`](@ref) object, which is a pre-rendered Typst document.
-
-`typst` may be a single one of these objects, or an array of them.
-
-## Attributes
-$(Makie.ATTRIBUTES)
-"""
-@recipe(TypstImg, typst) do scene
-    merge(
-        default_theme(scene),
-        Attributes(
-            render_density = 2,
-            align = (:center, :center),
-            scale = 1.0,
-            position = [Point2{Float32}(0)],
-            rotation = [0f0],
-            space = :data,
-            markerspace = :pixel
-        )
-    )
-end
-
 # First, handle the case of one or more abstract strings passed in!
 # These are themable.
 
@@ -118,21 +87,18 @@ function offset_from_align(align::Tuple{Symbol, Symbol}, wh)::Vec2f
     return Vec2f(x, y)
 end
 
-__bc_if_array(::Type{TeXImg}, x) = _bc_if_array(CachedTeX, x)
-__bc_if_array(::Type{TypstImg}, x) = _bc_if_array(CachedTypst, x)
-
 _bc_if_array(f, x) = f(x)
 _bc_if_array(f, x::AbstractArray) = f.(x)
 
 # scatter: marker size, rotations to determine everything
-function Makie.plot!(plot::T) where T <: Union{TeXImg, TypstImg}
+function Makie.plot!(plot::TeXImg)
     # We always want to draw this at a 1:1 ratio, so increasing scale or
     # changing dpi should rerender
-    plottable_images = lift(plot[1], plot.render_density, plot.scale) do ct, render_density, scale
-        if ct isa AbstractString || ct isa AbstractArray{<: AbstractString}
-            to_array(__bc_if_array(T, ct))
+    plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
+        if cachedtex isa AbstractString || cachedtex isa AbstractArray{<: AbstractString}
+            to_array(_bc_if_array(CachedTEX, cachedtex))
         else
-            to_array(_bc_if_array(Cached, ct))
+            to_array(_bc_if_array(Cached, cachedtex))
         end
     end
 
@@ -147,7 +113,7 @@ function Makie.plot!(plot::T) where T <: Union{TeXImg, TypstImg}
     onany(plot, plottable_images, plot.position, plot.rotation, plot.align, plot.scale) do images, pos, rotations, align, scale
         if length(images) != length(pos) && !(pos isa Makie.VecTypes)
             # skip this update and let the next one propagate
-            @debug "$T: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
+            @debug "TeXImg: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
             return
         end
 
@@ -177,4 +143,3 @@ function Makie.plot!(plot::T) where T <: Union{TeXImg, TypstImg}
         markerspace = plot.markerspace,
     )
 end
-
