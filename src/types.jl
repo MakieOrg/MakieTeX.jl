@@ -270,6 +270,62 @@ Available keyword arguments are:
 """
 texdoc(contents; kwargs...) = TEXDocument(contents, true; kwargs...)
 
+struct TypstDocument <: AbstractDocument
+    contents::String
+    page::Int
+end
+TypstDocument(contents) = TypstDocument(contents, 0)
+Cached(x::TypstDocument) = CachedPDF(x)
+getdoc(doc::TypstDocument) = doc.contents
+mimetype(::TypstDocument) = MIME"text/typst"()
+
+"""
+    TypstDocument(contents::AbstractString, add_defaults::Bool; preamble)
+
+This constructor function creates a `struct` of type `TypstDocument` which can be passed to `typstimg`.
+All arguments are to be passed as strings.
+
+If `add_defaults` is `false`, then we will *not* automatically add document structure.
+Note that in this case, keyword arguments will be disregarded and `contents` must be
+a complete Typst document.
+
+Available keyword arguments are:
+- `preamble`: arbitrary code inserted prior to the `contents`.  Default: `""`.
+
+See also [`CachedTypst`](@ref), [`compile_typst`](@ref), etc.
+"""
+function TypstDocument(
+        contents::AbstractString,
+        add_defaults::Bool;
+        preamble::AbstractString = "",
+    )
+    if add_defaults
+        return TypstDocument(
+            """
+            $(preamble)
+
+            $(contents)
+            """
+        )
+    else
+        return TypstDocument(contents)
+    end
+end
+TypstDocument(ts::LaTeXString) = TEXDocument(ts, true)
+
+"""
+    typstdoc(contents::AbstractString; kwargs...)
+
+A shorthand for `TypstDocument(contents, add_defaults=true; kwargs...)`.
+
+Available keyword arguments are:
+
+- `preamble`: arbitrary code inserted prior to the `contents`.  Default: `""`.
+
+"""
+typst_doc(contents; kwargs...) = TypstDocument(contents, true; kwargs...)
+
+
 
 #=
 # Cached documents
@@ -443,13 +499,86 @@ end
 # do not rerun the pipeline on CachedTEX
 CachedTEX(ct::CachedTEX) = ct
 
-function update_handle!(ct::CachedTEX)
+struct CachedTypst <: AbstractCachedDocument
+    "The original `TypstDocument` which is compiled."
+    doc::TypstDocument
+    "The resulting compiled PDF"
+    pdf::Vector{UInt8}
+    "A pointer to the Poppler handle of the PDF.  May be randomly GC'ed by Poppler."
+    ptr::Ref{Ptr{Cvoid}} # Poppler handle
+    "A surface to which Poppler has drawn the PDF.  Permanent and cached."
+    surf::CairoSurface
+    "The dimensions of the PDF page, for ease of access."
+    dims::Tuple{Float64, Float64}
+end
+getdoc(doc::CachedTypst) = getdoc(doc.doc)
+mimetype(::CachedTypst) = MIME"text/typst"()
+
+"""
+    CachedTypst(doc::TypstDocument)
+
+Compile a `TypstDocument`, compile it and return the cached Typst object.
+
+A `CachedTypst` struct stores the document and its compiled form, as well as some
+pointers to in-program versions of it.  It also stores the page dimensions.
+
+The constructor stores the following fields:
+$(FIELDS)
+
+!!! note
+    This is a `mutable struct` because the pointer to the Poppler handle can change.
+    TODO: make this an immutable struct with a Ref to the handle??  OR maybe even the surface itself...
+
+!!! note
+    It is also possible to manually construct a `CachedTypst` with `nothing` in the `doc` field, 
+    if you just want to insert a pre-rendered PDF into your figure.
+"""
+function CachedTypst(doc::TypstDocument)
+    pdf = Vector{UInt8}(typst2pdf(convert(String, doc)))
+    ptr = load_pdf(pdf)
+    surf = page2recordsurf(ptr, doc.page)
+    dims = (pdf_get_page_size(ptr, doc.page))
+
+    ct = CachedTypst(
+        doc,
+        pdf,
+        Ref(ptr),
+        surf,
+        dims# .+ (1, 1),
+    )
+
+    return ct
+end
+
+function CachedTypst(str::Union{String, TypstString}; kwargs...)
+    CachedTypst(TypstDocument(str); kwargs...)
+end
+
+function CachedTypst(pdf::Vector{UInt8}; kwargs...)
+    ptr = load_pdf(pdf)
+    surf = firstpage2recordsurf(ptr)
+    dims = pdf_get_page_size(ptr, 0)
+
+    ct = CachedTypst(
+        nothing,
+        pdf,
+        Ref(ptr),
+        surf,
+        dims# .+ (1, 1),
+    )
+    return ct
+end
+
+# do not rerun the pipeline on CachedTypst
+CachedTypst(ct::CachedTypst) = ct
+
+function update_handle!(ct::Union{CachedTEX, CachedTypst})
     ct.ptr[] = load_pdf(ct.pdf)
     return ct.ptr[]
 end
 
-Base.convert(::Type{CachedPDF}, ct::CachedTEX) = CachedPDF(PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page), ct.ptr, ct.dims, ct.surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
-Base.convert(::Type{PDFDocument}, ct::CachedTEX) = PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page)
+Base.convert(::Type{CachedPDF}, ct::Union{CachedTEX, CachedTypst}) = CachedPDF(PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page), ct.ptr, ct.dims, ct.surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
+Base.convert(::Type{PDFDocument}, ct::Union{CachedTEX, CachedTypst}) = PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page)
 
 function Base.show(io::IO, ct::CachedTEX)
     if isnothing(ct.doc)
@@ -458,6 +587,16 @@ function Base.show(io::IO, ct::CachedTEX)
         println(io, "CachedTEX(TexDocument(...), $(ct.ptr), $(ct.dims))")
     else
         println(io, "CachedTEX($(ct.doc), $(ct.ptr), $(ct.dims))")
+    end
+end
+
+function Base.show(io::IO, ct::CachedTypst)
+    if isnothing(ct.doc)
+        println(io, "CachedTypst(no document, $(ct.ptr), $(ct.dims))")
+    elseif length(ct.doc.contents) > 1000
+        println(io, "CachedTypst(TypstDocument(...), $(ct.ptr), $(ct.dims))")
+    else
+        println(io, "CachedTypst($(ct.doc), $(ct.ptr), $(ct.dims))")
     end
 end
 
@@ -517,10 +656,9 @@ function rotatedrect(rect::Rect{2, T}, angle)::Rect{2, T} where T
     return Rect2(rmins..., (rmaxs .- rmins)...)
 end
 
-function Makie.boundingbox(cachedtex::CachedTEX, position, rotation, scale,
-    align)
-    origin = offset_from_align(align, cachedtex.dims)
-    box = Rect2f(Point2f(origin), Vec2f(cachedtex.dims) * scale)
+function Makie.boundingbox(ct::Union{CachedTEX, CachedTypst}, position, rotation, scale, align)
+    origin = offset_from_align(align, ct.dims)
+    box = Rect2f(Point2f(origin), Vec2f(ct.dims) * scale)
     rect = rotatedrect(box, rotation)
     new_origin = Point3f(rect.origin..., 0)
     new_widths = Vec3f(rect.widths..., 0)
@@ -528,18 +666,15 @@ function Makie.boundingbox(cachedtex::CachedTEX, position, rotation, scale,
 end
 
 # this method copied from Makie.jl
-function Makie.boundingbox(cachedtexs::AbstractVector{CachedTEX}, positions, rotations, scale,
-    align)
-
-    isempty(cachedtexs) && (return Rect3f((0, 0, 0), (0, 0, 0)))
+function Makie.boundingbox(cts::AbstractVector{<:Union{CachedTEX, CachedTypst}}, positions, rotations, scale, align)
+    isempty(cts) && (return Rect3f((0, 0, 0), (0, 0, 0)))
 
     bb = Rect3f()
-    broadcast_foreach(cachedtexs, positions, rotations, scale,
-    align) do cachedtex, pos, rot, scl, aln
+    broadcast_foreach(cts, positions, rotations, scale, align) do ct, pos, rot, scl, aln
         if !Makie.isfinite_rect(bb)
-            bb = Makie.boundingbox(cachedtex, pos, rot, scl, aln)
+            bb = Makie.boundingbox(ct, pos, rot, scl, aln)
         else
-            bb = Makie.union(bb, Makie.boundingbox(cachedtex, pos, rot, scl, aln))
+            bb = Makie.union(bb, Makie.boundingbox(ct, pos, rot, scl, aln))
         end
     end
     !Makie.isfinite_rect(bb) && error("Invalid `TeX` boundingbox")

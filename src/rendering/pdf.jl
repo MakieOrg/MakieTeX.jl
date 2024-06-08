@@ -86,15 +86,15 @@ end
 # Rendering functions for the resulting Cairo surfaces and images
 
 """
-    page2img(tex::CachedTeX, page::Int; scale = 1, render_density = 1)
+    page2img(ct::Union{CachedTeX, CachedTypst}, page::Int; scale = 1, render_density = 1)
 
-Renders the `page` of the given `CachedTeX` object to an image, with the given `scale` and `render_density`.
+Renders the `page` of the given `CachedTeX` or `CachedTypst` object to an image, with the given `scale` and `render_density`.
 
 This function reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
 """
-function page2img(tex::Union{CachedTeX, CachedPDF}, page::Int; scale = 1, render_density = 1)
-    document = update_handle!(tex)
-    page2img(document, page, size(tex); scale, render_density)
+function page2img(ct::Union{CachedTeX, CachedTypst, CachedPDF}, page::Int; scale = 1, render_density = 1)
+    document = update_handle!(ct)
+    page2img(document, page, size(ct); scale, render_density)
 end
 
 function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; scale = 1, render_density = 1)
@@ -136,7 +136,7 @@ function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; scale = 1, r
 
 end
 
-firstpage2img(tex; kwargs...) = page2img(tex, 0; kwargs...)
+firstpage2img(ct; kwargs...) = page2img(ct, 0; kwargs...)
 
 function page2recordsurf(document::Ptr{Cvoid}, page::Int; scale = 1, render_density = 1)
     w, h = pdf_get_page_size(document, page)
@@ -167,16 +167,16 @@ function page2recordsurf(document::Ptr{Cvoid}, page::Int; scale = 1, render_dens
 
 end
 
-firstpage2recordsurf(tex; kwargs...) = page2recordsurf(tex, 0; kwargs...)
+firstpage2recordsurf(ct; kwargs...) = page2recordsurf(ct, 0; kwargs...)
 
-function recordsurf2img(tex::CachedTeX, render_density = 1)
+function recordsurf2img(ct::Union{CachedTeX, CachedTypst}, render_density = 1)
 
     # We can find the final dimensions (in pixel units) of the Rsvg image.
     # Then, it's possible to store the image in a native Julia array,
     # which simplifies the process of rendering.
     # Cairo does not draw "empty" pixels, so we need to fill here
-    w = ceil(Int, tex.dims[1] * render_density)
-    h = ceil(Int, tex.dims[2] * render_density)
+    w = ceil(Int, ct.dims[1] * render_density)
+    h = ceil(Int, ct.dims[2] * render_density)
 
     img = fill(Colors.ARGB32(0,0,0,0), w, h)
 
@@ -187,7 +187,7 @@ function recordsurf2img(tex::CachedTeX, render_density = 1)
     c = Cairo.CairoContext(cs)
 
     # Render the parsed SVG to a Cairo context
-    render_surface(c, tex.surf)
+    render_surface(c, ct.surf)
 
     # The image is rendered transposed, so we need to flip it.
     return rotr90(permutedims(img))
