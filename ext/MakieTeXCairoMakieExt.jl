@@ -23,9 +23,9 @@ CairoMakie.cairo_scatter_marker(v::NTuple{N, <: MakieTeX.AbstractDocument}) wher
 
 # # Teximg
 
-# Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
+# Override `is_cairomakie_atomic_plot` to allow `TeXImg` and `TypstImg` to remain a unit,
 # instead of auto-decomposing into its component scatter plot.
-CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
+CairoMakie.is_cairomakie_atomic_plot(plot::Union{TeXImg, TypstImg}) = true
 
 # # Scatter markers
 
@@ -81,7 +81,8 @@ function CairoMakie.draw_marker(ctx, marker::MakieTeX.CachedSVG, pos, scale,
 end
 
 
-function CairoMakie.draw_marker(ctx, marker::Union{MakieTeX.CachedTEX, MakieTeX.CachedTeX, MakieTeX.CachedPDF}, pos, scale,
+function CairoMakie.draw_marker(ctx, marker::Union{MakieTeX.CachedTEX, MakieTeX.CachedTeX, MakieTeX.CachedTypst, MakieTeX.CachedPDF},
+    pos, scale,
     strokecolor #= unused =#, strokewidth #= unused =#,
     marker_offset, rotation) 
     # get dimensions

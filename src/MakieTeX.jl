@@ -3,7 +3,7 @@ module MakieTeX
 using Makie
 using Makie.MakieCore
 
-using Colors, LaTeXStrings
+using Colors, LaTeXStrings, Typstry
 using Base64
 
 # Patch for Makie.jl `@Block` macro error
@@ -36,6 +36,7 @@ include("layoutable.jl")
 
 include("rendering/pdf_utils.jl")
 include("rendering/tex.jl")
+include("rendering/typst.jl")
 include("rendering/pdf.jl")
 include("rendering/svg.jl")
 
@@ -46,9 +47,11 @@ export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
-export LTeX
+export typstimg, typstimg!, TypstImg
+export LTeX, LTypst
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
+export Typstry, TypstString, @typst_str
 
 "Try to write to `engine` and see what happens"
 function try_tex_engine(engine::Cmd)
