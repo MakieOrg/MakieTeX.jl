@@ -73,9 +73,11 @@ code(lt::LTypst) = lt.typst
 img!(::Type{LTeX}, args...; kwargs...) = teximg!(args...; kwargs...)
 img!(::Type{LTypst}, args...; kwargs...) = typstimg!(args...; kwargs...)
 
-_to_cached(::Type{LTeX}, x) = CachedTEX(x)
-_to_cached(::Type{LTypst}, x) = CachedTypst(x)
-_to_cached(::Type, x::AbstractDocument) = Cached(x)
+__to_cached(T, x) = T(x)
+__to_cached(T, x::AbstractDocument) = Cached(x)
+
+_to_cached(::Type{LTeX}, x) = __to_cached(CachedTEX, x)
+_to_cached(::Type{LTypst}, x) = __to_cached(CachedTypst, x)
 
 function Makie.initialize_block!(l::T) where T <: Union{LTeX, LTypst}
 
