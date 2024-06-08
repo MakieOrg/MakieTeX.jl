@@ -311,7 +311,7 @@ function TypstDocument(
         return TypstDocument(contents)
     end
 end
-TypstDocument(ts::LaTeXString) = TEXDocument(ts, true)
+TypstDocument(ts::TypstString) = TypstDocument(ts, true)
 
 """
     typstdoc(contents::AbstractString; kwargs...)
