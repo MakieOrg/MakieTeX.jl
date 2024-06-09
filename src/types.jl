@@ -282,7 +282,7 @@ mimetype(::TypstDocument) = MIME"text/typst"()
 """
     TypstDocument(contents::AbstractString, add_defaults::Bool; preamble)
 
-This constructor function creates a `struct` of type `TypstDocument` which can be passed to `typstimg`.
+This constructor function creates a `struct` of type `TypstDocument`.
 All arguments are to be passed as strings.
 
 If `add_defaults` is `false`, then we will *not* automatically add document structure.
