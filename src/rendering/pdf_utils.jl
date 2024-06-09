@@ -144,4 +144,45 @@ Crop a PDF file using Ghostscript.  This alters the crop box but does not
 actually remove elements.
 """
 function crop_pdf(path::String; margin = _PDFCROP_DEFAULT_MARGINS[])
+    # if pdf_num_pages("temp.pdf") > 1
+    #     @warn("The PDF has more than 1 page!  Choosing the first page.")
+    # end
+
+    # Generate the cropping margins
+    bbox = get_pdf_bbox(path)
+    crop_box = (
+        bbox[1] - margin[1],
+        bbox[2] - margin[2],
+        bbox[3] + margin[3],
+        bbox[4] + margin[4]
+    )
+    crop_cmd = join(crop_box, " ")
+
+
+    out = Pipe()
+    err = Pipe()
+    try
+        redirect_stderr(err) do
+            redirect_stdout(out) do
+                Ghostscript_jll.gs() do gs_exe
+                    run(`$gs_exe -o temp_cropped.pdf -sDEVICE=pdfwrite -c "[/CropBox [$crop_cmd]" -c "/PAGES pdfmark" -f $path`)
+                end
+            end
+        end
+    catch e
+    finally
+        close(out.in)
+        close(err.in)
+        if !isfile("temp_cropped.pdf")
+            println("`gs` failed to crop the PDF!")
+            println("Files in temp directory are:\n" * join(readdir(), ','))
+            printstyled("Stdout\n", bold=true, color = :blue)
+            println(read(out, String))
+            printstyled("Stderr\n", bold=true, color = :red)
+            println(read(err, String))
+            error()
+        end
+    end
+
+    return isfile("temp_cropped.pdf") ? read("temp_cropped.pdf", String) : read(path, String)
 end
