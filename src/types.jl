@@ -450,23 +450,7 @@ $(FIELDS)
     It is also possible to manually construct a `CachedTEX` with `nothing` in the `doc` field, 
     if you just want to insert a pre-rendered PDF into your figure.
 """
-function CachedTEX(doc::TEXDocument; kwargs...)
-
-    pdf = Vector{UInt8}(latex2pdf(convert(String, doc); kwargs...))
-    ptr = load_pdf(pdf)
-    surf = page2recordsurf(ptr, doc.page)
-    dims = (pdf_get_page_size(ptr, doc.page))
-
-    ct = CachedTEX(
-        doc,
-        pdf,
-        Ref(ptr),
-        surf,
-        dims# .+ (1, 1),
-    )
-
-    return ct
-end
+CachedTEX(doc::TEXDocument; kwargs...) = cached_doc(CachedTEX, latex2pdf, doc; kwargs...)
 
 function CachedTEX(str::String; kwargs...)
     return CachedTEX(implant_text(str); kwargs...)
@@ -481,20 +465,7 @@ function CachedTEX(x::LaTeXString; kwargs...)
     end
 end
 
-function CachedTEX(pdf::Vector{UInt8}; kwargs...)
-    ptr = load_pdf(pdf)
-    surf = firstpage2recordsurf(ptr)
-    dims = pdf_get_page_size(ptr, 0)
-
-    ct = CachedTEX(
-        nothing,
-        pdf,
-        Ref(ptr),
-        surf,
-        dims# .+ (1, 1),
-    )
-    return ct
-end
+CachedTEX(pdf::Vector{UInt8}; kwargs...) = cached_pdf(CachedTEX, pdf; kwargs...)
 
 # do not rerun the pipeline on CachedTEX
 CachedTEX(ct::CachedTEX) = ct
@@ -533,13 +504,24 @@ $(FIELDS)
     It is also possible to manually construct a `CachedTypst` with `nothing` in the `doc` field, 
     if you just want to insert a pre-rendered PDF into your figure.
 """
-function CachedTypst(doc::TypstDocument)
-    pdf = Vector{UInt8}(typst2pdf(convert(String, doc)))
+CachedTypst(doc::TypstDocument) = cached_doc(CachedTypst, typst2pdf, doc)
+
+function CachedTypst(str::Union{String, TypstString}; kwargs...)
+    CachedTypst(TypstDocument(str); kwargs...)
+end
+
+CachedTypst(pdf::Vector{UInt8}; kwargs...) = cached_pdf(CachedTypst, pdf; kwargs...)
+
+# do not rerun the pipeline on CachedTypst
+CachedTypst(ct::CachedTypst) = ct
+
+function cached_doc(T, f, doc; kwargs...)
+    pdf = Vector{UInt8}(f(convert(String, doc); kwargs...))
     ptr = load_pdf(pdf)
     surf = page2recordsurf(ptr, doc.page)
     dims = (pdf_get_page_size(ptr, doc.page))
 
-    ct = CachedTypst(
+    ct = T(
         doc,
         pdf,
         Ref(ptr),
@@ -550,16 +532,12 @@ function CachedTypst(doc::TypstDocument)
     return ct
 end
 
-function CachedTypst(str::Union{String, TypstString}; kwargs...)
-    CachedTypst(TypstDocument(str); kwargs...)
-end
-
-function CachedTypst(pdf::Vector{UInt8}; kwargs...)
+function cached_pdf(T, pdf; kwargs...)
     ptr = load_pdf(pdf)
     surf = firstpage2recordsurf(ptr)
     dims = pdf_get_page_size(ptr, 0)
 
-    ct = CachedTypst(
+    ct = T(
         nothing,
         pdf,
         Ref(ptr),
@@ -569,9 +547,6 @@ function CachedTypst(pdf::Vector{UInt8}; kwargs...)
     return ct
 end
 
-# do not rerun the pipeline on CachedTypst
-CachedTypst(ct::CachedTypst) = ct
-
 function update_handle!(ct::Union{CachedTEX, CachedTypst})
     ct.ptr[] = load_pdf(ct.pdf)
     return ct.ptr[]
@@ -580,25 +555,18 @@ end
 Base.convert(::Type{CachedPDF}, ct::Union{CachedTEX, CachedTypst}) = CachedPDF(PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page), ct.ptr, ct.dims, ct.surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
 Base.convert(::Type{PDFDocument}, ct::Union{CachedTEX, CachedTypst}) = PDFDocument(String(deepcopy(ct.pdf)), ct.doc.page)
 
-function Base.show(io::IO, ct::CachedTEX)
+function _show(io, ct, x, y)
     if isnothing(ct.doc)
-        println(io, "CachedTEX(no document, $(ct.ptr), $(ct.dims))")
+        println(io, x, "(no document, $(ct.ptr), $(ct.dims))")
     elseif length(ct.doc.contents) > 1000
-        println(io, "CachedTEX(TexDocument(...), $(ct.ptr), $(ct.dims))")
+        println(io, x, "(", y, "(...), $(ct.ptr), $(ct.dims))")
     else
-        println(io, "CachedTEX($(ct.doc), $(ct.ptr), $(ct.dims))")
+        println(io, x, "($(ct.doc), $(ct.ptr), $(ct.dims))")
     end
 end
 
-function Base.show(io::IO, ct::CachedTypst)
-    if isnothing(ct.doc)
-        println(io, "CachedTypst(no document, $(ct.ptr), $(ct.dims))")
-    elseif length(ct.doc.contents) > 1000
-        println(io, "CachedTypst(TypstDocument(...), $(ct.ptr), $(ct.dims))")
-    else
-        println(io, "CachedTypst($(ct.doc), $(ct.ptr), $(ct.dims))")
-    end
-end
+Base.show(io::IO, ct::CachedTEX) = _show(io, ct, "CachedTEX", "TEXDocument")
+Base.show(io::IO, ct::CachedTypst) = _show(io, ct, "CachedTypst", "TypstDocument")
 
 function implant_math(str)
     return TEXDocument(
