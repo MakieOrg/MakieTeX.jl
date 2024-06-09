@@ -50,8 +50,8 @@ function Makie.initialize_block!(l::LTeX)
 
     t = teximg!(
         topscene, cached_tex; position = textpos, visible = l.visible,
-        scale = scale, align = (:bottom, :left),
-        rotations = l.rotation,
+        scale = scale, align = (:center, :center),
+        rotation = l.rotation,
         markerspace = :pixel,
         inspectable = false
     )
