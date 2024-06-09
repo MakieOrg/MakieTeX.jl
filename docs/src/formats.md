@@ -58,6 +58,21 @@ scatter(fig[2, 1], rand(10), rand(10), marker=tex_document, markersize = 50)
 fig
 ```
 
+## Typst
+
+```@example main
+using MakieTeX, CairoMakie
+
+typst_string = typst"$ integral_0^pi sin(x)^2 diff x $";
+typst_document = TypstDocument(typst_string);
+cached_typst = CachedTypst(typst_document);
+cached_pdf = convert(CachedPDF, cached_typst);
+
+fig = Figure(size=(100, 100));
+LTeX(fig[1, 1], cached_pdf);
+fig
+```
+
 ## PDF
 
 ```@example main

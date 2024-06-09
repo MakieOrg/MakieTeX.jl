@@ -37,10 +37,12 @@ SVGDocument
 PDFDocument
 EPSDocument
 TEXDocument
+TypstDocument
 ```
 ### Cached document types
 ```@docs
 CachedTEX
+CachedTypst
 CachedPDF
 CachedSVG
 CachedEPS
