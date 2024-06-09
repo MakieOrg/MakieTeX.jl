@@ -35,6 +35,22 @@ function render_texample(CachedType, DocType, url)
 
 end
 
+function render_texample(url; assume = ".tex")
+    ext = splitext(url)
+    isempty(ext) && (ext = assume)
+    if ext == ".tex"
+        render_texample(CachedTeX, TeXDocument, url)
+    elseif ext == ".typst"
+        render_texample(CachedTypst, TypstDocument, url)
+    elseif ext == ".svg"
+        render_texample(CachedSVG, SVGDocument, url)
+    elseif ext == ".pdf"
+        render_texample(CachedPDF, PDFDocument, url)
+    else
+        error("Unknown file type: $ext")
+    end
+end
+
 
 include("tex.jl")
 include("typst.jl")
