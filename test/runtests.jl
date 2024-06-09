@@ -16,11 +16,11 @@ function save_test(filename, fig; kwargs...)
 
 end
 
-function render_texample(cached, document, url)
+function render_texample(CachedType, DocType, url)
 
     fig = Figure()
 
-    lt = LTeX(fig[1, 1], convert(CachedPDF, cached(document(read(Downloads.download(url), String), false))))
+    lt = LTeX(fig[1, 1], CachedType(DocType(read(Downloads.download(url), String), false)))
 
     @test true
 
