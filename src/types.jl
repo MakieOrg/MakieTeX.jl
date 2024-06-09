@@ -38,9 +38,14 @@ This must be the full file, i.e., if it was saved, the file should be immediatel
 """
 function getdoc end
 """
+    mimetype(::Type{<: AbstractDocument})::Base.MIME
     mimetype(::AbstractDocument)::Base.MIME
 
 Return the MIME type of the document.  For example, `mimetype(::SVGDocument) == MIME("image/svg+xml")`.
+
+!!! note
+    This is generally defined for the type, and there is a 
+    generic overload when passing a constructed object.
 """
 function mimetype end
 """
@@ -114,6 +119,8 @@ compatibility and conversions.
 
 =#
 
+mimetype(::T) where T <: AbstractDocument = mimetype(T)
+
 Base.convert(::Type{String}, doc::AbstractDocument) = Base.convert(String, getdoc(doc))
 Base.convert(::Type{UInt8}, doc::AbstractDocument) = Vector{UInt8}(Base.convert(String, doc))
 
@@ -156,7 +163,7 @@ struct SVGDocument <: AbstractDocument
 end
 Cached(x::SVGDocument) = CachedSVG(x)
 getdoc(doc::SVGDocument) = doc.doc
-mimetype(::SVGDocument) = MIME"image/svg+xml"()
+mimetype(::Type{SVGDocument}) = MIME"image/svg+xml"()
 
 """
     PDFDocument(pdf::AbstractString, [page = 0])
@@ -173,7 +180,7 @@ PDFDocument(doc::String) = PDFDocument(doc, 0)
 PDFDocument(doc::Vector{UInt8}) = PDFDocument(String(doc))
 Cached(x::PDFDocument) = CachedPDF(x)
 getdoc(doc::PDFDocument) = doc.doc
-mimetype(::PDFDocument) = MIME"application/pdf"()
+mimetype(::Type{PDFDocument}) = MIME"application/pdf"()
 
 """
     EPSDocument(eps::AbstractString, [page = 0])
@@ -189,7 +196,7 @@ end
 EPSDocument(doc::String) = EPSDocument(doc, 0) # default page is 0
 Cached(x::EPSDocument) = CachedPDF(x)
 getdoc(doc::EPSDocument) = doc.doc
-mimetype(::EPSDocument) = MIME"application/postscript"()
+mimetype(::Type{EPSDocument}) = MIME"application/postscript"()
 
 # This will be documented elsewhere in the package.
 struct TEXDocument <: AbstractDocument
@@ -199,7 +206,7 @@ end
 TEXDocument(contents) = TEXDocument(contents, 0)
 Cached(x::TEXDocument) = CachedTEX(x)
 getdoc(doc::TEXDocument) = doc.contents
-mimetype(::TEXDocument) = MIME"application/x-tex"()
+mimetype(::Type{TEXDocument}) = MIME"text/latex"()
 
 Base.@deprecate TeXDocument TEXDocument # To keep consistency, we deprecate the TeX in favour of TEX.  This will require a large refactor everywhere, but should be worth it.
 
@@ -275,9 +282,9 @@ struct TypstDocument <: AbstractDocument
     page::Int
 end
 TypstDocument(contents) = TypstDocument(contents, 0)
-Cached(x::TypstDocument) = CachedPDF(x)
+Cached(x::TypstDocument) = CachedTypst(x)
 getdoc(doc::TypstDocument) = doc.contents
-mimetype(::TypstDocument) = MIME"text/typst"()
+mimetype(::Type{TypstDocument}) = MIME"text/typst"()
 
 """
     TypstDocument(contents::AbstractString, add_defaults::Bool; preamble)
@@ -367,7 +374,7 @@ function CachedPDF(pdf::PDFDocument, poppler_handle::Ptr{Cvoid}, dims::Tuple{Flo
 end
 CachedPDF(pdf::String) = CachedPDF(PDFDocument(pdf))
 getdoc(doc::CachedPDF) = getdoc(doc.doc)
-mimetype(::CachedPDF) = MIME"application/pdf"()
+mimetype(::Type{CachedPDF}) = MIME"application/pdf"()
 
 
 """
@@ -405,7 +412,7 @@ function CachedSVG(svg::SVGDocument, rsvg_handle::Rsvg.RsvgHandle, dims::Tuple{F
 end
 CachedSVG(svg::String) = CachedSVG(SVGDocument(svg))
 getdoc(doc::CachedSVG) = getdoc(doc.doc)
-mimetype(::CachedSVG) = MIME"image/svg+xml"()
+mimetype(::Type{CachedSVG}) = MIME"image/svg+xml"()
 
 
 # TODO: document, that you should use PDFDocument/CachedPDF.
@@ -424,7 +431,7 @@ struct CachedTEX <: AbstractCachedDocument
 end
 const CachedTeX = CachedTEX
 getdoc(doc::CachedTEX) = getdoc(doc.doc)
-mimetype(::CachedTEX) = MIME"application/x-tex"()
+mimetype(::Type{CachedTEX}) = MIME"text/latex"()
 
 """
     CachedTEX(doc::TEXDocument; kwargs...)
@@ -483,7 +490,7 @@ struct CachedTypst <: AbstractCachedDocument
     dims::Tuple{Float64, Float64}
 end
 getdoc(doc::CachedTypst) = getdoc(doc.doc)
-mimetype(::CachedTypst) = MIME"text/typst"()
+mimetype(::Type{CachedTypst}) = MIME"text/typst"()
 
 """
     CachedTypst(doc::TypstDocument)
