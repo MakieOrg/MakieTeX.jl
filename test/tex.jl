@@ -1,29 +1,9 @@
 using CairoMakie, MakieTeX
 using Test, Downloads
 
-function render_texample(url)
-
-    fig = Figure()
-
-    lt = LTeX(fig[1, 1], CachedTeX(TeXDocument(read(Downloads.download(url), String), false)))
-
-    @test true
-
-    resize_to_layout!(fig)
-
-    filename = splitdir(splitext(url)[1])[2]
-
-    save_test(joinpath(@__DIR__, "test_images", "texample", filename), fig)
-
-
-    @test true
-
-end
-
-
 @testset "TeX rendering" begin
 
-    can_access_texample = try
+    can_access_example = try
         Downloads.download("https://texample.net/media/tikz/examples/TEX/rotated-triangle.tex")
         true
     catch e
@@ -31,7 +11,7 @@ end
         @warn "Cannot access texample.net; skipping tests that require it."
     end
 
-    can_access_texample && @testset "texample.net" begin
+    can_access_example && @testset "texample.net" begin
 
         mkpath(joinpath(example_path, "texample"))
 
@@ -49,7 +29,8 @@ end
         for name in names
 
             @testset "$name" begin
-                render_texample("https://texample.net/media/tikz/examples/TEX/$name.tex")
+                render_texample(CachedTeX, TeXDocument,
+                    "https://texample.net/media/tikz/examples/TEX/$name.tex")
             end
 
         end

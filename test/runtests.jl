@@ -16,6 +16,27 @@ function save_test(filename, fig; kwargs...)
 
 end
 
+function render_texample(cached, document, url)
+
+    fig = Figure()
+
+    lt = LTeX(fig[1, 1], convert(CachedPDF, cached(document(read(Downloads.download(url), String), false))))
+
+    @test true
+
+    resize_to_layout!(fig)
+
+    filename = splitdir(splitext(url)[1])[2]
+
+    save_test(joinpath(@__DIR__, "test_images", "texample", filename), fig)
+
+
+    @test true
+
+end
+
+
 include("tex.jl")
+include("typst.jl")
 include("svg.jl")
 include("pdf.jl")
