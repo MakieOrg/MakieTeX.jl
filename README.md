@@ -11,7 +11,7 @@
 
 MakieTeX allows you to draw and visualize arbitrary vector documents (TEX, Typst, PDF, SVG) in Makie!  You can insert anything from a single line of math to a large and complex TikZ diagram.
 
-It works by compiling a stand-alone <img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="20" align = "center"></a> document to PDF.  For CairoMakie, the PDF is read and rendered directly, and a raster image is rendered in GLMakie.
+It works by compiling a stand-alone $\LaTeX$ document to PDF.  For CairoMakie, the PDF is read and rendered directly, and a raster image is rendered in GLMakie.
 
 ### Quick start
 ```julia
