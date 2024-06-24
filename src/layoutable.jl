@@ -1,8 +1,8 @@
-import Makie.MakieLayout: inherit
+import Makie: inherit
 
 # This code has basically been adapted from the Label code in the main repo.
 
-Makie.MakieLayout.@Block LTeX begin
+Makie.@Block LTeX begin
     @attributes begin
         "The LaTeX code to be compiled and drawn.  Can be a String, a TeXDocument or a CachedTeX."
         tex = "\\LaTeX"
@@ -35,36 +35,40 @@ end
 
 LTeX(x, tex; kwargs...) = LTeX(x; tex = tex, kwargs...)
 
-function Makie.MakieLayout.initialize_block!(l::LTeX)
+_to_cachedtex(x) = CachedTEX(x)
+_to_cachedtex(x::AbstractDocument) = Cached(x)
+
+function Makie.initialize_block!(l::LTeX)
 
     topscene = l.blockscene
     layoutobservables = l.layoutobservables
 
-    textpos = Observable(Point3f[(0, 0, 0)])
+    textpos = Observable([Point3f(0, 0, 0)])
+    scale = Observable([Vec2f(1.0, 1.0)])
 
-    cached_tex = lift(collect ∘ tuple ∘ CachedTeX, l.tex)
+    cached_tex = lift(collect ∘ tuple ∘ _to_cachedtex, l.tex)
 
     t = teximg!(
         topscene, cached_tex; position = textpos, visible = l.visible,
-        scale = l.scale, render_density = l.render_density, align = (:center, :center),
-        rotations=l.rotation,
-        markerspace = :screen,
+        scale = scale, align = (:center, :center),
+        rotation = l.rotation,
+        markerspace = :pixel,
         inspectable = false
     )
 
     textbb = Ref(BBox(0, 1, 0, 1))
 
     onany(l.tex, l.scale, l.rotation, l.padding) do tex, scale, rotation, padding
-        textbb[] = Makie.rotatedrect(Makie.MakieLayout.Rect2f(0,0,(t[1][][1].dims .* scale)...), rotation)
-        autowidth = Makie.MakieLayout.width(textbb[]) + padding[1] + padding[2]
-        autoheight = Makie.MakieLayout.height(textbb[]) + padding[3] + padding[4]
+        textbb[] = rotatedrect(Makie.Rect2f(0,0,(t[1][][1].dims .* scale)...), rotation)
+        autowidth = Makie.width(textbb[]) + padding[1] + padding[2]
+        autoheight = Makie.height(textbb[]) + padding[3] + padding[4]
         layoutobservables.autosize[] = (autowidth, autoheight)
     end
 
-    onany(layoutobservables.computedbbox, l.padding) do bbox, padding
+    onany(layoutobservables.computedbbox, l.padding, l.scale) do bbox, padding, _scale
 
-        tw = Makie.MakieLayout.width(textbb[])
-        th = Makie.MakieLayout.height(textbb[])
+        tw = Makie.width(textbb[])
+        th = Makie.height(textbb[])
 
         box = bbox.origin[1]
         boy = bbox.origin[2]
@@ -72,7 +76,8 @@ function Makie.MakieLayout.initialize_block!(l::LTeX)
         tx = box + padding[1] + 0.5 * tw
         ty = boy + padding[3] + 0.5 * th
 
-        textpos[] = Makie.MakieLayout.Point3f[(tx, ty, 0)]
+        textpos[] = [Makie.Point3f(tx, ty, 0)]
+        scale[] = [(bbox.widths ./ textbb[].widths) .* _scale]
     end
 
 

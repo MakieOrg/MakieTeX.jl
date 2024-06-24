@@ -1,0 +1,91 @@
+data_config_version = 0
+uuid = "c9f88755-cec1-4fc7-a16e-0de771f0bcda"
+name = "microbench-graph"
+plugins = ["store", "defaults", "memorise"]
+
+[config.defaults.storage._]
+checksum = "auto"
+
+[[file-icons]]
+uuid = "da0197d0-a0bd-4c7d-a3d6-54b8d28addfc"
+description = "Source files for the custom icon-font used by the File-Icons package"
+
+    [[file-icons.storage]]
+    driver = "git"
+    checksum = "k12:93dff68faee99aed4240d426603a717c"
+    clone = true
+    path = "svg"
+    remote = "https://github.com/file-icons/icons.git"
+    revision = "e6e6e6ac8cb1d91867167c228c00a667f4d47101"
+
+    [[file-icons.loader]]
+    driver = "tar"
+
+[[file-icons-devopicons]]
+uuid = "20e42fdd-10db-44f8-8b18-205158e48afe"
+description = "Heavily-optimised version of the Devicons icon-font"
+
+    [[file-icons-devopicons.storage]]
+    driver = "git"
+    checksum = "k12:96bb50765d4b99ec67e6c21ae6654f54"
+    clone = true
+    path = "svg"
+    remote = "https://github.com/file-icons/DevOpicons.git"
+    revision = "2c2bf2bdb6507b8e4bfe695c1d54d639fbfed479"
+
+    [[file-icons-devopicons.loader]]
+    driver = "tar"
+
+[[file-icons-mfixx]]
+uuid = "d4cd9be5-869c-4b63-a0ec-8fb172c192f2"
+description = "Optimised version of the MFizz icon font"
+
+    [[file-icons-mfixx.storage]]
+    driver = "git"
+    checksum = "k12:a839aaf0f57a1a63d0ed2b5c13546850"
+    clone = true
+    path = "svg"
+    remote = "https://github.com/file-icons/MFixx.git"
+    revision = "9bc4e3734898a07d3ff1b452f90446368d6baf12"
+
+    [[file-icons-mfixx.loader]]
+    driver = "tar"
+
+[[go-logo-solid]]
+uuid = "09662418-cff6-4456-88ee-4a348b771eef"
+description = "Solid go logo"
+
+    [[go-logo-solid.storage]]
+    driver = "web"
+    checksum = "k12:de75d60ae2c948cc904d129afb8efb37"
+    url = "https://raw.githubusercontent.com/file-icons/icons/master/svg/Go-Old.svg"
+
+    [[go-logo-solid.loader]]
+    driver = "passthrough"
+
+[[linguist-langs]]
+uuid = "6ef087f1-17ee-4d7e-93bb-8a3b49c0fc69"
+description = "Linguist language data listing"
+
+    [[linguist-langs.storage]]
+    driver = "web"
+    checksum = "k12:aa2cd4d4a862c53b0fc0e53e381f798d"
+    url = "https://github.com/github-linguist/linguist/raw/4a807b475da9715fb20c5bbed34d0e2d97879e3a/lib/linguist/languages.yml"
+
+    [[linguist-langs.loader]]
+    driver = "yaml"
+
+[[microbench]]
+uuid = "acf3ac73-6fea-49c6-9612-cc056a2f49b2"
+description = "Julia Microbenchmark data"
+
+    [[microbench.storage]]
+    driver = "web"
+    checksum = "k12:9d670b7cf573b71e7f9ef8773c3d278c"
+    url = "https://raw.githubusercontent.com/JuliaLang/Microbenchmarks/master/bin/benchmarks.csv"
+
+    [[microbench.loader]]
+    driver = "csv"
+
+        [microbench.loader.args]
+        header = ["language", "benchmark", "time"]
