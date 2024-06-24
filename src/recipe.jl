@@ -175,6 +175,5 @@ function tex_annotation!(axis::Axis, lstring, x, y; mainfont = nothing, mathfont
         classoptions = "preview, tightpage, 12pt"
     )
     tex = CachedTeX(texdoc)
-    marker = MakieTeX.rotl90(MakieTeX.recordsurf2img(tex, 4))
-    scatter!(axis, x, y; marker, markersize=tex.dims .* scale_factor)
+    scatter!(axis, x, y; tex, markersize=tex.dims .* scale_factor)
 end
