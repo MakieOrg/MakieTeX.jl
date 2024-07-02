@@ -8,6 +8,9 @@ using Base64
 
 # Patch for Makie.jl `@Block` macro error
 using Makie: CURRENT_DEFAULT_THEME
+if :make_block_docstring in names(Makie; all = true)
+    @eval import Makie: make_block_docstring
+end
 
 using Makie.GeometryBasics: origin, widths
 using Makie.Observables
