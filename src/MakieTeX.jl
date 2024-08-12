@@ -7,6 +7,7 @@ using Colors, LaTeXStrings, Typstry
 using Base64
 
 # Patch for Makie.jl `@Block` macro error
+using Makie: make_block_docstring
 using Makie: CURRENT_DEFAULT_THEME
 
 using Makie.GeometryBasics: origin, widths
