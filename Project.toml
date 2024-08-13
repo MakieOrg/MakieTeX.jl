@@ -35,7 +35,7 @@ Makie = "0.21.2"
 Poppler_jll = "21.9, 22, 23"
 Rsvg = "1"
 julia = "1.9"
-Typstry = "0.2"
+Typstry = "0.3"
 tectonic_jll = "0"
 
 [extras]
