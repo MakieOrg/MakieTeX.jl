@@ -40,7 +40,7 @@ function compile_typst(document::AbstractString)
             try
                 # `pipeline` is not yet supported for `TypstCommand`
                 redirect_stdio(stdout=out, stderr=err) do
-                    run(ignorestatus(addenv(typst`compile temp.typ`, "TYPST_FONT_PATHS" => julia_mono)))
+                    run(ignorestatus(addenv(typst`compile temp.typ`, "TYPST_FONT_PATHS" => Typstry.julia_mono)))
                 end
 
                 close(out.in)
