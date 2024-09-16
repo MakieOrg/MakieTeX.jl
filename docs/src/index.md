@@ -13,7 +13,7 @@ hero:
       link: /index
     - theme: alt
       text: View on Github
-      link: https://github.com/JuliaPlots/MakieTeX.jl
+      link: https://github.com/MakieOrg/MakieTeX.jl
     - theme: alt
       text: Available formats
       link: /formats
