@@ -38,9 +38,12 @@ function compile_typst(document::AbstractString)
             err = Pipe()
 
             try
-                # `pipeline` is not yet supported for `TypstCommand`
+                # `pipeline` is not yet supported for `TypstCommand`.
+                # We need to add Julia Mono as a typst font, but don't want to override user env specs.
+                _separator = Sys.iswindows() ? ";" : ":"
+                TYPST_FONT_PATHS = haskey(ENV, "TYPST_FONT_PATHS") ? "$(ENV["TYPST_FONT_PATHS"])$(_separator)$(Typstry.julia_mono)" : Typstry.julia_mono
                 redirect_stdio(stdout=out, stderr=err) do
-                    run(ignorestatus(addenv(typst`compile temp.typ`, "TYPST_FONT_PATHS" => Typstry.julia_mono)))
+                    run(ignorestatus(addenv(typst`compile temp.typ`, "TYPST_FONT_PATHS" => TYPST_FONT_PATHS)))
                 end
 
                 close(out.in)
