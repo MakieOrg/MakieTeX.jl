@@ -1,8 +1,8 @@
 # <img src="https://user-images.githubusercontent.com/32143268/165514916-4337e55a-18ec-4831-ab0f-11ebcb679600.svg" alt="MakieTeX.jl" height="50" align = "top">
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliaplots.github.io/MakieTeX.jl/stable/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliaplots.github.io/MakieTeX.jl/dev/)
-[![Build Status](https://github.com/JuliaPlots/MakieTeX.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/JuliaPlots/MakieTeX.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://MakieOrg.github.io/MakieTeX.jl/stable/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://MakieOrg.github.io/MakieTeX.jl/dev/)
+[![Build Status](https://github.com/MakieOrg/MakieTeX.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/MakieOrg/MakieTeX.jl/actions/workflows/CI.yml?query=branch%3Amaster)
 
 ## <a href = "https://www.latex-project.org/"><img src="https://upload.wikimedia.org/wikipedia/commons/9/92/LaTeX_logo.svg" alt="LaTeX" height="30" align = "top"></a> integration for <a href = "https://www.github.com/MakieOrg/Makie.jl"><img src="https://raw.githubusercontent.com/MakieOrg/Makie.jl/master/assets/logo.png" alt="Makie.jl" height="30" align = "top"></a>
 

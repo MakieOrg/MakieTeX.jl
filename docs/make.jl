@@ -5,7 +5,7 @@ using MakieTeX
 makedocs(;
     modules=[MakieTeX],
     format=DocumenterVitepress.MarkdownVitepress(; 
-        repo = "https://github.com/JuliaPlots/MakieTeX.jl"
+        repo = "https://github.com/MakieOrg/MakieTeX.jl"
     ),
     pages=[
         "Home" => "index.md",
@@ -18,7 +18,7 @@ makedocs(;
 )
 
 deploydocs(; 
-    repo = "github.com/JuliaPlots/MakieTeX.jl", 
+    repo = "github.com/MakieOrg/MakieTeX.jl", 
     target = "build", 
     push_preview = true, 
     forcepush = true

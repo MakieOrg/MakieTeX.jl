@@ -13,4 +13,4 @@ jobs:
           comment: |
             We do not accept issues on the MakieTeX.jl repository.
             Please open your issue on the Makie.jl repository instead:
-            https://github.com/JuliaPlots/Makie.jl/issues
+            https://github.com/MakieOrg/Makie.jl/issues
