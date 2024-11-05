@@ -63,7 +63,7 @@ fig
 ```@example main
 using MakieTeX, CairoMakie
 
-typst_string = typst"$ integral_0^pi sin(x)^2 diff x $";
+typst_string = typst"$ integral_0^pi sin(x)^2 dif x $";
 typst_document = TypstDocument(typst_string);
 cached_typst = CachedTypst(typst_document);
 

@@ -14,12 +14,13 @@ Compile the given document as a String and return the resulting PDF (also as a S
 """
 function compile_typst(document::AbstractString)
     #=
-    Typst_jll v0.11+ supports compiling from `stdin`.
-    It does not yet support compiling to `stdout`.
+    Typst_jll v0.11+ supports reading from `stdin`.
+    Typst_jll v0.12+ will likely support writing to `stdout`.
 
     See also:
     https://github.com/typst/typst/issues/410
     https://github.com/typst/typst/pull/3339
+    https://github.com/typst/typst/pull/3632
     =#
     return mktempdir() do dir
         cd(dir) do
@@ -37,9 +38,12 @@ function compile_typst(document::AbstractString)
             err = Pipe()
 
             try
-                # `pipeline` is not yet supported for `TypstCommand`
+                # `pipeline` is not yet supported for `TypstCommand`.
+                # We need to add Julia Mono as a typst font, but don't want to override user env specs.
+                _separator = Sys.iswindows() ? ";" : ":"
+                TYPST_FONT_PATHS = haskey(ENV, "TYPST_FONT_PATHS") ? "$(ENV["TYPST_FONT_PATHS"])$(_separator)$(Typstry.julia_mono)" : Typstry.julia_mono
                 redirect_stdio(stdout=out, stderr=err) do
-                    run(ignorestatus(typst`compile temp.typ`))
+                    run(ignorestatus(addenv(typst`compile temp.typ`, "TYPST_FONT_PATHS" => TYPST_FONT_PATHS)))
                 end
 
                 close(out.in)
