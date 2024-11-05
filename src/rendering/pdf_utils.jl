@@ -128,7 +128,7 @@ function get_pdf_bbox(path::String)
         println(read(err, String))
         error()
     end
-    bbox_match = match(r"%%BoundingBox: ([0-9.]+) ([0-9.]+) ([0-9.]+) ([0-9.]+)", result)
+    bbox_match = match(r"%%BoundingBox: ([-0-9.]+) ([-0-9.]+) ([-0-9.]+) ([-0-9.]+)", result)
     return parse.(Int, (
         bbox_match.captures[1],
         bbox_match.captures[2],
