@@ -131,6 +131,42 @@ Base.convert(::Type{Matrix{ARGB32}}, cached::AbstractCachedDocument) = rasterize
 Base.size(cached::AbstractCachedDocument) = cached.dims
 
 #=
+### Convert arbitrary Julia objects to Documents
+
+TODOs: 
+- Allow the conversion to use the constructor, if there is a method.
+=#
+
+
+function Base.convert(T::Type{<: AbstractDocument}, x)
+    if !showable(mimetype(T), x)
+        error("Object of type $(typeof(x)) is not showable as mime type $(mimetype(T)).")
+    end
+    return T(sprint(show, mimetype(T), x))
+end
+# This resolves an ambiguity otherwise.
+Base.convert(::Type{T}, x::T) where T <: AbstractDocument = x
+
+function Base.convert(::Type{AbstractDocument}, x)
+    for DocType in [TEXDocument, TypstDocument, SVGDocument, PDFDocument]
+        if showable(mimetype(DocType), x)
+            return convert(DocType, x)
+        end
+    end
+    error("MakieTeX: Object of type $(typeof(x)) is not showable as an AbstractDocument.")
+end
+
+
+function Base.convert(::Type{AbstractCachedDocument}, x)
+    for DocType in [CachedTEX, CachedTypst, CachedSVG, CachedPDF]
+        if showable(mimetype(DocType), x)
+            return convert(DocType, x)
+        end
+    end
+    error("MakieTeX: Object of type $(typeof(x)) is not showable as an AbstractCachedDocument.")
+end
+
+#=
 
 ### Makie.jl function definitions
 The backend-specific functions and rasterizers are kept in the backends' extensions.
@@ -276,6 +312,18 @@ Available keyword arguments are:
 
 """
 texdoc(contents; kwargs...) = TEXDocument(contents, true; kwargs...)
+
+function Base.convert(::Type{TEXDocument}, x)
+    if !showable(mimetype(TEXDocument), x)
+        error("Object of type $(typeof(x)) is not showable as mime type $(mimetype(TEXDocument)).")
+    end
+    texstring = sprint(show, mimetype(TEXDocument), x)
+    if contains(texstring, "\\begin{document}")
+        return TEXDocument(texstring, false) # assume this to be a fixed document
+    else
+        return TEXDocument(texstring, true) # assume this to require a preamble
+    end
+end
 
 struct TypstDocument <: AbstractDocument
     contents::String
