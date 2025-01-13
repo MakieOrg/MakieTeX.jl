@@ -54,6 +54,8 @@ export LTeX
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 export Typstry, TypstString, @typst_str
 
+export tex_annotation!
+
 "Try to write to `engine` and see what happens"
 function try_tex_engine(engine::Cmd)
     try
