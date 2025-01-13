@@ -66,7 +66,7 @@ fig
 
 ### Inner workings
 
-MakieTeX provides high-level dispatches on `LaTeXString`s from the [`LaTeXStrings.jl`](github.com/stevengj/LaTeXStrings.jl) package, as well as some lower level types.
+MakieTeX provides high-level dispatches on `LaTeXString`s from the [`LaTeXStrings.jl`](https://github.com/JuliaStrings/LaTeXStrings.jl) package, as well as some lower level types.
 
 Any input is converted to a `TeXDocument`, which is then compiled to `CachedTeX`. This last type contains the compiled PDF and some pointers to in-memory versions of the PDF.  These are what MakieTeX eventually uses to plot to the screen.
 
