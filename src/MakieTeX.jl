@@ -1,7 +1,6 @@
 module MakieTeX
 
 using Makie
-using Makie.MakieCore
 
 using Colors, LaTeXStrings, Typstry
 using Base64
@@ -41,6 +40,8 @@ include("rendering/typst.jl")
 include("rendering/pdf.jl")
 include("rendering/svg.jl")
 
+include("text_integration.jl")
+
 export Cached
 export TeXDocument, CachedTeX
 export TEXDocument, CachedTEX
@@ -50,6 +51,7 @@ export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
 export LTeX
+export TeXString
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 export Typstry, TypstString, @typst_str

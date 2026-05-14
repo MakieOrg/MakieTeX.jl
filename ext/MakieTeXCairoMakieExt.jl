@@ -2,7 +2,6 @@ module MakieTeXCairoMakieExt
 
 using CairoMakie, MakieTeX
 using Makie
-using Makie.MakieCore
 using Poppler_jll
 using Cairo
 using Colors
@@ -25,7 +24,9 @@ CairoMakie.cairo_scatter_marker(v::NTuple{N, <: MakieTeX.AbstractDocument}) wher
 
 # Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
 # instead of auto-decomposing into its component scatter plot.
-CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
+# Disabled while bringing MakieTeX up against Makie >= 0.25 — the scatter
+# child plot of the TeXImg recipe handles rendering on its own there.
+# CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
 
 # # Scatter markers
 
