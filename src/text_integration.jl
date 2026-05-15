@@ -4,15 +4,21 @@
 # titles, tick labels via `xtickformat`, etc.) with a real LaTeX engine
 # instead of MathTeXEngine's in-process glyph approximation.
 #
-# Usage (one of):
+# Usage:
 #
-#   set_theme!(latex_handler = MakieTeX.makietex_latex_handler)
-#   with_theme(latex_handler = MakieTeX.makietex_latex_handler) do … end
+#   set_theme!(latex_handler = MakieTeXLaTeX())                       # global default
+#   with_theme(latex_handler = MakieTeXLaTeX(preamble = "…")) do … end # scoped override
+#   text!(scene, L"…"; latex_handler = MakieTeXLaTeX(preamble = "…"))  # per-plot override
 #
-# Without the handler set, Makie's default MathTeXEngine path is used — good
-# for quick iteration; switch to this handler to polish a publication-quality
-# figure without changing plot code (especially useful when LaTeXStrings come
-# from a third-party plotting function you don't control).
+# Each `MakieTeXLaTeX` value carries its own preamble / class options /
+# engine, so different text plots in the same figure can compile against
+# different LaTeX setups (e.g. one Axis using `physics` package macros and
+# another using `siunitx`).
+#
+# Without a handler set, Makie's default MathTeXEngine path is used — good
+# for quick iteration; switch to MakieTeXLaTeX to polish a publication-
+# quality figure without changing plot code (especially useful when the
+# LaTeXStrings come from a third-party plotting function you don't control).
 #
 # See companion PR: https://github.com/MakieOrg/Makie.jl/pull/5632
 
@@ -37,39 +43,56 @@ function _latex_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom
     return Makie.Vec2f(ox, oy)
 end
 
-# Safety margin (pt) of empty space on all four sides of the rendered marker
-# image, so the rasterizer doesn't clip anti-aliased glyph edges and so the
-# ink sits at a *known* distance from the page boundary (used by alignment).
-# We need two things to make this work:
-#   1. `classoptions` includes a `border` slightly larger than the margin, so
-#      the page MediaBox has room to accommodate the cropped extension below
-#      and above the ink (otherwise crop clamps to MediaBox and the margin
-#      effectively disappears in y).
-#   2. The crop uses `%%HiResBoundingBox` from Ghostscript with sub-pt
-#      precision; `%%BoundingBox` rounds to ints and leaves up to 1pt of
-#      jitter in ink position, which would propagate as a visible baseline
-#      offset.
-const _TEX_CROP_MARGIN_PT = 2.0f0
-const _TEX_DOC_BORDER_PT  = 3   # > margin so MediaBox has room
-
-# LaTeX's default base font is 12pt; we scale the rendered PDF's pt dims so
-# that fontsize=12 in Makie ≈ 12pt rendered output.
-const _LATEX_HANDLER_BASE_PT = 12.0f0
+const _DEFAULT_PREAMBLE = "\\usepackage{amsmath, amsfonts, xcolor}\n\\pagestyle{empty}\n\\nopagecolor"
+const _DEFAULT_CLASSOPTIONS = "preview, tightpage, 12pt"
 
 """
-    compile_latex_for_makie(latex_src::AbstractString) -> (cached::CachedPDF, baseline_pt::Float32, margin_pt::Float32)
+    MakieTeXLaTeX(; preamble, classoptions, engine, border_pt,
+                    crop_margin_pt, base_pt)
 
-Compile a LaTeX snippet to a `CachedPDF` and simultaneously extract the
-descender depth (`\\dp`) of the rendered box — needed for
-`align = (:left, :baseline)`. Single LaTeX run: the content is wrapped in
-`\\sbox` + `\\typeout`, then `\\usebox`'d, so the same compile produces both
-the PDF that gets rendered and a log line we parse back for the baseline.
+A `latex_handler` for Makie's `text` recipe that renders `LaTeXString`
+content with a real LaTeX engine (via MakieTeX). Construct one and pass it
+to `set_theme!` / `with_theme` / a plot's `latex_handler` attribute.
 
-The returned `cached` document is cropped with a small symmetric pt margin
-to avoid clipping anti-aliased glyph edges at the bbox boundary; `margin_pt`
-is that margin (per side) so callers can recover the natural ink box.
+# Fields
+
+* `preamble` — LaTeX preamble (everything between `\\documentclass{…}` and
+  `\\begin{document}`). Default loads `amsmath, amsfonts, xcolor` and sets
+  `\\pagestyle{empty}\\nopagecolor` so the page background is transparent.
+* `classoptions` — options to the standalone class (without `border=`, that
+  field is appended automatically from `border_pt`). Default
+  `"preview, tightpage, 12pt"`.
+* `engine` — `nothing` (use `MakieTeX.CURRENT_TEX_ENGINE[]`) or a `Cmd` like
+  `` `lualatex` `` / `` `pdflatex` `` / `` `tectonic` ``.
+* `border_pt` — pt margin built into the standalone page MediaBox; must be
+  larger than `crop_margin_pt` so the safety crop below has room to extend.
+* `crop_margin_pt` — symmetric pt safety pad cropped around the ink, so
+  anti-aliased glyph edges aren't clipped by the page boundary.
+* `base_pt` — LaTeX font size assumed in the document (Makie's `fontsize`
+  is scaled by `fontsize / base_pt`).
 """
-function compile_latex_for_makie(latex_src::AbstractString)
+Base.@kwdef struct MakieTeXLaTeX
+    preamble::String = _DEFAULT_PREAMBLE
+    classoptions::String = _DEFAULT_CLASSOPTIONS
+    engine::Union{Nothing, Cmd} = nothing
+    border_pt::Int = 3
+    crop_margin_pt::Float32 = 2.0f0
+    base_pt::Float32 = 12.0f0
+end
+
+"""
+    compile_latex_for_makie(h::MakieTeXLaTeX, latex_src::AbstractString)
+        -> (cached::CachedPDF, baseline_pt::Float32)
+
+Compile a LaTeX snippet under the configuration `h` to a `CachedPDF` and
+simultaneously extract the descender depth (`\\dp`) of the rendered box —
+needed for `align = (:left, :baseline)`. Single LaTeX run: the content is
+wrapped in `\\sbox` + `\\typeout`, then `\\usebox`'d, so the same compile
+produces both the PDF that gets rendered and a log line we parse back for
+the baseline. The returned `cached` document is cropped with a symmetric
+`h.crop_margin_pt` margin to avoid clipping anti-aliased glyph edges.
+"""
+function compile_latex_for_makie(h::MakieTeXLaTeX, latex_src::AbstractString)
     src = String(latex_src)
     body = """
     \\newsavebox\\makietexbaselinebox%
@@ -77,21 +100,22 @@ function compile_latex_for_makie(latex_src::AbstractString)
     \\typeout{MAKIETEX_BASELINE_DEPTH=\\the\\dp\\makietexbaselinebox}%
     \\usebox\\makietexbaselinebox
     """
-    # Build the TEXDocument ourselves so we can set `border=Npt` in the
-    # standalone class options — this gives the page MediaBox enough room
-    # for our crop margin.
+    # Build the TEXDocument ourselves so we can set `border=Npt` from the
+    # handler config — gives the page MediaBox enough room for our crop
+    # margin (otherwise the crop clamps to MediaBox and the margin
+    # disappears in y).
     doc = TEXDocument(body, true;
         requires = "\\RequirePackage{luatex85}",
-        preamble = "\\usepackage{amsmath, amsfonts, xcolor}\\pagestyle{empty}\\nopagecolor",
+        preamble = h.preamble,
         class = "standalone",
-        classoptions = "preview, tightpage, 12pt, border=$(_TEX_DOC_BORDER_PT)pt",
+        classoptions = "$(h.classoptions), border=$(h.border_pt)pt",
     )
-    pdf, baseline_pt = _compile_latex_capture_baseline(String(doc.contents))
+    engine = h.engine === nothing ? CURRENT_TEX_ENGINE[] : h.engine
+    pdf, baseline_pt = _compile_latex_capture_baseline(String(doc.contents), engine, h.crop_margin_pt)
     # `CachedTEX(::Vector{UInt8})` is broken upstream (it stashes `nothing`
-    # into a strictly-typed `doc::TEXDocument` field). `CachedPDF` works fine
-    # and is what `page2img` dispatches on anyway.
-    cached = CachedPDF(PDFDocument(pdf))
-    return cached, baseline_pt, _TEX_CROP_MARGIN_PT
+    # into a strictly-typed `doc::TEXDocument` field). `CachedPDF` works
+    # fine and is what `page2img` dispatches on anyway.
+    return CachedPDF(PDFDocument(pdf)), baseline_pt
 end
 
 # Like MakieTeX's `crop_pdf`, but reads Ghostscript's `%%HiResBoundingBox`
@@ -133,16 +157,16 @@ end
 # reads `temp.log` before the directory is torn down and pulls the baseline
 # depth out of it. Returns the cropped PDF as `Vector{UInt8}` plus the depth
 # in pt.
-function _compile_latex_capture_baseline(document::String)
+function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_margin_pt::Real)
     return mktempdir() do dir
         cd(dir) do
             write("temp.tex", document)
             out = Pipe(); err = Pipe()
             try
-                cmd = if CURRENT_TEX_ENGINE[] == `tectonic`
+                cmd = if engine == `tectonic`
                     `$(tectonic_jll.tectonic()) temp.tex`
                 else
-                    `latexmk -file-line-error --shell-escape -cd -$(CURRENT_TEX_ENGINE[]) -interaction=nonstopmode temp.tex`
+                    `latexmk -file-line-error --shell-escape -cd -$(engine) -interaction=nonstopmode temp.tex`
                 end
                 run(pipeline(ignorestatus(cmd), stdout = out, stderr = err))
             finally
@@ -151,29 +175,15 @@ function _compile_latex_capture_baseline(document::String)
             log_text = isfile("temp.log") ? read("temp.log", String) : ""
             m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
             baseline_pt = m === nothing ? 0.0f0 : max(0.0f0, parse(Float32, m.captures[1]))
-            pdf = _hires_crop_pdf("temp.pdf", _TEX_CROP_MARGIN_PT)
+            pdf = _hires_crop_pdf("temp.pdf", crop_margin_pt)
             return pdf, baseline_pt
         end
     end
 end
 
-"""
-    makietex_latex_handler(outputs, latex_str, i, N, fontsize, font, align,
-                           rotation, justification, lineheight, word_wrap_width,
-                           offset, fonts, color, strokecolor, strokewidth)
-
-`latex_handler` for Makie's `text` recipe. Renders `latex_str::LaTeXString`
-with a real LaTeX engine (via MakieTeX) and embeds the result into the text
-plot as a single image primitive — replacing Makie's default MathTeXEngine
-glyph layout. Install it through theming:
-
-    set_theme!(latex_handler = MakieTeX.makietex_latex_handler)
-
-After that, every `L"…"` you (or anyone whose plotting code you call) hand
-to `text()` / Axis labels / `xtickformat` etc. renders via lualatex /
-pdflatex / tectonic.
-"""
-function makietex_latex_handler(
+# Makie calls the handler as `h(outputs, latex_str, i, N, _inputs...)`. We
+# make `MakieTeXLaTeX` callable with that exact signature.
+function (h::MakieTeXLaTeX)(
         outputs::NamedTuple, latex_str::LaTeXString,
         i, N, fontsize, font, align, rotation, justification,
         lineheight, word_wrap_width, offset, fonts, color, strokecolor, strokewidth
@@ -190,16 +200,16 @@ function makietex_latex_handler(
     # MakieTeXCairoMakieExt) hands it to `poppler_page_render`, which puts
     # the PDF's vector content directly into the figure's Cairo surface (no
     # raster intermediate, so hairlines stay crisp).
-    cached, baseline_pt, margin_pt = compile_latex_for_makie(String(latex_str))
+    cached, baseline_pt = compile_latex_for_makie(h, String(latex_str))
 
-    # `dim_pt` includes a `margin_pt` safety pad on each side (added at crop
-    # time to keep anti-aliased glyphs from clipping). The natural ink box
-    # is `dim_pt - 2 * margin_pt`. Alignment refers to the ink box so the
-    # safety pad doesn't shift positions.
-    scale = fs / _LATEX_HANDLER_BASE_PT
+    # `dim_pt` includes the safety pad `h.crop_margin_pt` on each side (added
+    # at crop time to keep anti-aliased glyphs from clipping). The natural
+    # ink box is `dim_pt - 2 * crop_margin_pt`. Alignment refers to the ink
+    # box so the safety pad doesn't shift positions.
+    scale = fs / h.base_pt
     dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
     target_size = dim_pt .* scale
-    ink_size = (dim_pt .- 2 * margin_pt) .* scale
+    ink_size = (dim_pt .- 2 * h.crop_margin_pt) .* scale
     baseline_from_bottom = baseline_pt * scale
 
     align_off = _latex_align_offset(al, ink_size, baseline_from_bottom)
