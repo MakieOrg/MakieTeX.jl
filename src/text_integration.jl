@@ -80,6 +80,12 @@ Base.@kwdef struct MakieTeXLaTeX
     base_pt::Float32 = 12.0f0
 end
 
+# We push the compiled LaTeX into the text plot as a single image marker; no
+# line segments. Declaring this lets the `text` recipe skip the
+# `linesegments!` child plot it otherwise registers for handlers it knows
+# nothing about.
+Makie.text_primitive_types(::MakieTeXLaTeX) = (Makie.ImageTextPrimitive,)
+
 """
     compile_latex_for_makie(h::MakieTeXLaTeX, latex_src::AbstractString)
         -> (cached::CachedPDF, baseline_pt::Float32)
