@@ -55,11 +55,20 @@ function _texstring_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bo
     return Makie.Vec2f(ox, oy)
 end
 
-# Safety margin (pt) added on all four sides of the cropped PDF so the
-# rasterizer doesn't clip anti-aliased glyph edges at the bbox boundary.
-# Tracked in the returned tuple so all alignment / bbox math can subtract it
-# off and reason about the natural ink box rather than the padded marker.
-const _TEX_CROP_MARGIN_PT = 1.0f0
+# Safety margin (pt) of empty space on all four sides of the rendered marker
+# image, so the rasterizer doesn't clip anti-aliased glyph edges and so the
+# ink sits at a *known* distance from the page boundary (used by alignment).
+# We need two things to make this work:
+#   1. `classoptions` includes a `border` slightly larger than the margin, so
+#      the page MediaBox has room to accommodate the cropped extension below
+#      and above the ink (otherwise crop clamps to MediaBox and the margin
+#      effectively disappears in y).
+#   2. The crop uses `%%HiResBoundingBox` from Ghostscript with sub-pt
+#      precision; `%%BoundingBox` rounds to ints and leaves up to 1pt of
+#      jitter in ink position, which would propagate as a visible baseline
+#      offset.
+const _TEX_CROP_MARGIN_PT = 2.0f0
+const _TEX_DOC_BORDER_PT  = 3   # > margin so MediaBox has room
 
 """
     compile_texstring(latex_src::AbstractString) -> (cached::CachedPDF, baseline_pt::Float32, margin_pt::Float32)
@@ -82,13 +91,56 @@ function compile_texstring(latex_src::AbstractString)
     \\typeout{MAKIETEX_BASELINE_DEPTH=\\the\\dp\\makietexbaselinebox}%
     \\usebox\\makietexbaselinebox
     """
-    doc = implant_text(body)
+    # Build the TEXDocument ourselves so we can set `border=Npt` in the
+    # standalone class options — this gives the page MediaBox enough room
+    # for our crop margin.
+    doc = TEXDocument(body, true;
+        requires = "\\RequirePackage{luatex85}",
+        preamble = "\\usepackage{amsmath, amsfonts, xcolor}\\pagestyle{empty}\\nopagecolor",
+        class = "standalone",
+        classoptions = "preview, tightpage, 12pt, border=$(_TEX_DOC_BORDER_PT)pt",
+    )
     pdf, baseline_pt = _compile_latex_capture_baseline(String(doc.contents))
     # `CachedTEX(::Vector{UInt8})` is broken upstream (it stashes `nothing`
     # into a strictly-typed `doc::TEXDocument` field). `CachedPDF` works fine
     # and is what `page2img` dispatches on anyway.
     cached = CachedPDF(PDFDocument(pdf))
     return cached, baseline_pt, _TEX_CROP_MARGIN_PT
+end
+
+# Like MakieTeX's `crop_pdf`, but reads Ghostscript's `%%HiResBoundingBox`
+# (sub-pt precision) rather than the integer `%%BoundingBox`. With the
+# integer version, glyph edges can be jittered by up to ~1pt within the
+# crop, which propagates into visible baseline misalignment.
+function _hires_pdf_bbox(path::String)
+    out = Pipe(); err = Pipe()
+    success(pipeline(`$(Ghostscript_jll.gs()) -q -dBATCH -dNOPAUSE -sDEVICE=bbox $path`, stdout = out, stderr = err))
+    close(out.in); close(err.in)
+    result = read(err, String)
+    m = match(r"%%HiResBoundingBox: ([-0-9.]+) ([-0-9.]+) ([-0-9.]+) ([-0-9.]+)", result)
+    m === nothing && error("could not extract %%HiResBoundingBox from gs output")
+    return parse.(Float64, (m.captures[1], m.captures[2], m.captures[3], m.captures[4]))
+end
+
+function _hires_crop_pdf(path::String, margin::Real)
+    bb = _hires_pdf_bbox(path)
+    crop_box = (bb[1] - margin, bb[2] - margin, bb[3] + margin, bb[4] + margin)
+    crop_cmd = join(crop_box, " ")
+    out_path = "_hires_cropped.pdf"
+    out = Pipe(); err = Pipe()
+    try
+        redirect_stderr(err) do
+            redirect_stdout(out) do
+                Ghostscript_jll.gs() do gs_exe
+                    run(`$gs_exe -o $out_path -sDEVICE=pdfwrite -c "[/CropBox [$crop_cmd]" -c "/PAGES pdfmark" -f $path`)
+                end
+            end
+        end
+    catch e
+    finally
+        close(out.in); close(err.in)
+    end
+    return read(out_path)
 end
 
 # Mirror of MakieTeX.compile_latex's tempdir-and-latexmk pipeline, but also
@@ -113,13 +165,8 @@ function _compile_latex_capture_baseline(document::String)
             log_text = isfile("temp.log") ? read("temp.log", String) : ""
             m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
             baseline_pt = m === nothing ? 0.0f0 : max(0.0f0, parse(Float32, m.captures[1]))
-            # Symmetric safety margin: Ghostscript's `bbox` device returns
-            # integer-pt-truncated bounds, so anti-aliased glyph edges right
-            # at the bbox boundary can otherwise get clipped by the
-            # rasterizer. Callers subtract the margin out for alignment.
-            m = _TEX_CROP_MARGIN_PT
-            pdf = crop_pdf("temp.pdf"; margin = (m, m, m, m))
-            return Vector{UInt8}(pdf), baseline_pt
+            pdf = _hires_crop_pdf("temp.pdf", _TEX_CROP_MARGIN_PT)
+            return pdf, baseline_pt
         end
     end
 end
