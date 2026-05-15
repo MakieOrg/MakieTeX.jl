@@ -7,31 +7,33 @@
 """
     TeXString(s)
 
-A wrapper `AbstractString` that flags content for full-LaTeX rendering via
-MakieTeX when passed through `text()`. Unlike `LaTeXString` (which uses
-MathTeXEngine for in-process glyph layout), a `TeXString` is compiled with a
-real LaTeX engine and embedded into the text plot as a single image primitive.
-It Just Works™ everywhere `text()` is used: `text!()` calls, Axis `title`,
+An opaque payload flagged for full-LaTeX rendering by MakieTeX when passed
+through `text()`. Unlike `LaTeXString` (which uses MathTeXEngine for
+in-process glyph layout), a `TeXString` is compiled with a real LaTeX
+engine and embedded into the text plot as a single image primitive. It Just
+Works™ everywhere `text()` is used: `text!()` calls, Axis `title`,
 `xlabel`, `ylabel`, `xtickformat` returning a `Vector{TeXString}`, etc.
+
+The wrapped LaTeX source is never glyph-iterated, so `TeXString` doesn't
+implement the `AbstractString` interface. It opts into Makie's text input
+pipeline via `Makie.is_text_input(::Type{TeXString}) = true` and a
+`Makie.convert_text_string!` method.
 """
-struct TeXString <: AbstractString
+struct TeXString
     s::String
 end
 TeXString(s::AbstractString) = TeXString(String(s))
 TeXString(l::LaTeXString) = TeXString(String(l))
 
-# Forward the AbstractString interface to the wrapped String.
-Base.ncodeunits(t::TeXString) = ncodeunits(t.s)
-Base.codeunit(t::TeXString) = codeunit(t.s)
-Base.codeunit(t::TeXString, i::Integer) = codeunit(t.s, i)
-Base.iterate(t::TeXString) = iterate(t.s)
-Base.iterate(t::TeXString, i::Integer) = iterate(t.s, i)
-Base.isvalid(t::TeXString, i::Integer) = isvalid(t.s, i)
 Base.String(t::TeXString) = t.s
 Base.convert(::Type{String}, t::TeXString) = t.s
 
-# A TeXString never counts as whitespace for layout purposes — Axis label
-# layout checks `iswhitespace` to decide whether to reserve space for the label.
+# Opt-in to Makie's text recipe input path. No subtyping needed — just this
+# one method.
+Makie.is_text_input(::Type{TeXString}) = true
+
+# Axis label layout checks `iswhitespace` to decide whether to reserve space
+# for the label; a `TeXString` always represents visible content.
 Makie.iswhitespace(::TeXString) = false
 
 # Scatter centers its marker on the position, then adds `marker_offset`. To
