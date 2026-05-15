@@ -36,16 +36,68 @@ Makie.iswhitespace(::TeXString) = false
 
 # Scatter centers its marker on the position, then adds `marker_offset`. To
 # make `position` correspond to the alignment edge of the marker, shift by
-# half the marker size scaled by the alignment fraction.
-function _texstring_align_offset(align::Tuple, wh::Makie.Vec2f)
+# half the marker size scaled by the alignment fraction. `valign === :baseline`
+# is supported: `baseline_from_bottom` is the descender depth in markerspace.
+function _texstring_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
     halign, valign = align
     fhalign = halign === :left ? 0.0f0 :
         halign === :center ? 0.5f0 :
         halign === :right ? 1.0f0 : Float32(halign)
-    fvalign = valign === :bottom ? 0.0f0 :
-        valign === :center ? 0.5f0 :
-        valign === :top ? 1.0f0 : Float32(valign)
-    return Makie.Vec2f((0.5f0 - fhalign) * wh[1], (0.5f0 - fvalign) * wh[2])
+    ox = (0.5f0 - fhalign) * wh[1]
+    oy = if valign === :baseline
+        0.5f0 * wh[2] - Float32(baseline_from_bottom)
+    else
+        fvalign = valign === :bottom ? 0.0f0 :
+            valign === :center ? 0.5f0 :
+            valign === :top ? 1.0f0 : Float32(valign)
+        (0.5f0 - fvalign) * wh[2]
+    end
+    return Makie.Vec2f(ox, oy)
+end
+
+"""
+    detect_tex_baseline(latex_src::AbstractString) -> Float32
+
+Return the descender depth (in pt) of the rendered LaTeX — i.e. how far the
+content extends below its baseline. Used to support `align = (:left, :baseline)`.
+
+LaTeX is asked to measure the rendered box and `\\typeout` its `\\dp` (depth)
+into the run log; the log is then parsed back. One compile, no rendering of
+visible markers, no interference from MakieTeX's PDF cropping step.
+"""
+function detect_tex_baseline(latex_src::AbstractString)
+    src = String(latex_src)
+    body = """
+    \\newsavebox\\makietexbaselinebox%
+    \\sbox\\makietexbaselinebox{$(src)}%
+    \\typeout{MAKIETEX_BASELINE_DEPTH=\\the\\dp\\makietexbaselinebox}%
+    \\usebox\\makietexbaselinebox
+    """
+    doc = implant_text(body)
+    return _compile_and_parse_baseline(String(doc.contents))
+end
+
+function _compile_and_parse_baseline(document::String)
+    return mktempdir() do dir
+        cd(dir) do
+            write("temp.tex", document)
+            out = Pipe(); err = Pipe()
+            try
+                cmd = if CURRENT_TEX_ENGINE[] == `tectonic`
+                    `$(tectonic_jll.tectonic()) temp.tex`
+                else
+                    `latexmk -file-line-error --shell-escape -cd -$(CURRENT_TEX_ENGINE[]) -interaction=nonstopmode temp.tex`
+                end
+                run(pipeline(ignorestatus(cmd), stdout = out, stderr = err))
+            finally
+                close(out.in); close(err.in)
+            end
+            log_text = isfile("temp.log") ? read("temp.log", String) : ""
+            m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
+            m === nothing && return 0.0f0
+            return max(0.0f0, parse(Float32, m.captures[1]))
+        end
+    end
 end
 
 # LaTeX's default base font is 12pt; we scale the rendered PDF's pt dims so
@@ -72,7 +124,17 @@ function Makie.convert_text_string!(
 
     dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
     target_size = dim_pt .* (fs / _TEXSTRING_BASE_PT)
-    align_off = _texstring_align_offset(al, target_size)
+
+    # When valign=:baseline, do a second compile with a depth probe to measure
+    # the content's descender. Skipped otherwise — keeps the common path cheap.
+    baseline_from_bottom = if al[2] === :baseline
+        descender_pt = detect_tex_baseline(input_text.s)
+        descender_pt * (fs / _TEXSTRING_BASE_PT)
+    else
+        0.0f0
+    end
+
+    align_off = _texstring_align_offset(al, target_size, baseline_from_bottom)
     marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
 
     # `text_blocks` must have one entry per input string. This block has no
