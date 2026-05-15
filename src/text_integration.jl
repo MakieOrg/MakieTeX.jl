@@ -1,46 +1,26 @@
-# Integration with Makie's `text` recipe via the AbstractTextPrimitive
-# extension hook (added in Makie 0.25). Allows MakieTeX to feed real LaTeX
-# directly into `text()`, Axis labels, ticks, titles, etc.
+# Integration with Makie's `text` recipe via the `AbstractTextPrimitive` +
+# `latex_handler` extension hooks (added in Makie 0.25). Lets MakieTeX
+# render any `LaTeXString` passed into `text()` (and therefore Axis labels,
+# titles, tick labels via `xtickformat`, etc.) with a real LaTeX engine
+# instead of MathTeXEngine's in-process glyph approximation.
+#
+# Usage (one of):
+#
+#   set_theme!(latex_handler = MakieTeX.makietex_latex_handler)
+#   with_theme(latex_handler = MakieTeX.makietex_latex_handler) do … end
+#
+# Without the handler set, Makie's default MathTeXEngine path is used — good
+# for quick iteration; switch to this handler to polish a publication-quality
+# figure without changing plot code (especially useful when LaTeXStrings come
+# from a third-party plotting function you don't control).
 #
 # See companion PR: https://github.com/MakieOrg/Makie.jl/pull/5632
-
-"""
-    TeXString(s)
-
-An opaque payload flagged for full-LaTeX rendering by MakieTeX when passed
-through `text()`. Unlike `LaTeXString` (which uses MathTeXEngine for
-in-process glyph layout), a `TeXString` is compiled with a real LaTeX
-engine and embedded into the text plot as a single image primitive. It Just
-Works™ everywhere `text()` is used: `text!()` calls, Axis `title`,
-`xlabel`, `ylabel`, `xtickformat` returning a `Vector{TeXString}`, etc.
-
-The wrapped LaTeX source is never glyph-iterated, so `TeXString` doesn't
-implement the `AbstractString` interface. It opts into Makie's text input
-pipeline via `Makie.is_text_input(::Type{TeXString}) = true` and a
-`Makie.convert_text_string!` method.
-"""
-struct TeXString
-    s::String
-end
-TeXString(s::AbstractString) = TeXString(String(s))
-TeXString(l::LaTeXString) = TeXString(String(l))
-
-Base.String(t::TeXString) = t.s
-Base.convert(::Type{String}, t::TeXString) = t.s
-
-# Opt-in to Makie's text recipe input path. No subtyping needed — just this
-# one method.
-Makie.is_text_input(::Type{TeXString}) = true
-
-# Axis label layout checks `iswhitespace` to decide whether to reserve space
-# for the label; a `TeXString` always represents visible content.
-Makie.iswhitespace(::TeXString) = false
 
 # Scatter centers its marker on the position, then adds `marker_offset`. To
 # make `position` correspond to the alignment edge of the marker, shift by
 # half the marker size scaled by the alignment fraction. `valign === :baseline`
 # is supported: `baseline_from_bottom` is the descender depth in markerspace.
-function _texstring_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
+function _latex_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
     halign, valign = align
     fhalign = halign === :left ? 0.0f0 :
         halign === :center ? 0.5f0 :
@@ -72,20 +52,24 @@ end
 const _TEX_CROP_MARGIN_PT = 2.0f0
 const _TEX_DOC_BORDER_PT  = 3   # > margin so MediaBox has room
 
-"""
-    compile_texstring(latex_src::AbstractString) -> (cached::CachedPDF, baseline_pt::Float32, margin_pt::Float32)
+# LaTeX's default base font is 12pt; we scale the rendered PDF's pt dims so
+# that fontsize=12 in Makie ≈ 12pt rendered output.
+const _LATEX_HANDLER_BASE_PT = 12.0f0
 
-Compile a `TeXString` payload to a `CachedPDF` and simultaneously extract the
+"""
+    compile_latex_for_makie(latex_src::AbstractString) -> (cached::CachedPDF, baseline_pt::Float32, margin_pt::Float32)
+
+Compile a LaTeX snippet to a `CachedPDF` and simultaneously extract the
 descender depth (`\\dp`) of the rendered box — needed for
 `align = (:left, :baseline)`. Single LaTeX run: the content is wrapped in
-`\\sbox` + `\\typeout`, then `\\usebox`'d, so the same compile produces both the
-PDF that gets rendered and a log line we parse back for the baseline.
+`\\sbox` + `\\typeout`, then `\\usebox`'d, so the same compile produces both
+the PDF that gets rendered and a log line we parse back for the baseline.
 
 The returned `cached` document is cropped with a small symmetric pt margin
 to avoid clipping anti-aliased glyph edges at the bbox boundary; `margin_pt`
 is that margin (per side) so callers can recover the natural ink box.
 """
-function compile_texstring(latex_src::AbstractString)
+function compile_latex_for_makie(latex_src::AbstractString)
     src = String(latex_src)
     body = """
     \\newsavebox\\makietexbaselinebox%
@@ -173,12 +157,24 @@ function _compile_latex_capture_baseline(document::String)
     end
 end
 
-# LaTeX's default base font is 12pt; we scale the rendered PDF's pt dims so
-# that fontsize=12 in Makie ≈ 12pt rendered output.
-const _TEXSTRING_BASE_PT = 12.0f0
+"""
+    makietex_latex_handler(outputs, latex_str, i, N, fontsize, font, align,
+                           rotation, justification, lineheight, word_wrap_width,
+                           offset, fonts, color, strokecolor, strokewidth)
 
-function Makie.convert_text_string!(
-        outputs::NamedTuple, input_text::TeXString,
+`latex_handler` for Makie's `text` recipe. Renders `latex_str::LaTeXString`
+with a real LaTeX engine (via MakieTeX) and embeds the result into the text
+plot as a single image primitive — replacing Makie's default MathTeXEngine
+glyph layout. Install it through theming:
+
+    set_theme!(latex_handler = MakieTeX.makietex_latex_handler)
+
+After that, every `L"…"` you (or anyone whose plotting code you call) hand
+to `text()` / Axis labels / `xtickformat` etc. renders via lualatex /
+pdflatex / tectonic.
+"""
+function makietex_latex_handler(
+        outputs::NamedTuple, latex_str::LaTeXString,
         i, N, fontsize, font, align, rotation, justification,
         lineheight, word_wrap_width, offset, fonts, color, strokecolor, strokewidth
     )
@@ -191,22 +187,22 @@ function Makie.convert_text_string!(
     # Single LaTeX compile: yields the rendered PDF + the box-depth in pt for
     # `align = (..., :baseline)`. The `CachedPDF` is passed straight to scatter
     # as the marker — CairoMakie's `draw_marker(::CachedPDF, …)` override (in
-    # MakieTeXCairoMakieExt) feeds it to `poppler_page_render_for_printing`,
-    # which puts the PDF's vector content directly into the figure's Cairo
-    # surface (no raster intermediate, so hairlines stay crisp).
-    cached, baseline_pt, margin_pt = compile_texstring(input_text.s)
+    # MakieTeXCairoMakieExt) hands it to `poppler_page_render`, which puts
+    # the PDF's vector content directly into the figure's Cairo surface (no
+    # raster intermediate, so hairlines stay crisp).
+    cached, baseline_pt, margin_pt = compile_latex_for_makie(String(latex_str))
 
     # `dim_pt` includes a `margin_pt` safety pad on each side (added at crop
     # time to keep anti-aliased glyphs from clipping). The natural ink box
     # is `dim_pt - 2 * margin_pt`. Alignment refers to the ink box so the
     # safety pad doesn't shift positions.
-    scale = fs / _TEXSTRING_BASE_PT
+    scale = fs / _LATEX_HANDLER_BASE_PT
     dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
     target_size = dim_pt .* scale
     ink_size = (dim_pt .- 2 * margin_pt) .* scale
     baseline_from_bottom = baseline_pt * scale
 
-    align_off = _texstring_align_offset(al, ink_size, baseline_from_bottom)
+    align_off = _latex_align_offset(al, ink_size, baseline_from_bottom)
     marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
 
     # `text_blocks` must have one entry per input string. This block has no

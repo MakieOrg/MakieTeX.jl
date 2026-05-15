@@ -51,7 +51,7 @@ export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export teximg, teximg!, TeXImg
 export LTeX
-export TeXString, compile_texstring
+export makietex_latex_handler, compile_latex_for_makie
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 export Typstry, TypstString, @typst_str
