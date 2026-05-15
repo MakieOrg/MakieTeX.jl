@@ -56,16 +56,15 @@ function _texstring_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bo
 end
 
 """
-    detect_tex_baseline(latex_src::AbstractString) -> Float32
+    compile_texstring(latex_src::AbstractString) -> (cached::CachedPDF, baseline_pt::Float32)
 
-Return the descender depth (in pt) of the rendered LaTeX — i.e. how far the
-content extends below its baseline. Used to support `align = (:left, :baseline)`.
-
-LaTeX is asked to measure the rendered box and `\\typeout` its `\\dp` (depth)
-into the run log; the log is then parsed back. One compile, no rendering of
-visible markers, no interference from MakieTeX's PDF cropping step.
+Compile a `TeXString` payload to a `CachedPDF` and simultaneously extract the
+descender depth (`\\dp`) of the rendered box — needed for
+`align = (:left, :baseline)`. Single LaTeX run: the content is wrapped in
+`\\sbox` + `\\typeout`, then `\\usebox`'d, so the same compile produces both the
+PDF that gets rendered and a log line we parse back for the baseline.
 """
-function detect_tex_baseline(latex_src::AbstractString)
+function compile_texstring(latex_src::AbstractString)
     src = String(latex_src)
     body = """
     \\newsavebox\\makietexbaselinebox%
@@ -74,10 +73,19 @@ function detect_tex_baseline(latex_src::AbstractString)
     \\usebox\\makietexbaselinebox
     """
     doc = implant_text(body)
-    return _compile_and_parse_baseline(String(doc.contents))
+    pdf, baseline_pt = _compile_latex_capture_baseline(String(doc.contents))
+    # `CachedTEX(::Vector{UInt8})` is broken upstream (it stashes `nothing`
+    # into a strictly-typed `doc::TEXDocument` field). `CachedPDF` works fine
+    # and is what `page2img` dispatches on anyway.
+    cached = CachedPDF(PDFDocument(pdf))
+    return cached, baseline_pt
 end
 
-function _compile_and_parse_baseline(document::String)
+# Mirror of MakieTeX.compile_latex's tempdir-and-latexmk pipeline, but also
+# reads `temp.log` before the directory is torn down and pulls the baseline
+# depth out of it. Returns the cropped PDF as `Vector{UInt8}` plus the depth
+# in pt.
+function _compile_latex_capture_baseline(document::String)
     return mktempdir() do dir
         cd(dir) do
             write("temp.tex", document)
@@ -94,8 +102,9 @@ function _compile_and_parse_baseline(document::String)
             end
             log_text = isfile("temp.log") ? read("temp.log", String) : ""
             m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
-            m === nothing && return 0.0f0
-            return max(0.0f0, parse(Float32, m.captures[1]))
+            baseline_pt = m === nothing ? 0.0f0 : max(0.0f0, parse(Float32, m.captures[1]))
+            pdf = crop_pdf("temp.pdf")
+            return Vector{UInt8}(pdf), baseline_pt
         end
     end
 end
@@ -115,24 +124,17 @@ function Makie.convert_text_string!(
     rot = convert(Makie.Quaternionf, Makie.sv_getindex(rotation, i))
     off = Makie.Vec3f(Makie.sv_getindex(offset, i))
 
-    # Compile LaTeX → cached PDF → rasterized image. Bypass MakieTeX's
-    # `rasterize(::CachedTEX)` because it ignores the `scale` arg for TEX;
-    # `page2img` honors `render_density` directly.
-    cached = CachedTEX(input_text.s)
+    # Single LaTeX compile: yields both the rendered PDF (used to build a
+    # CachedTEX → rasterized marker image) and the box-depth in pt for
+    # `align = (..., :baseline)`. `page2img` is called directly because
+    # `rasterize(::CachedTEX)` ignores its `scale` arg for TEX.
+    cached, baseline_pt = compile_texstring(input_text.s)
     density = max(2, ceil(Int, Float64(fs) / _TEXSTRING_BASE_PT) * 4)
     img = page2img(cached, cached.doc.page; render_density = density)
 
     dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
     target_size = dim_pt .* (fs / _TEXSTRING_BASE_PT)
-
-    # When valign=:baseline, do a second compile with a depth probe to measure
-    # the content's descender. Skipped otherwise — keeps the common path cheap.
-    baseline_from_bottom = if al[2] === :baseline
-        descender_pt = detect_tex_baseline(input_text.s)
-        descender_pt * (fs / _TEXSTRING_BASE_PT)
-    else
-        0.0f0
-    end
+    baseline_from_bottom = baseline_pt * (fs / _TEXSTRING_BASE_PT)
 
     align_off = _texstring_align_offset(al, target_size, baseline_from_bottom)
     marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
