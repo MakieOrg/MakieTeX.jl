@@ -137,11 +137,17 @@ The backend-specific functions and rasterizers are kept in the backends' extensi
 
 These functions are generic to the Makie API.
 =#
-Makie.to_spritemarker(x::AbstractCachedDocument) = rasterize(x, MakieTeX.RENDER_DENSITY[])
-Makie.marker_to_sdf_shape(::AbstractCachedDocument) = Makie.RECTANGLE # this is the same result as the dispatch for `::AbstractMatrix`.
+# `to_spritemarker` is Makie's generic marker-normalization step (runs at
+# attribute-conversion time, before any backend is involved). For backends
+# that natively render PDFs (CairoMakie's `draw_marker(::CachedPDF, …)`
+# dispatch in `MakieTeXCairoMakieExt`), we want the document to pass through
+# untouched so the vector pipeline kicks in. Backends without a native PDF
+# path will need their own conversion (e.g. via a backend-side `rasterize`).
+Makie.to_spritemarker(x::AbstractCachedDocument) = x
+Makie.marker_to_sdf_shape(::AbstractCachedDocument) = Makie.RECTANGLE # same as `::AbstractMatrix`.
 Makie.el32convert(x::AbstractCachedDocument) = rasterize(x, MakieTeX.RENDER_DENSITY[])
 
-Makie.to_spritemarker(x::AbstractDocument) = rasterize(Cached(x), MakieTeX.RENDER_DENSITY[]) # this should never be called
+Makie.to_spritemarker(x::AbstractDocument) = Cached(x) # this should rarely be called
 
 #=
 ## Concrete type definitions

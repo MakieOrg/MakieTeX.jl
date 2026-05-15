@@ -186,13 +186,13 @@ function Makie.convert_text_string!(
     rot = convert(Makie.Quaternionf, Makie.sv_getindex(rotation, i))
     off = Makie.Vec3f(Makie.sv_getindex(offset, i))
 
-    # Single LaTeX compile: yields both the rendered PDF (used to build a
-    # CachedPDF → rasterized marker image) and the box-depth in pt for
-    # `align = (..., :baseline)`. `page2img` is called directly because
-    # `rasterize(::CachedTEX)` ignores its `scale` arg for TEX.
+    # Single LaTeX compile: yields the rendered PDF + the box-depth in pt for
+    # `align = (..., :baseline)`. The `CachedPDF` is passed straight to scatter
+    # as the marker — CairoMakie's `draw_marker(::CachedPDF, …)` override (in
+    # MakieTeXCairoMakieExt) feeds it to `poppler_page_render_for_printing`,
+    # which puts the PDF's vector content directly into the figure's Cairo
+    # surface (no raster intermediate, so hairlines stay crisp).
     cached, baseline_pt, margin_pt = compile_texstring(input_text.s)
-    density = max(2, ceil(Int, Float64(fs) / _TEXSTRING_BASE_PT) * 4)
-    img = page2img(cached, cached.doc.page; render_density = density)
 
     # `dim_pt` includes a `margin_pt` safety pad on each side (added at crop
     # time to keep anti-aliased glyphs from clipping). The natural ink box
@@ -218,7 +218,7 @@ function Makie.convert_text_string!(
         )
     )
 
-    push!(outputs.text_primitives, Makie.ImageTextPrimitive(img, marker_offset, target_size, rot))
+    push!(outputs.text_primitives, Makie.ImageTextPrimitive(cached, marker_offset, target_size, rot))
     push!(outputs.text_primitive_block_indices, i)
     return
 end
