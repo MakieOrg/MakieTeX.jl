@@ -2,7 +2,6 @@ module MakieTeXCairoMakieExt
 
 using CairoMakie, MakieTeX
 using Makie
-using Makie.MakieCore
 using Poppler_jll
 using Cairo
 using Colors
