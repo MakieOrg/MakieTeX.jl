@@ -1,7 +1,6 @@
 module MakieTeX
 
 using Makie
-using Makie.MakieCore
 
 using Colors, LaTeXStrings, Typstry
 using Base64
