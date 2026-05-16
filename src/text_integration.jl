@@ -216,7 +216,7 @@ function (h::MakieTeXLaTeX)(
     marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
 
     # `text_blocks` must have one entry per input string. This block has no
-    # glyphs — only an image primitive — so we push an empty range.
+    # glyphs — only a Scatter spec — so we push an empty range.
     curr = length(outputs.glyphindices)
     push!(outputs.text_blocks, (curr + 1):curr)
     push!(
@@ -226,7 +226,23 @@ function (h::MakieTeXLaTeX)(
         )
     )
 
-    push!(outputs.text_primitives, Makie.ImageTextPrimitive(cached, marker_offset, target_size, rot))
-    push!(outputs.text_primitive_block_indices, i)
+    # Emit the LaTeX render as a single Scatter PlotSpec. Positions are in
+    # block-relative markerspace (origin = the text block's anchor point);
+    # the text recipe shifts by the projected block position late, so we
+    # only need to supply a zero point here. `space`/`markerspace` are
+    # patched in by the recipe to match the parent text plot.
+    push!(outputs.text_specs, Makie.PlotSpec(:Scatter, Makie.Point3f[Makie.Point3f(0, 0, 0)];
+        marker = [cached],
+        markersize = [target_size],
+        marker_offset = [marker_offset],
+        rotation = [rot],
+    ))
+    push!(outputs.text_spec_block_indices, i)
+
+    # Block-relative bbox: marker_offset is the center, ink box is target
+    # minus the 2*margin safety pad on each side; rotation is applied.
+    half = 0.5f0 .* Makie.Vec3f(target_size..., 0)
+    bb = Makie.Rect3d(Makie.to_ndim(Makie.Point3d, marker_offset, 0) .- half, Makie.Vec3d(target_size..., 0))
+    push!(outputs.text_spec_bboxes, Makie.rotate_bbox(bb, rot))
     return
 end
