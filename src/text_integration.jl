@@ -181,6 +181,32 @@ function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_mar
     end
 end
 
+# GPU rasterization hook: when a Makie GPU-backed backend (currently
+# GLMakie / WGLMakie) is the active backend and sees a `CachedPDF` /
+# `CachedTEX` / `CachedTypst` as a scatter marker, it calls this method
+# to turn it into a `Matrix{ARGB32}` for upload as a texture. CairoMakie
+# does its own native vector dispatch on the cached document type and
+# never reaches this hook (so vector quality is preserved on Cairo).
+
+# Density heuristic: pixel size of one axis divided by 8, with a floor of 2.
+# So a 30 pt marker height → density 4, a 100 pt marker → density 13.
+_makietex_density_for_size(s) = max(2, ceil(Int, maximum(s) / 8))
+
+function Makie.rasterize_marker_for_gpu(doc::AbstractCachedDocument, scale)
+    s = scale isa AbstractVector ? first(scale) : scale
+    return page2img(doc, doc.doc isa Nothing ? 0 : doc.doc.page;
+        render_density = _makietex_density_for_size(s))
+end
+
+function Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractCachedDocument}, scale)
+    sizes = scale isa AbstractVector ? scale : fill(scale, length(docs))
+    return [
+        page2img(d, d.doc isa Nothing ? 0 : d.doc.page;
+            render_density = _makietex_density_for_size(sz))
+            for (d, sz) in zip(docs, sizes)
+    ]
+end
+
 # Makie calls the handler as `h(outputs, latex_str, i, N, _inputs...)`. We
 # make `MakieTeXLaTeX` callable with that exact signature.
 function (h::MakieTeXLaTeX)(
