@@ -41,9 +41,7 @@ tectonic_jll = "0"
 [extras]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [targets]
-test = ["Test", "Downloads", "CairoMakie", "GLMakie", "WGLMakie"]
+test = ["Test", "Downloads", "CairoMakie"]

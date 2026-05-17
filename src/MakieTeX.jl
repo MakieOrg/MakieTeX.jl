@@ -17,8 +17,6 @@ using Poppler_jll, Ghostscript_jll, Glib_jll, tectonic_jll
 using Rsvg, Cairo
 
 # Define some constants for configuration
-"Render with Poppler pipeline (true) or Cairo pipeline (false)"
-const RENDER_EXTRASAFE = Ref(false)
 "The current `TeX` engine which MakieTeX uses."
 const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
 "Default margins for `pdfcrop`.  Private, try not to touch!"
@@ -26,16 +24,10 @@ const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
 "Default density when rendering images"
 const RENDER_DENSITY = Ref(3)
 
-@deprecate TEXT_RENDER_DENSITY RENDER_DENSITY
-
 
 include("types.jl")
-include("recipe.jl")
-include("text_utils.jl")
-include("layoutable.jl")
 
 include("rendering/pdf_utils.jl")
-include("rendering/tex.jl")
 include("rendering/typst.jl")
 include("rendering/pdf.jl")
 include("rendering/svg.jl")
@@ -43,15 +35,11 @@ include("rendering/svg.jl")
 include("text_integration.jl")
 
 export Cached
-export TeXDocument, CachedTeX
-export TEXDocument, CachedTEX
 export TypstDocument, CachedTypst
 export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
-export teximg, teximg!, TeXImg
-export LTeX
-export MakieTeXLaTeX, compile_latex_for_makie
+export LaTeX, FullLaTeX
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 export Typstry, TypstString, @typst_str

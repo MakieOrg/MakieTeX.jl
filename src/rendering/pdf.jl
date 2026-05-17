@@ -86,13 +86,13 @@ end
 # Rendering functions for the resulting Cairo surfaces and images
 
 """
-    page2img(ct::Union{CachedTeX, CachedTypst}, page::Int; scale = 1, render_density = 1)
+    page2img(ct::Union{CachedTypst, CachedPDF}, page::Int; scale = 1, render_density = 1)
 
-Renders the `page` of the given `CachedTeX` or `CachedTypst` object to an image, with the given `scale` and `render_density`.
+Renders the `page` of the given cached document to an image with the given `scale` and `render_density`.
 
-This function reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
+Reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
 """
-function page2img(ct::Union{CachedTeX, CachedTypst, CachedPDF}, page::Int; scale = 1, render_density = 1)
+function page2img(ct::Union{CachedTypst, CachedPDF}, page::Int; scale = 1, render_density = 1)
     document = update_handle!(ct)
     page2img(document, page, size(ct); scale, render_density)
 end
@@ -169,7 +169,7 @@ end
 
 firstpage2recordsurf(ct; kwargs...) = page2recordsurf(ct, 0; kwargs...)
 
-function recordsurf2img(ct::Union{CachedTeX, CachedTypst}, render_density = 1)
+function recordsurf2img(ct::CachedTypst, render_density = 1)
 
     # We can find the final dimensions (in pixel units) of the Rsvg image.
     # Then, it's possible to store the image in a native Julia array,

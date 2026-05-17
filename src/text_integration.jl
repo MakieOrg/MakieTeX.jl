@@ -1,31 +1,13 @@
-# Integration with Makie's `text` recipe via the `AbstractTextPrimitive` +
-# `latex_handler` extension hooks (added in Makie 0.25). Lets MakieTeX
-# render any `LaTeXString` passed into `text()` (and therefore Axis labels,
-# titles, tick labels via `xtickformat`, etc.) with a real LaTeX engine
-# instead of MathTeXEngine's in-process glyph approximation.
-#
-# Usage:
-#
-#   set_theme!(latex_handler = MakieTeXLaTeX())                       # global default
-#   with_theme(latex_handler = MakieTeXLaTeX(preamble = "…")) do … end # scoped override
-#   text!(scene, L"…"; latex_handler = MakieTeXLaTeX(preamble = "…"))  # per-plot override
-#
-# Each `MakieTeXLaTeX` value carries its own preamble / class options /
-# engine, so different text plots in the same figure can compile against
-# different LaTeX setups (e.g. one Axis using `physics` package macros and
-# another using `siunitx`).
-#
-# Without a handler set, Makie's default MathTeXEngine path is used — good
-# for quick iteration; switch to MakieTeXLaTeX to polish a publication-
-# quality figure without changing plot code (especially useful when the
-# LaTeXStrings come from a third-party plotting function you don't control).
-#
-# See companion PR: https://github.com/MakieOrg/Makie.jl/pull/5632
+# Integration with Makie's `text` recipe via the `text_handler` hook
+# (Makie 0.25+). When `text_handler` is set to a `LaTeX`, any
+# `LaTeXString` going through `text()` — including Axis labels, titles,
+# tick labels — is rendered with a real LaTeX engine instead of
+# MathTeXEngine. Other input types fall through.
+# See https://github.com/MakieOrg/Makie.jl/pull/5632.
 
-# Scatter centers its marker on the position, then adds `marker_offset`. To
-# make `position` correspond to the alignment edge of the marker, shift by
-# half the marker size scaled by the alignment fraction. `valign === :baseline`
-# is supported: `baseline_from_bottom` is the descender depth in markerspace.
+# Convert an `(halign, valign)` pair into a markerspace offset that maps
+# scatter's center anchor onto the alignment edge. `:baseline` valign is
+# supported via `baseline_from_bottom` (descender depth in markerspace).
 function _latex_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
     halign, valign = align
     fhalign = halign === :left ? 0.0f0 :
@@ -44,84 +26,167 @@ function _latex_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom
 end
 
 const _DEFAULT_PREAMBLE = "\\usepackage{amsmath, amsfonts, xcolor}\n\\pagestyle{empty}\n\\nopagecolor"
-const _DEFAULT_CLASSOPTIONS = "preview, tightpage, 12pt"
+const _DEFAULT_CLASSOPTIONS = "preview, tightpage"
 
 """
-    MakieTeXLaTeX(; preamble, classoptions, engine, border_pt,
-                    crop_margin_pt, base_pt)
+    AbstractLaTeX
 
-A `latex_handler` for Makie's `text` recipe that renders `LaTeXString`
-content with a real LaTeX engine (via MakieTeX). Construct one and pass it
-to `set_theme!` / `with_theme` / a plot's `latex_handler` attribute.
+Shared supertype for [`LaTeX`](@ref) (LaTeXString only) and
+[`FullLaTeX`](@ref) (LaTeXString + plain strings).
+"""
+abstract type AbstractLaTeX end
+
+"""
+    LaTeX(; preamble, classoptions, engine, border_pt, crop_margin_pt)
+
+A `text_handler` for Makie's `text` recipe that renders `LaTeXString` content
+with a real LaTeX engine. Pass to `set_theme!` / `with_theme` / a plot's
+`text_handler` attribute. Plain `String` inputs fall through to the default
+FreeType glyph layout. Use [`FullLaTeX`](@ref) to also route plain
+strings through LaTeX.
 
 # Fields
 
-* `preamble` — LaTeX preamble (everything between `\\documentclass{…}` and
-  `\\begin{document}`). Default loads `amsmath, amsfonts, xcolor` and sets
-  `\\pagestyle{empty}\\nopagecolor` so the page background is transparent.
-* `classoptions` — options to the standalone class (without `border=`, that
-  field is appended automatically from `border_pt`). Default
-  `"preview, tightpage, 12pt"`.
-* `engine` — `nothing` (use `MakieTeX.CURRENT_TEX_ENGINE[]`) or a `Cmd` like
-  `` `lualatex` `` / `` `pdflatex` `` / `` `tectonic` ``.
-* `border_pt` — pt margin built into the standalone page MediaBox; must be
-  larger than `crop_margin_pt` so the safety crop below has room to extend.
-* `crop_margin_pt` — symmetric pt safety pad cropped around the ink, so
-  anti-aliased glyph edges aren't clipped by the page boundary.
-* `base_pt` — LaTeX font size assumed in the document (Makie's `fontsize`
-  is scaled by `fontsize / base_pt`).
+* `preamble` — LaTeX preamble. Default loads `amsmath, amsfonts, xcolor` and
+  sets a transparent page background.
+* `classoptions` — `standalone` class options (without `border=`, which is
+  appended from `border_pt`).
+* `engine` — `nothing` (use `MakieTeX.CURRENT_TEX_ENGINE[]`) or a `Cmd`.
+* `border_pt` — pt margin in the page MediaBox; must exceed `crop_margin_pt`.
+* `crop_margin_pt` — safety pad around the ink so anti-aliased edges aren't
+  clipped at the page boundary.
 """
-Base.@kwdef struct MakieTeXLaTeX
+Base.@kwdef struct LaTeX <: AbstractLaTeX
     preamble::String = _DEFAULT_PREAMBLE
     classoptions::String = _DEFAULT_CLASSOPTIONS
     engine::Union{Nothing, Cmd} = nothing
     border_pt::Int = 3
     crop_margin_pt::Float32 = 2.0f0
-    base_pt::Float32 = 12.0f0
 end
 
 """
-    compile_latex_for_makie(h::MakieTeXLaTeX, latex_src::AbstractString)
-        -> (cached::CachedPDF, baseline_pt::Float32)
+    FullLaTeX(; preamble, classoptions, engine, border_pt, crop_margin_pt)
 
-Compile a LaTeX snippet under the configuration `h` to a `CachedPDF` and
-simultaneously extract the descender depth (`\\dp`) of the rendered box —
-needed for `align = (:left, :baseline)`. Single LaTeX run: the content is
-wrapped in `\\sbox` + `\\typeout`, then `\\usebox`'d, so the same compile
-produces both the PDF that gets rendered and a log line we parse back for
-the baseline. The returned `cached` document is cropped with a symmetric
-`h.crop_margin_pt` margin to avoid clipping anti-aliased glyph edges.
+Like [`LaTeX`](@ref), but also routes plain `AbstractString` inputs
+through LaTeX (with appropriate text-mode escaping for special characters).
+Closest analogue to matplotlib's `rcParams["text.usetex"] = True`.
 """
-function compile_latex_for_makie(h::MakieTeXLaTeX, latex_src::AbstractString)
-    src = String(latex_src)
-    body = """
+Base.@kwdef struct FullLaTeX <: AbstractLaTeX
+    preamble::String = _DEFAULT_PREAMBLE
+    classoptions::String = _DEFAULT_CLASSOPTIONS
+    engine::Union{Nothing, Cmd} = nothing
+    border_pt::Int = 3
+    crop_margin_pt::Float32 = 2.0f0
+end
+
+# Escape LaTeX special chars for text-mode embedding. `replace` with multiple
+# pairs scans the source once and skips re-processing replacements, so the
+# `{`/`}` in `\textbackslash{}` etc. don't get double-escaped.
+function _escape_for_text_mode(s::AbstractString)
+    return replace(
+        s,
+        '\\' => raw"\textbackslash{}",
+        '{'  => raw"\{",
+        '}'  => raw"\}",
+        '$'  => raw"\$",
+        '&'  => raw"\&",
+        '#'  => raw"\#",
+        '_'  => raw"\_",
+        '%'  => raw"\%",
+        '^'  => raw"\textasciicircum{}",
+        '~'  => raw"\textasciitilde{}",
+        '\n' => raw"\\",
+    )
+end
+
+# Compile inputs (color, fontsize, lineheight) are baked into the LaTeX source
+# so the resulting PDF is already correctly sized and colored. Inline LaTeX
+# color/size commands override these in the natural way.
+function _compile_latex_block(h::AbstractLaTeX, body::String, color, fontsize, lineheight)
+    color_hex = Colors.hex(convert(RGB, Makie.to_color(color)))
+    fs = Float32(fontsize)
+    lh = Float32(lineheight)
+
+    document = """
+    \\RequirePackage{luatex85}
+    \\documentclass[$(h.classoptions), border=$(h.border_pt)pt]{standalone}
+    $(h.preamble)
+    \\definecolor{maincolor}{HTML}{$(color_hex)}
+    \\begin{document}
     \\newsavebox\\makietexbaselinebox%
-    \\sbox\\makietexbaselinebox{$(src)}%
+    \\sbox\\makietexbaselinebox{%
+    \\color{maincolor}\\fontsize{$(fs)pt}{$(fs * lh)pt}\\selectfont $(body)%
+    }%
     \\typeout{MAKIETEX_BASELINE_DEPTH=\\the\\dp\\makietexbaselinebox}%
     \\usebox\\makietexbaselinebox
+    \\end{document}
     """
-    # Build the TEXDocument ourselves so we can set `border=Npt` from the
-    # handler config — gives the page MediaBox enough room for our crop
-    # margin (otherwise the crop clamps to MediaBox and the margin
-    # disappears in y).
-    doc = TEXDocument(body, true;
-        requires = "\\RequirePackage{luatex85}",
-        preamble = h.preamble,
-        class = "standalone",
-        classoptions = "$(h.classoptions), border=$(h.border_pt)pt",
-    )
     engine = h.engine === nothing ? CURRENT_TEX_ENGINE[] : h.engine
-    pdf, baseline_pt = _compile_latex_capture_baseline(String(doc.contents), engine, h.crop_margin_pt)
-    # `CachedTEX(::Vector{UInt8})` is broken upstream (it stashes `nothing`
-    # into a strictly-typed `doc::TEXDocument` field). `CachedPDF` works
-    # fine and is what `page2img` dispatches on anyway.
-    return CachedPDF(PDFDocument(pdf)), baseline_pt
+    pdf, baseline_pt = _compile_latex_capture_baseline(document, engine, h.crop_margin_pt)
+    return (CachedPDF(PDFDocument(pdf)), baseline_pt)
 end
 
-# Like MakieTeX's `crop_pdf`, but reads Ghostscript's `%%HiResBoundingBox`
-# (sub-pt precision) rather than the integer `%%BoundingBox`. With the
-# integer version, glyph edges can be jittered by up to ~1pt within the
-# crop, which propagates into visible baseline misalignment.
+# Both variants accept LaTeXString. Explicit methods on concrete types avoid
+# the (Full, AbstractString) vs (Abstract, LaTeXString) ambiguity that would
+# arise with a single LaTeXString method on the abstract supertype.
+Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =
+    _compile_latex_block(h, String(src), color, fontsize, lineheight)
+Makie.compile_text(h::FullLaTeX, src::LaTeXString, color, fontsize, lineheight) =
+    _compile_latex_block(h, String(src), color, fontsize, lineheight)
+
+# Only the Full variant claims plain strings.
+Makie.compile_text(h::FullLaTeX, src::AbstractString, color, fontsize, lineheight) =
+    _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
+
+function Makie.place_text!(
+        h::AbstractLaTeX, outputs::NamedTuple, i, N, compiled,
+        fontsize, font, align, rotation, justification, lineheight,
+        word_wrap_width, offset, fonts, color, strokecolor, strokewidth,
+    )
+    cached, baseline_pt = compiled
+    al = Makie.sv_getindex(align, i)
+    rot = convert(Makie.Quaternionf, Makie.sv_getindex(rotation, i))
+    off = Makie.Vec3f(Makie.sv_getindex(offset, i))
+
+    # The PDF is already at the correct fontsize; markersize is the literal
+    # PDF dimensions. `crop_margin_pt` was padded around the ink at crop time,
+    # so the natural ink box is `dim_pt - 2 * crop_margin_pt`.
+    dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
+    ink_size = dim_pt .- 2 * h.crop_margin_pt
+
+    align_off = _latex_align_offset(al, ink_size, baseline_pt)
+    marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
+
+    curr = length(outputs.glyphindices)
+    push!(outputs.text_blocks, (curr + 1):curr)
+    push!(
+        outputs.glyphcollections, Makie.GlyphCollection(
+            UInt64[], Makie.NativeFont[], Makie.Point3f[], Makie.GlyphExtent[],
+            Makie.Vec2f[], Makie.Quaternionf[], Makie.RGBAf[], Makie.RGBAf[], Float32[]
+        )
+    )
+
+    # Positions are block-relative; the text recipe shifts each spec by the
+    # projected block position and patches `space`/`markerspace` to match.
+    push!(
+        outputs.text_specs, Makie.PlotSpec(
+            :Scatter, [Makie.Point3f(0, 0, 0)];
+            marker = [cached],
+            markersize = [dim_pt],
+            marker_offset = [marker_offset],
+            rotation = [rot],
+        )
+    )
+    push!(outputs.text_spec_block_indices, i)
+
+    half = 0.5f0 .* Makie.Vec3f(dim_pt..., 0)
+    bb = Makie.Rect3d(Makie.to_ndim(Makie.Point3d, marker_offset, 0) .- half, Makie.Vec3d(dim_pt..., 0))
+    push!(outputs.text_spec_bboxes, Makie.rotate_bbox(bb, rot))
+    return
+end
+
+# Sub-pt-precise crop via Ghostscript's `%%HiResBoundingBox`. The integer
+# `%%BoundingBox` jitters glyph edges by up to ~1pt, visible as baseline drift.
 function _hires_pdf_bbox(path::String)
     out = Pipe(); err = Pipe()
     success(pipeline(`$(Ghostscript_jll.gs()) -q -dBATCH -dNOPAUSE -sDEVICE=bbox $path`, stdout = out, stderr = err))
@@ -153,10 +218,8 @@ function _hires_crop_pdf(path::String, margin::Real)
     return read(out_path)
 end
 
-# Mirror of MakieTeX.compile_latex's tempdir-and-latexmk pipeline, but also
-# reads `temp.log` before the directory is torn down and pulls the baseline
-# depth out of it. Returns the cropped PDF as `Vector{UInt8}` plus the depth
-# in pt.
+# Run latexmk/tectonic in a tempdir and parse `temp.log` for the box depth
+# before tearing the dir down.
 function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_margin_pt::Real)
     return mktempdir() do dir
         cd(dir) do
@@ -181,15 +244,9 @@ function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_mar
     end
 end
 
-# GPU rasterization hook: when a Makie GPU-backed backend (currently
-# GLMakie / WGLMakie) is the active backend and sees a `CachedPDF` /
-# `CachedTEX` / `CachedTypst` as a scatter marker, it calls this method
-# to turn it into a `Matrix{ARGB32}` for upload as a texture. CairoMakie
-# does its own native vector dispatch on the cached document type and
-# never reaches this hook (so vector quality is preserved on Cairo).
-
-# Density heuristic: pixel size of one axis divided by 8, with a floor of 2.
-# So a 30 pt marker height → density 4, a 100 pt marker → density 13.
+# GPU backends (GL/WGLMakie) call this to turn a cached document into a
+# texture-uploadable image. CairoMakie has its own vector dispatch and
+# doesn't reach this path.
 _makietex_density_for_size(s) = max(2, ceil(Int, maximum(s) / 8))
 
 function Makie.rasterize_marker_for_gpu(doc::AbstractCachedDocument, scale)
@@ -205,70 +262,4 @@ function Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractCachedDoc
             render_density = _makietex_density_for_size(sz))
             for (d, sz) in zip(docs, sizes)
     ]
-end
-
-# Makie calls the handler as `h(outputs, latex_str, i, N, _inputs...)`. We
-# make `MakieTeXLaTeX` callable with that exact signature.
-function (h::MakieTeXLaTeX)(
-        outputs::NamedTuple, latex_str::LaTeXString,
-        i, N, fontsize, font, align, rotation, justification,
-        lineheight, word_wrap_width, offset, fonts, color, strokecolor, strokewidth
-    )
-
-    fs = Float32(Makie.sv_getindex(fontsize, i))
-    al = Makie.sv_getindex(align, i)
-    rot = convert(Makie.Quaternionf, Makie.sv_getindex(rotation, i))
-    off = Makie.Vec3f(Makie.sv_getindex(offset, i))
-
-    # Single LaTeX compile: yields the rendered PDF + the box-depth in pt for
-    # `align = (..., :baseline)`. The `CachedPDF` is passed straight to scatter
-    # as the marker — CairoMakie's `draw_marker(::CachedPDF, …)` override (in
-    # MakieTeXCairoMakieExt) hands it to `poppler_page_render`, which puts
-    # the PDF's vector content directly into the figure's Cairo surface (no
-    # raster intermediate, so hairlines stay crisp).
-    cached, baseline_pt = compile_latex_for_makie(h, String(latex_str))
-
-    # `dim_pt` includes the safety pad `h.crop_margin_pt` on each side (added
-    # at crop time to keep anti-aliased glyphs from clipping). The natural
-    # ink box is `dim_pt - 2 * crop_margin_pt`. Alignment refers to the ink
-    # box so the safety pad doesn't shift positions.
-    scale = fs / h.base_pt
-    dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
-    target_size = dim_pt .* scale
-    ink_size = (dim_pt .- 2 * h.crop_margin_pt) .* scale
-    baseline_from_bottom = baseline_pt * scale
-
-    align_off = _latex_align_offset(al, ink_size, baseline_from_bottom)
-    marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
-
-    # `text_blocks` must have one entry per input string. This block has no
-    # glyphs — only a Scatter spec — so we push an empty range.
-    curr = length(outputs.glyphindices)
-    push!(outputs.text_blocks, (curr + 1):curr)
-    push!(
-        outputs.glyphcollections, Makie.GlyphCollection(
-            UInt64[], Makie.NativeFont[], Makie.Point3f[], Makie.GlyphExtent[],
-            Makie.Vec2f[], Makie.Quaternionf[], Makie.RGBAf[], Makie.RGBAf[], Float32[]
-        )
-    )
-
-    # Emit the LaTeX render as a single Scatter PlotSpec. Positions are in
-    # block-relative markerspace (origin = the text block's anchor point);
-    # the text recipe shifts by the projected block position late, so we
-    # only need to supply a zero point here. `space`/`markerspace` are
-    # patched in by the recipe to match the parent text plot.
-    push!(outputs.text_specs, Makie.PlotSpec(:Scatter, Makie.Point3f[Makie.Point3f(0, 0, 0)];
-        marker = [cached],
-        markersize = [target_size],
-        marker_offset = [marker_offset],
-        rotation = [rot],
-    ))
-    push!(outputs.text_spec_block_indices, i)
-
-    # Block-relative bbox: marker_offset is the center, ink box is target
-    # minus the 2*margin safety pad on each side; rotation is applied.
-    half = 0.5f0 .* Makie.Vec3f(target_size..., 0)
-    bb = Makie.Rect3d(Makie.to_ndim(Makie.Point3d, marker_offset, 0) .- half, Makie.Vec3d(target_size..., 0))
-    push!(outputs.text_spec_bboxes, Makie.rotate_bbox(bb, rot))
-    return
 end
