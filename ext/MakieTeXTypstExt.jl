@@ -1,79 +1,78 @@
-# Integration with Makie's `text` recipe via the `text_handler` hook.
-# Mirror of `text_integration.jl` for the Typst engine. When `text_handler`
-# is set to a `Typst`, any `TypstString` going through `text()` — including
-# Axis labels, titles, tick labels — is rendered with the Typst compiler
-# instead of MathTeXEngine. Other input types fall through.
+module MakieTeXTypstExt
 
-const _DEFAULT_TYPST_PREAMBLE = ""  # page sizing handled inside _compile_typst_block
+# Engine-side implementation of the `Typst` / `FullTypst` text handlers and
+# the legacy `TypstDocument` / `CachedTypst` scatter-marker types. Triggered
+# by `Typstry`, which brings `Typst_jll` in transitively.
 
+using MakieTeX
+using MakieTeX: AbstractTypst, Typst, FullTypst, CachedPDF, PDFDocument,
+    TypstDocument, CachedTypst,
+    _escape_for_typst, _is_blank,
+    cached_doc, crop_pdf, page2img
+using MakieTeX.Colors
+using Makie
+using Typstry
+using Typstry: TypstString, typst
+
+# --- Legacy scatter-marker path -------------------------------------------
+
+# `compile_typst` returns the raw cropped PDF bytes from a Typst source string.
 """
-    AbstractTypst
+    compile_typst(document::AbstractString)
 
-Shared supertype for [`Typst`](@ref) (TypstString only) and
-[`FullTypst`](@ref) (TypstString + plain strings).
+Compile the given document as a String and return the resulting PDF.
 """
-abstract type AbstractTypst <: AbstractPdfTextHandler end
+function compile_typst(document::AbstractString)
+    return mktempdir() do dir
+        cd(dir) do
+            write("temp.typ", document)
+            path = "temp.pdf"
 
-"""
-    Typst(; preamble, font, crop_margin_pt)
-
-A `text_handler` for Makie's `text` recipe that renders `TypstString` content
-with the Typst compiler. Pass to `set_theme!` / `with_theme` / a plot's
-`text_handler` attribute. Plain `String` inputs fall through to the default
-FreeType glyph layout. Use [`FullTypst`](@ref) to also route plain strings
-through Typst.
-
-# Fields
-
-* `preamble` — Typst preamble. Default sets a transparent, auto-sized page.
-* `font` — `nothing` (Typst's default) or a font family name set via
-  `#set text(font: …)`. The bundled Julia Mono path is always added to
-  `TYPST_FONT_PATHS` so user fonts and the default fall through.
-* `crop_margin_pt` — safety pad around the ink so anti-aliased edges aren't
-  clipped at the page boundary.
-"""
-Base.@kwdef struct Typst <: AbstractTypst
-    preamble::String = _DEFAULT_TYPST_PREAMBLE
-    font::Union{Nothing, String} = nothing
-    crop_margin_pt::Float32 = 2.0f0
+            out = Pipe(); err = Pipe()
+            try
+                _separator = Sys.iswindows() ? ";" : ":"
+                font_paths = haskey(ENV, "TYPST_FONT_PATHS") ?
+                    "$(ENV["TYPST_FONT_PATHS"])$(_separator)$(Typstry.julia_mono)" :
+                    Typstry.julia_mono
+                redirect_stdio(stdout = out, stderr = err) do
+                    run(ignorestatus(addenv(typst`compile temp.typ`,
+                        "TYPST_FONT_PATHS" => font_paths)))
+                end
+                close(out.in); close(err.in)
+                if !isfile(path)
+                    println("Typst did not write $(path)!")
+                    println("Files in temp directory: ", join(readdir(), ","))
+                    printstyled("Stdout\n"; bold = true, color = :blue)
+                    println(read(out, String))
+                    printstyled("Stderr\n"; bold = true, color = :red)
+                    println(read(err, String))
+                    error()
+                end
+            finally
+                return crop_pdf(path)
+            end
+        end
+    end
 end
 
-"""
-    FullTypst(; preamble, font, crop_margin_pt)
+compile_typst(doc::TypstDocument) = compile_typst(String(doc.contents))
+typst2pdf(args...) = compile_typst(args...)
 
-Like [`Typst`](@ref), but also routes plain `AbstractString` inputs through
-Typst (with markup-character escaping). Closest analogue to enabling LaTeX
-for all text.
-"""
-Base.@kwdef struct FullTypst <: AbstractTypst
-    preamble::String = _DEFAULT_TYPST_PREAMBLE
-    font::Union{Nothing, String} = nothing
-    crop_margin_pt::Float32 = 2.0f0
+# CachedTypst constructors that need the engine.
+MakieTeX.CachedTypst(doc::TypstDocument) = cached_doc(CachedTypst, typst2pdf, doc)
+function MakieTeX.CachedTypst(str::Union{String, TypstString}; kwargs...)
+    MakieTeX.CachedTypst(MakieTeX.TypstDocument(str); kwargs...)
 end
 
-# Conservatively escape characters that introduce Typst markup in text mode.
-function _escape_for_typst(s::AbstractString)
-    return replace(
-        s,
-        '\\' => raw"\\",
-        '#'  => raw"\#",
-        '$'  => raw"\$",
-        '*'  => raw"\*",
-        '_'  => raw"\_",
-        '`'  => raw"\`",
-        '<'  => raw"\<",
-        '>'  => raw"\>",
-        '@'  => raw"\@",
-        '='  => raw"\=",
-        '~'  => raw"\~",
-    )
+# TypstDocument(::TypstString) — needs Typstry's `TypstString`.
+MakieTeX.TypstDocument(ts::TypstString) = MakieTeX.TypstDocument(ts, true)
+
+function MakieTeX.rasterize(ct::CachedTypst, scale::Int64 = 1)
+    return page2img(ct, ct.doc.page; scale)
 end
 
-# Compile inputs (color, fontsize, lineheight) are baked into the Typst source
-# so the resulting PDF is already correctly sized and colored. We also emit a
-# `<makietex-baseline>` metadata block holding the font-metric descender depth,
-# which `typst query` will pull out after compilation. The metadata block has
-# no layout effect (verified against `gs -sDEVICE=bbox`).
+# --- `text_handler` path (Makie 0.25+ text recipe) ------------------------
+
 function _compile_typst_block(h::AbstractTypst, body::String, color, fontsize, lineheight)
     color_hex = Colors.hex(convert(RGB, Makie.to_color(color)))
     fs = Float32(fontsize)
@@ -120,13 +119,6 @@ end
 
 Makie.is_text_input(::TypstString) = true
 
-# Empty / whitespace-only text shouldn't drive layout protrusions — the
-# strut would otherwise emit a full cap-height+descender bbox even with
-# nothing to render. Returning `nothing` makes Makie's text recipe fall
-# through to the default (FreeType) path, which yields a 0-size bbox for
-# empty input as expected.
-_is_blank(s::AbstractString) = isempty(s) || all(isspace, s)
-
 # Both variants accept TypstString. Explicit methods on concrete types avoid
 # the (Full, AbstractString) vs (Abstract, TypstString) ambiguity that would
 # arise with a single TypstString method on the abstract supertype.
@@ -169,8 +161,7 @@ function _compile_typst_capture_baseline(document::String, crop_margin_pt::Real)
                       "stderr: ", read(err, String))
             end
 
-            qout = Pipe()
-            qerr = Pipe()
+            qout = Pipe(); qerr = Pipe()
             try
                 redirect_stdio(stdout = qout, stderr = qerr) do
                     run(ignorestatus(addenv(
@@ -186,12 +177,9 @@ function _compile_typst_capture_baseline(document::String, crop_margin_pt::Real)
             baseline_pt = m === nothing ? 0.0f0 :
                 max(0.0f0, parse(Float32, m.captures[1]))
 
-            # No ink-cropping: Typst already sized the page tight to the
-            # layout box + crop_margin_pt on all sides, so the page MediaBox
-            # *is* what place_text! expects. baseline_pt is the descender,
-            # which (combined with the margin already in cached.dims) gives
-            # the correct baseline distance from the cropped ink bottom.
             return read("temp.pdf"), baseline_pt
         end
     end
 end
+
+end # module

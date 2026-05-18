@@ -1,0 +1,128 @@
+module MakieTeXLaTeXExt
+
+# Engine-side implementation of the `LaTeX` / `FullLaTeX` text handlers.
+# Triggered by `tectonic_jll`; if `latexmk` is available on PATH it is
+# preferred (matches the user's local TeX install / packages), and
+# `tectonic_jll`'s bundled binary is used as a fallback otherwise.
+#
+# Type definitions, alignment math, and the bbox crop helpers all live in
+# MakieTeX core. This extension only adds the engine-using methods.
+
+using MakieTeX
+using MakieTeX: AbstractLaTeX, LaTeX, FullLaTeX, CachedPDF, PDFDocument,
+    CURRENT_TEX_ENGINE, _escape_for_text_mode, _hires_crop_pdf
+using MakieTeX.Colors
+using Makie
+using Makie: LaTeXStrings
+using Makie.LaTeXStrings: LaTeXString
+using tectonic_jll
+
+# Compile inputs (color, fontsize, lineheight) are baked into the LaTeX source
+# so the resulting PDF is already correctly sized and colored. Inline LaTeX
+# color/size commands override these in the natural way.
+function _compile_latex_block(h::AbstractLaTeX, body::String, color, fontsize, lineheight)
+    color_hex = Colors.hex(convert(RGB, Makie.to_color(color)))
+    fs = Float32(fontsize)
+    lh = Float32(lineheight)
+
+    document = """
+    \\RequirePackage{luatex85}
+    \\documentclass[$(h.classoptions), border=$(h.border_pt)pt]{standalone}
+    $(h.preamble)
+    \\definecolor{maincolor}{HTML}{$(color_hex)}
+    \\begin{document}
+    \\newsavebox\\makietexbaselinebox%
+    \\sbox\\makietexbaselinebox{%
+    \\color{maincolor}\\fontsize{$(fs)pt}{$(fs * lh)pt}\\selectfont $(body)%
+    }%
+    \\typeout{MAKIETEX_BASELINE_DEPTH=\\the\\dp\\makietexbaselinebox}%
+    \\usebox\\makietexbaselinebox
+    \\end{document}
+    """
+    engine = h.engine === nothing ? CURRENT_TEX_ENGINE[] : h.engine
+    pdf, baseline_pt = _compile_latex_capture_baseline(document, engine, h.crop_margin_pt)
+    return (CachedPDF(PDFDocument(pdf)), baseline_pt)
+end
+
+# Both variants accept LaTeXString. Explicit methods on concrete types avoid
+# the (Full, AbstractString) vs (Abstract, LaTeXString) ambiguity that would
+# arise with a single LaTeXString method on the abstract supertype.
+Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =
+    _compile_latex_block(h, String(src), color, fontsize, lineheight)
+Makie.compile_text(h::FullLaTeX, src::LaTeXString, color, fontsize, lineheight) =
+    _compile_latex_block(h, String(src), color, fontsize, lineheight)
+
+# Only the Full variant claims plain strings.
+Makie.compile_text(h::FullLaTeX, src::AbstractString, color, fontsize, lineheight) =
+    _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
+
+# Run latexmk/tectonic in a tempdir and parse `temp.log` for the box depth
+# before tearing the dir down.
+function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_margin_pt::Real)
+    return mktempdir() do dir
+        cd(dir) do
+            write("temp.tex", document)
+            out = Pipe(); err = Pipe()
+            try
+                cmd = if engine == `tectonic`
+                    `$(tectonic_jll.tectonic()) temp.tex`
+                else
+                    `latexmk -file-line-error --shell-escape -cd -$(engine) -interaction=nonstopmode temp.tex`
+                end
+                run(pipeline(ignorestatus(cmd), stdout = out, stderr = err))
+            finally
+                close(out.in); close(err.in)
+            end
+            log_text = isfile("temp.log") ? read("temp.log", String) : ""
+            m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
+            baseline_pt = m === nothing ? 0.0f0 : max(0.0f0, parse(Float32, m.captures[1]))
+            pdf = _hires_crop_pdf("temp.pdf", crop_margin_pt)
+            return pdf, baseline_pt
+        end
+    end
+end
+
+"Try to write to `engine` and see what happens."
+function _try_tex_engine(engine::Cmd)
+    try
+        fd = open(engine; write = true)
+        write(fd, "\n")
+        close(fd)
+        return nothing
+    catch err
+        return err
+    end
+end
+
+function __init__()
+    # Determine LaTeX engine support.
+    latexmk = Sys.which("latexmk")
+    if isnothing(latexmk)
+        @warn """
+        MakieTeXLaTeXExt could not find `latexmk` on your system!
+        If you want to use the `luatex` engine, or any local or non-standard
+        packages, please install `latexmk` and ensure that it is on `PATH`.
+
+        Defaulting to the bundled `tectonic` renderer.
+        """
+        CURRENT_TEX_ENGINE[] = `tectonic`
+        return
+    end
+
+    t1 = _try_tex_engine(CURRENT_TEX_ENGINE[])  # default `lualatex`
+    if !isnothing(t1)
+        @warn "The specified TeX engine $(CURRENT_TEX_ENGINE[]) is not available; trying pdflatex."
+        CURRENT_TEX_ENGINE[] = `pdflatex`
+    else
+        return
+    end
+
+    t2 = _try_tex_engine(CURRENT_TEX_ENGINE[])
+    if !isnothing(t2)
+        @warn "Could not find a TeX engine; defaulting to bundled `tectonic`."
+        CURRENT_TEX_ENGINE[] = `tectonic`
+    end
+    return
+end
+
+end # module

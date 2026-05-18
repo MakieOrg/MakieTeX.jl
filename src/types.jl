@@ -242,7 +242,8 @@ function TypstDocument(
         return TypstDocument(contents)
     end
 end
-TypstDocument(ts::TypstString) = TypstDocument(ts, true)
+# `TypstDocument(::TypstString)` constructor lives in `MakieTeXTypstExt`
+# since `TypstString` is from `Typstry` (an optional dep).
 
 """
     typstdoc(contents::AbstractString; kwargs...)
@@ -373,12 +374,8 @@ $(FIELDS)
     It is also possible to manually construct a `CachedTypst` with `nothing` in the `doc` field, 
     if you just want to insert a pre-rendered PDF into your figure.
 """
-CachedTypst(doc::TypstDocument) = cached_doc(CachedTypst, typst2pdf, doc)
-
-function CachedTypst(str::Union{String, TypstString}; kwargs...)
-    CachedTypst(TypstDocument(str); kwargs...)
-end
-
+# `CachedTypst(doc::TypstDocument)` and the string-based constructors live
+# in `MakieTeXTypstExt` since they need the Typst compiler (via Typstry).
 CachedTypst(pdf::Vector{UInt8}; kwargs...) = cached_pdf(CachedTypst, pdf; kwargs...)
 
 # do not rerun the pipeline on CachedTypst
