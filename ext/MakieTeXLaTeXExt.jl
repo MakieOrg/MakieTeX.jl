@@ -10,7 +10,7 @@ module MakieTeXLaTeXExt
 
 using MakieTeX
 using MakieTeX: LaTeX, CachedPDF, PDFDocument,
-    CURRENT_TEX_ENGINE, _escape_for_text_mode, _hires_crop_pdf
+    CURRENT_TEX_ENGINE, _escape_for_text_mode, _hires_crop_pdf, _is_blank
 using MakieTeX.Colors
 using Makie
 using Makie: LaTeXStrings
@@ -25,15 +25,20 @@ function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheigh
     fs = Float32(fontsize)
     lh = Float32(lineheight)
 
+    # `\vphantom{Ágy}` extends the saved box to the full font line metrics
+    # (Á to capture ascender + accent overshoot, gy for descender) so the
+    # bbox we hand back to Makie is content-independent — matches the
+    # ascender/descender padding used by the FreeType and Typst handlers
+    # instead of clinging to cap-height.
     document = """
     \\RequirePackage{luatex85}
-    \\documentclass[$(h.classoptions), border=$(h.border_pt)pt]{standalone}
+    \\documentclass[$(h.classoptions), border=$(h.crop_margin_pt)pt]{standalone}
     $(h.preamble)
     \\definecolor{maincolor}{HTML}{$(color_hex)}
     \\begin{document}
     \\newsavebox\\makietexbaselinebox%
     \\sbox\\makietexbaselinebox{%
-    \\color{maincolor}\\fontsize{$(fs)pt}{$(fs * lh)pt}\\selectfont $(body)%
+    \\color{maincolor}\\fontsize{$(fs)pt}{$(fs * lh)pt}\\selectfont\\vphantom{Ágy}$(body)%
     }%
     \\typeout{MAKIETEX_BASELINE_DEPTH=\\the\\dp\\makietexbaselinebox}%
     \\usebox\\makietexbaselinebox
@@ -45,13 +50,15 @@ function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheigh
 end
 
 Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =
+    _is_blank(String(src)) ? nothing :
     _compile_latex_block(h, String(src), color, fontsize, lineheight)
 
-# `full = true` claims plain `AbstractString` inputs too.
+# `full = true` claims plain `AbstractString` inputs too. Blank input
+# returns `nothing` so empty Axis subtitles don't allocate phantom
+# protrusion via a single-line LaTeX box.
 Makie.compile_text(h::LaTeX, src::AbstractString, color, fontsize, lineheight) =
-    h.full ?
-        _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight) :
-        nothing
+    (!h.full || _is_blank(src)) ? nothing :
+    _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
 
 # Run latexmk/tectonic in a tempdir and parse `temp.log` for the box depth
 # before tearing the dir down.
@@ -62,7 +69,12 @@ function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_mar
             out = Pipe(); err = Pipe()
             try
                 cmd = if engine == `tectonic`
-                    `$(tectonic_jll.tectonic()) temp.tex`
+                    # `--keep-logs` is needed so `temp.log` (which carries our
+                    # `\typeout{MAKIETEX_BASELINE_DEPTH=…}` marker) survives the
+                    # run; without it tectonic discards the log and the depth
+                    # parses as 0, collapsing baseline alignment onto the ink
+                    # bottom (visible as descenders sitting on the anchor).
+                    `$(tectonic_jll.tectonic()) --keep-logs temp.tex`
                 else
                     `latexmk -file-line-error --shell-escape -cd -$(engine) -interaction=nonstopmode temp.tex`
                 end
@@ -73,8 +85,11 @@ function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_mar
             log_text = isfile("temp.log") ? read("temp.log", String) : ""
             m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
             baseline_pt = m === nothing ? 0.0f0 : max(0.0f0, parse(Float32, m.captures[1]))
-            pdf = _hires_crop_pdf("temp.pdf", crop_margin_pt)
-            return pdf, baseline_pt
+            # Use the natural standalone page (border = crop_margin_pt) so
+            # the \vphantom-induced ascender padding survives. Cropping to
+            # gs ink bbox would erase that and the bbox would slip back to
+            # cap-height — exactly the divergence we're trying to fix.
+            return read("temp.pdf"), baseline_pt
         end
     end
 end
