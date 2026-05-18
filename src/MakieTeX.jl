@@ -33,6 +33,7 @@ include("rendering/pdf.jl")
 include("rendering/svg.jl")
 
 include("text_integration.jl")
+include("typst_integration.jl")
 
 export Cached
 export TypstDocument, CachedTypst
@@ -40,6 +41,7 @@ export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 export LaTeX, FullLaTeX
+export Typst, FullTypst
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 export Typstry, TypstString, @typst_str
