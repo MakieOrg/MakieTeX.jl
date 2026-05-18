@@ -117,8 +117,6 @@ function _compile_typst_block(h::AbstractTypst, body::String, color, fontsize, l
     return (CachedPDF(PDFDocument(pdf)), baseline_pt)
 end
 
-Makie.is_text_input(::TypstString) = true
-
 # Both variants accept TypstString. Explicit methods on concrete types avoid
 # the (Full, AbstractString) vs (Abstract, TypstString) ambiguity that would
 # arise with a single TypstString method on the abstract supertype.
