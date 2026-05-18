@@ -14,7 +14,7 @@ using Makie.Observables
 using DocStringExtensions
 
 using Poppler_jll, Ghostscript_jll, Glib_jll
-using Rsvg, Cairo
+using Cairo
 
 # Default margins for `pdfcrop`.  Private, try not to touch!
 const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0, 0, 0, 0])
@@ -26,7 +26,6 @@ include("types.jl")
 
 include("rendering/pdf_utils.jl")
 include("rendering/pdf.jl")
-include("rendering/svg.jl")
 
 include("pdf_text_handler.jl")
 include("latex_handler.jl")
@@ -34,8 +33,6 @@ include("typst_handler.jl")
 
 export Cached
 export PDFDocument, CachedPDF
-export SVGDocument, CachedSVG
-export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
 # `LaTeX` and `Typst` are too generic to export; access them as
 # `MakieTeX.LaTeX` / `MakieTeX.Typst` (Typstry also exports a `Typst` symbol,
 # so leaving them unexported avoids the ambiguity).

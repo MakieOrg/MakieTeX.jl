@@ -13,7 +13,6 @@ Glib_jll = "7746bdde-850d-59dc-9ae8-88ece973131d"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
-Rsvg = "c4c386cf-5103-5370-be45-f3a111cca3b8"
 
 [weakdeps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -35,17 +34,7 @@ Glib_jll = "2"
 LaTeXStrings = "1"
 Makie = "0.21.2, 0.25"
 Poppler_jll = "21.9, 22, 23"
-Rsvg = "1"
 julia = "1.9"
 Typstry = "0.7"
 tectonic_jll = "0"
 
-[extras]
-CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
-tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
-
-[targets]
-test = ["Test", "Downloads", "CairoMakie", "Typstry", "tectonic_jll"]

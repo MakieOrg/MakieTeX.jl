@@ -155,20 +155,6 @@ Now, we define the structs which hold the documents and their cached versions.
 =#
 
 """
-    SVGDocument(svg::AbstractString)
-
-A document type which stores an SVG string.
-
-Is converted to [`CachedSVG`](@ref) for use in plotting.
-"""
-struct SVGDocument <: AbstractDocument
-    doc::String
-end
-Cached(x::SVGDocument) = CachedSVG(x)
-getdoc(doc::SVGDocument) = doc.doc
-mimetype(::Type{SVGDocument}) = MIME"image/svg+xml"()
-
-"""
     PDFDocument(pdf::AbstractString, [page = 0])
 
 A document type which holds a raw PDF as a string.
@@ -242,44 +228,6 @@ end
 CachedPDF(pdf::String) = CachedPDF(PDFDocument(pdf))
 getdoc(doc::CachedPDF) = getdoc(doc.doc)
 mimetype(::Type{CachedPDF}) = MIME"application/pdf"()
-
-
-"""
-    CachedSVG(svg::SVGDocument)
-
-Holds an SVG document along with an Rsvg handle and a Cairo surface to which it has already
-been rendered.
-
-## Usage
-
-```julia
-CachedSVG(read("path/to/svg.svg"))
-CachedSVG(read("path/to/svg.svg", String))
-CachedSVG(SVGDocument(...))
-```
-
-## Fields
-
-$(FIELDS)
-"""
-struct CachedSVG <: AbstractCachedDocument
-    "The original `SVGDocument` which is cached here, i.e., the text of that SVG."
-    doc::SVGDocument
-    "A pointer to the Rsvg handle of the SVG.  May be randomly GC'ed by Rsvg, so is stored as a `Ref` in case it has to be refreshed."
-    handle::Ref{Rsvg.RsvgHandle}
-    "The dimensions of the SVG in points, for ease of access."
-    dims::Tuple{Float64, Float64}
-    "A Cairo surface to which Rsvg has drawn the SVG.  Permanent and cached."
-    surf::CairoSurface
-    "A cache for a (rendered_image, scale_factor) pair.  This is used to avoid re-rendering the PDF."
-    image_cache::Ref{Tuple{Matrix{ARGB32}, Float64}}
-end
-function CachedSVG(svg::SVGDocument, rsvg_handle::Rsvg.RsvgHandle, dims::Tuple{Float64, Float64}, surf::CairoSurface)
-    return CachedSVG(svg, Ref(rsvg_handle), dims, surf, Ref{Tuple{Matrix{ARGB32}, Float64}}((Matrix{ARGB32}(undef, 0, 0), 0)))
-end
-CachedSVG(svg::String) = CachedSVG(SVGDocument(svg))
-getdoc(doc::CachedSVG) = getdoc(doc.doc)
-mimetype(::Type{CachedSVG}) = MIME"image/svg+xml"()
 
 
 # Bounding box methods
