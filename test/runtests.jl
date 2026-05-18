@@ -40,8 +40,6 @@ function render_texample(url; assume = ".tex")
     isempty(ext) && (ext = assume)
     if ext == ".tex"
         render_texample(CachedTeX, TeXDocument, url)
-    elseif ext == ".typst"
-        render_texample(CachedTypst, TypstDocument, url)
     elseif ext == ".svg"
         render_texample(CachedSVG, SVGDocument, url)
     elseif ext == ".pdf"
@@ -53,6 +51,5 @@ end
 
 
 include("tex.jl")
-include("typst.jl")
 include("svg.jl")
 include("pdf.jl")

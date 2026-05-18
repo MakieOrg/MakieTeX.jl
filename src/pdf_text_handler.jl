@@ -11,8 +11,8 @@ Shared supertype for text handlers whose `compile_text` produces a
 `(CachedPDF, baseline_pt)` tuple. `place_text!` is implemented once on this
 supertype; concrete handlers only need to override `compile_text`.
 
-Concrete handlers live in extensions: `AbstractLaTeX` (via
-`MakieTeXLaTeXExt`) and `AbstractTypst` (via `MakieTeXTypstExt`).
+Concrete handlers live in extensions: [`LaTeX`](@ref) (via
+`MakieTeXLaTeXExt`) and [`Typst`](@ref) (via `MakieTeXTypstExt`).
 """
 abstract type AbstractPdfTextHandler end
 

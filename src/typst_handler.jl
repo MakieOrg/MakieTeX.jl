@@ -2,54 +2,36 @@
 # in `MakieTeXTypstExt` (triggered by `Typstry`), so the engine
 # dependencies stay optional.
 
-const _DEFAULT_TYPST_PREAMBLE = ""
-
 """
-    AbstractTypst
-
-Shared supertype for [`Typst`](@ref) (TypstString only) and
-[`FullTypst`](@ref) (TypstString + plain strings). The compilation methods
-live in `MakieTeXTypstExt` — load `Typstry` to activate them.
-"""
-abstract type AbstractTypst <: AbstractPdfTextHandler end
-
-"""
-    Typst(; preamble, font, crop_margin_pt)
+    Typst(; full, preamble, font, font_paths, crop_margin_pt)
 
 A `text_handler` for Makie's `text` recipe that renders `TypstString` content
 with the Typst compiler. Pass to `set_theme!` / `with_theme` / a plot's
-`text_handler` attribute. Plain `String` inputs fall through to the default
-FreeType glyph layout. Use [`FullTypst`](@ref) to also route plain strings
-through Typst.
+`text_handler` attribute.
+
+When `full = false` (default), plain `String` inputs fall through to the
+default FreeType glyph layout. With `full = true`, plain strings are also
+routed through Typst (with markup-character escaping).
 
 Requires the `Typstry` package to be loaded — the actual rendering
 pipeline lives in `MakieTeXTypstExt`.
 
 # Fields
 
+* `full` — `true` routes plain `AbstractString` inputs through Typst too.
 * `preamble` — Typst preamble. Default is empty.
 * `font` — `nothing` (Typst's default) or a font family name set via
-  `#set text(font: …)`. The bundled Julia Mono path is always added to
-  `TYPST_FONT_PATHS` so user fonts and the default fall through.
+  `#set text(font: …)`.
+* `font_paths` — extra directories added to `TYPST_FONT_PATHS` so Typst can
+  pick up custom fonts. Prepended to whatever is already in the env var.
 * `crop_margin_pt` — safety pad around the ink so anti-aliased edges aren't
   clipped at the page boundary.
 """
-Base.@kwdef struct Typst <: AbstractTypst
-    preamble::String = _DEFAULT_TYPST_PREAMBLE
+Base.@kwdef struct Typst <: AbstractPdfTextHandler
+    full::Bool = false
+    preamble::String = ""
     font::Union{Nothing, String} = nothing
-    crop_margin_pt::Float32 = 2.0f0
-end
-
-"""
-    FullTypst(; preamble, font, crop_margin_pt)
-
-Like [`Typst`](@ref), but also routes plain `AbstractString` inputs through
-Typst (with markup-character escaping). Closest analogue to enabling LaTeX
-for all text.
-"""
-Base.@kwdef struct FullTypst <: AbstractTypst
-    preamble::String = _DEFAULT_TYPST_PREAMBLE
-    font::Union{Nothing, String} = nothing
+    font_paths::Vector{String} = String[]
     crop_margin_pt::Float32 = 2.0f0
 end
 

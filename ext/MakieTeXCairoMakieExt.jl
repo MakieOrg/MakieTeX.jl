@@ -18,7 +18,7 @@ CairoMakie.cairo_scatter_marker(v::NTuple{N, <:MakieTeX.AbstractDocument}) where
 
 # Vector-render a cached PDF marker via Poppler — no raster intermediate.
 function CairoMakie.draw_marker(
-        ctx, marker::Union{MakieTeX.CachedPDF, MakieTeX.CachedTypst}, pos,
+        ctx, marker::MakieTeX.CachedPDF, pos,
         strokecolor, strokewidth, mat
     )
     w, h = marker.dims

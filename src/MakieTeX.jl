@@ -33,12 +33,12 @@ include("latex_handler.jl")
 include("typst_handler.jl")
 
 export Cached
-export TypstDocument, CachedTypst
 export PDFDocument, CachedPDF
 export SVGDocument, CachedSVG
 export dvi2svg, latex2dvi, rsvg2recordsurf, svg2rsvg
-export LaTeX, FullLaTeX
-export Typst, FullTypst
+# `LaTeX` and `Typst` are too generic to export; access them as
+# `MakieTeX.LaTeX` / `MakieTeX.Typst` (Typstry also exports a `Typst` symbol,
+# so leaving them unexported avoids the ambiguity).
 
 export LaTeXStrings, LaTeXString, latexstring, @L_str
 

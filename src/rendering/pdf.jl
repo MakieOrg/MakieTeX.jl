@@ -86,13 +86,13 @@ end
 # Rendering functions for the resulting Cairo surfaces and images
 
 """
-    page2img(ct::Union{CachedTypst, CachedPDF}, page::Int; scale = 1, render_density = 1)
+    page2img(ct::CachedPDF, page::Int; scale = 1, render_density = 1)
 
 Renders the `page` of the given cached document to an image with the given `scale` and `render_density`.
 
 Reads the PDF using Poppler and renders it to a Cairo surface, which is then read as an image.
 """
-function page2img(ct::Union{CachedTypst, CachedPDF}, page::Int; scale = 1, render_density = 1)
+function page2img(ct::CachedPDF, page::Int; scale = 1, render_density = 1)
     document = update_handle!(ct)
     page2img(document, page, size(ct); scale, render_density)
 end
@@ -168,30 +168,6 @@ function page2recordsurf(document::Ptr{Cvoid}, page::Int; scale = 1, render_dens
 end
 
 firstpage2recordsurf(ct; kwargs...) = page2recordsurf(ct, 0; kwargs...)
-
-function recordsurf2img(ct::CachedTypst, render_density = 1)
-
-    # We can find the final dimensions (in pixel units) of the Rsvg image.
-    # Then, it's possible to store the image in a native Julia array,
-    # which simplifies the process of rendering.
-    # Cairo does not draw "empty" pixels, so we need to fill here
-    w = ceil(Int, ct.dims[1] * render_density)
-    h = ceil(Int, ct.dims[2] * render_density)
-
-    img = fill(Colors.ARGB32(0,0,0,0), w, h)
-
-    # Cairo allows you to use a Matrix of ARGB32, which simplifies rendering.
-    cs = Cairo.CairoImageSurface(img)
-    ccall((:cairo_surface_set_device_scale, Cairo.libcairo), Cvoid, (Ptr{Nothing}, Cdouble, Cdouble),
-    cs.ptr, render_density, render_density)
-    c = Cairo.CairoContext(cs)
-
-    # Render the parsed SVG to a Cairo context
-    render_surface(c, ct.surf)
-
-    # The image is rendered transposed, so we need to flip it.
-    return rotr90(permutedims(img))
-end
 
 function render_surface(ctx::CairoContext, surf)
     Cairo.save(ctx)

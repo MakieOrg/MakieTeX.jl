@@ -1,6 +1,6 @@
 module MakieTeXLaTeXExt
 
-# Engine-side implementation of the `LaTeX` / `FullLaTeX` text handlers.
+# Engine-side implementation of the `LaTeX` text handler.
 # Triggered by `tectonic_jll`; if `latexmk` is available on PATH it is
 # preferred (matches the user's local TeX install / packages), and
 # `tectonic_jll`'s bundled binary is used as a fallback otherwise.
@@ -9,7 +9,7 @@ module MakieTeXLaTeXExt
 # MakieTeX core. This extension only adds the engine-using methods.
 
 using MakieTeX
-using MakieTeX: AbstractLaTeX, LaTeX, FullLaTeX, CachedPDF, PDFDocument,
+using MakieTeX: LaTeX, CachedPDF, PDFDocument,
     CURRENT_TEX_ENGINE, _escape_for_text_mode, _hires_crop_pdf
 using MakieTeX.Colors
 using Makie
@@ -20,7 +20,7 @@ using tectonic_jll
 # Compile inputs (color, fontsize, lineheight) are baked into the LaTeX source
 # so the resulting PDF is already correctly sized and colored. Inline LaTeX
 # color/size commands override these in the natural way.
-function _compile_latex_block(h::AbstractLaTeX, body::String, color, fontsize, lineheight)
+function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheight)
     color_hex = Colors.hex(convert(RGB, Makie.to_color(color)))
     fs = Float32(fontsize)
     lh = Float32(lineheight)
@@ -44,17 +44,14 @@ function _compile_latex_block(h::AbstractLaTeX, body::String, color, fontsize, l
     return (CachedPDF(PDFDocument(pdf)), baseline_pt)
 end
 
-# Both variants accept LaTeXString. Explicit methods on concrete types avoid
-# the (Full, AbstractString) vs (Abstract, LaTeXString) ambiguity that would
-# arise with a single LaTeXString method on the abstract supertype.
 Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =
     _compile_latex_block(h, String(src), color, fontsize, lineheight)
-Makie.compile_text(h::FullLaTeX, src::LaTeXString, color, fontsize, lineheight) =
-    _compile_latex_block(h, String(src), color, fontsize, lineheight)
 
-# Only the Full variant claims plain strings.
-Makie.compile_text(h::FullLaTeX, src::AbstractString, color, fontsize, lineheight) =
-    _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
+# `full = true` claims plain `AbstractString` inputs too.
+Makie.compile_text(h::LaTeX, src::AbstractString, color, fontsize, lineheight) =
+    h.full ?
+        _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight) :
+        nothing
 
 # Run latexmk/tectonic in a tempdir and parse `temp.log` for the box depth
 # before tearing the dir down.
