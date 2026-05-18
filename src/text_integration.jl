@@ -5,10 +5,21 @@
 # MathTeXEngine. Other input types fall through.
 # See https://github.com/MakieOrg/Makie.jl/pull/5632.
 
+"""
+    AbstractPdfTextHandler
+
+Shared supertype for text handlers whose `compile_text` produces a
+`(CachedPDF, baseline_pt)` tuple. `place_text!` is implemented once on this
+supertype; concrete handlers only need to override `compile_text`.
+
+[`AbstractLaTeX`](@ref) and `AbstractTypst` both subtype this.
+"""
+abstract type AbstractPdfTextHandler end
+
 # Convert an `(halign, valign)` pair into a markerspace offset that maps
 # scatter's center anchor onto the alignment edge. `:baseline` valign is
 # supported via `baseline_from_bottom` (descender depth in markerspace).
-function _latex_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
+function _pdf_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
     halign, valign = align
     fhalign = halign === :left ? 0.0f0 :
         halign === :center ? 0.5f0 :
@@ -34,7 +45,7 @@ const _DEFAULT_CLASSOPTIONS = "preview, tightpage"
 Shared supertype for [`LaTeX`](@ref) (LaTeXString only) and
 [`FullLaTeX`](@ref) (LaTeXString + plain strings).
 """
-abstract type AbstractLaTeX end
+abstract type AbstractLaTeX <: AbstractPdfTextHandler end
 
 """
     LaTeX(; preamble, classoptions, engine, border_pt, crop_margin_pt)
@@ -139,7 +150,7 @@ Makie.compile_text(h::FullLaTeX, src::AbstractString, color, fontsize, lineheigh
     _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
 
 function Makie.place_text!(
-        h::AbstractLaTeX, outputs::NamedTuple, i, N, compiled,
+        h::AbstractPdfTextHandler, outputs::NamedTuple, i, N, compiled,
         fontsize, font, align, rotation, justification, lineheight,
         word_wrap_width, offset, fonts, color, strokecolor, strokewidth,
     )
@@ -154,7 +165,7 @@ function Makie.place_text!(
     dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
     ink_size = dim_pt .- 2 * h.crop_margin_pt
 
-    align_off = _latex_align_offset(al, ink_size, baseline_pt)
+    align_off = _pdf_align_offset(al, ink_size, baseline_pt)
     marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
 
     curr = length(outputs.glyphindices)
@@ -179,8 +190,12 @@ function Makie.place_text!(
     )
     push!(outputs.text_spec_block_indices, i)
 
-    half = 0.5f0 .* Makie.Vec3f(dim_pt..., 0)
-    bb = Makie.Rect3d(Makie.to_ndim(Makie.Point3d, marker_offset, 0) .- half, Makie.Vec3d(dim_pt..., 0))
+    # Report `ink_size` as the bbox so block-level layout (axis title gaps,
+    # tick label padding, etc.) doesn't include the `crop_margin_pt` pad —
+    # that pad exists only to keep the rasterized marker's anti-aliased
+    # edges intact, not as visual space around the text.
+    half = 0.5f0 .* Makie.Vec3f(ink_size..., 0)
+    bb = Makie.Rect3d(Makie.to_ndim(Makie.Point3d, marker_offset, 0) .- half, Makie.Vec3d(ink_size..., 0))
     push!(outputs.text_spec_bboxes, Makie.rotate_bbox(bb, rot))
     return
 end
