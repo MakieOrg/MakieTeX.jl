@@ -24,11 +24,12 @@ function _compile_typst_block(h::Typst, body::String, color, fontsize, lineheigh
     #   independent line box: the bbox stays the same whether the body is
     #   "g" or "h", and there's room above cap-height for ascenders,
     #   diacritics, and accents without clipping.
-    # - Pure math content (`$…$`) does NOT inherit those text edges, so a
-    #   `#hide[Mp]` strut is prepended to establish text-line metrics on
-    #   the line. `#h(-measure([Mp]).width)` retracts horizontally so the
-    #   body starts at x=0 with no leading whitespace. Math taller than
-    #   the strut's line grows the page naturally.
+    # - For inline / mixed / plain-text content, a `#hide[Mp]` strut is
+    #   prepended (with `#h(-measure([Mp]).width)` retracting the cursor)
+    #   to establish text-line metrics on the line. Content taller than
+    #   the strut grows the page naturally. Display math (`$ … $`) is its
+    #   own block — placing a strut would add an empty text line above it,
+    #   so we skip the strut when the body is a single block equation.
     # - Baseline is queried from "Mp" (constant for a given font/size).
     document = """
     #set page(width: auto, height: auto, margin: $(h.crop_margin_pt)pt, fill: none)
@@ -48,7 +49,11 @@ function _compile_typst_block(h::Typst, body::String, color, fontsize, lineheigh
       [#metadata((descent_pt: (h_total - h_above).pt())) <makietex-baseline>]
     }
 
-    #context [#hide[Mp]#h(-measure([Mp]).width)$(body)]
+    #context {
+      let b = [$(body)]
+      let is_block_eq = b.func() == math.equation and b.at("block", default: false)
+      if is_block_eq { b } else { hide[Mp] + h(-measure([Mp]).width) + b }
+    }
     """
 
     pdf, baseline_pt = _compile_typst_capture_baseline(document, h)
