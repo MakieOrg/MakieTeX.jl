@@ -4,9 +4,9 @@ using Makie
 using CairoMakie, GLMakie
 using LaTeXStrings
 using Typstry
+using PixelMatch
 using tectonic_jll  # activates MakieTeXLaTeXExt
 
-include("reftest.jl")
 include("reference_tests.jl")
 
 @testset "MakieTeX reference tests" begin

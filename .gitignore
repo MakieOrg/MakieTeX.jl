@@ -1,10 +1,7 @@
-*.jl.*.cov
+*.cov
 *.jl.cov
 *.jl.mem
-.DS_Store
-/Manifest.toml
-/dev/
-/docs/build/
-/docs/site/
-/docs/Manifest.toml
-test/test_images
+test/Manifest.toml
+# Reftest recordings and diffs; only `*_ref.png` is committed.
+test/reference_images/**/*_rec.png
+test/reference_images/**/*_diff.png
