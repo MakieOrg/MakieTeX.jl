@@ -108,7 +108,7 @@ function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; scale = 1, r
     w = ceil(Int, tex_dims[1] * render_density)
     h = ceil(Int, tex_dims[2] * render_density)
 
-    img = fill(Colors.ARGB32(1,1,1,0), w, h)
+    img = fill(Colors.ARGB32(0,0,0,0), w, h)
 
     surf = CairoImageSurface(img)
 
