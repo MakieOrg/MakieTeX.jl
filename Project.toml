@@ -28,7 +28,7 @@ MakieTeXTypstExt = "Typstry"
 [compat]
 Cairo = "1.0.5"
 CairoMakie = "0.12.2, 0.16"
-Colors = "0.9, 0.10, 0.11, 0.12"
+Colors = "0.9, 0.10, 0.11, 0.12, 0.13"
 DocStringExtensions = "0.8, 0.9"
 Ghostscript_jll = "9"
 Glib_jll = "2"
