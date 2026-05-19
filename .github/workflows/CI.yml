@@ -18,40 +18,46 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - '1'
-        os:
-          - ubuntu-latest
-          - windows
-          - macos
-        arch:
-          - x64
+        version: ['1']
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      # Cancel ongoing CI test runs if pushing to branch again before the previous tests
-      # have finished
       - name: Cancel ongoing test runs for previous commits
         uses: styfle/cancel-workflow-action@0.12.1
         with:
           access_token: ${{ github.token }}
 
-      # Do tests
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-        env: 
+
+      # Install xvfb on Linux; GL backend needs a display server.
+      - name: Install xvfb (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      # Skip julia-buildpkg / julia-runtest: instantiating the test env
+      # directly is enough, and lets `[sources]` in test/Project.toml drive
+      # the Makie 0.25 revs without the parent manifest fighting us.
+      - name: Run tests
+        shell: bash
+        env:
           DISPLAY: ':0'
-        with: 
-          prefix: xvfb-run -s '-screen 0 1024x768x24'
+          JULIA_PKG_PRECOMPILE_AUTO: '0'
+        run: |
+          script='using Pkg; Pkg.instantiate(); include("test/runtests.jl")'
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -s '-screen 0 1024x768x24' julia --project=test -e "$script"
+          else
+            julia --project=test -e "$script"
+          fi
+
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
-          name: test_images
-          path: test_images/
+          name: reference_images-${{ matrix.os }}
+          path: test/reference_images/
   docs:
     name: Build and deploy documentation
     runs-on: ubuntu-latest
