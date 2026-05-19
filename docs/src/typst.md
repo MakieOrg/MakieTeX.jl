@@ -8,7 +8,7 @@
 using CairoMakie, MakieTeX, Typstry
 
 with_theme(text_handler = MakieTeX.Typst()) do
-    fig = Figure(size = (600, 380), fontsize = 18)
+    fig = Figure()
     ax = Axis(fig[1, 1];
         title  = typst"Damped oscillation $A(t) = e^(-lambda t) cos(omega t)$",
         xlabel = typst"time $t$ (s)",
@@ -28,7 +28,7 @@ Inline math uses single `$…$` with no surrounding whitespace; spaced `$ … $`
 
 ```@example typst
 with_theme(text_handler = MakieTeX.Typst(full = true)) do
-    fig = Figure(size = (600, 380), fontsize = 18)
+    fig = Figure()
     ax = Axis(fig[1, 1];
         title  = typst"Damped oscillation $A(t) = e^(-lambda t) cos(omega t)$",
         xlabel = "time (seconds)",
@@ -57,7 +57,7 @@ handler = MakieTeX.Typst(
 )
 
 with_theme(text_handler = handler) do
-    fig = Figure(size = (600, 380), fontsize = 18)
+    fig = Figure()
     ax = Axis(fig[1, 1];
         title  = typst"Boltzmann distribution  $f(E) = exp(-E / (#kB T))$",
         xlabel = typst"energy $E$",
@@ -75,6 +75,48 @@ end
 
 ```julia
 MakieTeX.Typst(font = "Inter", font_paths = ["/path/to/your/fonts"])
+```
+
+## Complex content in layouts
+
+The handler flows through every Makie text element, including `Label` — and the `preamble` field is the natural place for `#import "@preview/..."` lines, so any Typst package from [Typst Universe](https://typst.app/universe/) works. Same physics as on the [LaTeX](@ref) page, drawn with [`fletcher`](https://typst.app/universe/package/fletcher):
+
+```@example typst
+handler = MakieTeX.Typst(
+    preamble = """
+        #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
+    """,
+)
+
+with_theme(text_handler = handler) do
+    fig = Figure(size = (760, 360))
+    Label(fig[1, 1], typst"""
+    #diagram(
+      spacing: 1.5cm,
+      node((0, 0), $e^-$),
+      node((0, 1), $e^+$),
+      node((1, 0.5), $$, shape: "circle", fill: black, radius: 1.2mm),
+      node((2, 0.5), $$, shape: "circle", fill: black, radius: 1.2mm),
+      node((3, 0), $mu^-$),
+      node((3, 1), $mu^+$),
+      edge((0, 0), (1, 0.5), "-|>"),
+      edge((1, 0.5), (0, 1), "-|>"),
+      edge((1, 0.5), (2, 0.5), "wave", label: $gamma$),
+      edge((2, 0.5), (3, 0), "-|>"),
+      edge((3, 1), (2, 0.5), "-|>"),
+    )
+    """; fontsize = 16)
+    ax = Axis(fig[1, 2];
+        title = typst"$e^-e^+ -> mu^-mu^+$ (tree level)",
+        xlabel = typst"$cos theta$",
+        ylabel = typst"$dif sigma slash dif cos theta$",
+    )
+    θ = range(-1, 1; length = 200)
+    lines!(ax, θ, 1 .+ θ.^2; label = typst"$prop 1 + cos^2 theta$")
+    axislegend(ax; position = :ct)
+    colsize!(fig.layout, 1, Relative(0.4))
+    fig
+end
 ```
 
 See the [API reference](@ref api) for the full set of options.

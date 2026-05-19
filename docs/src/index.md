@@ -57,7 +57,7 @@ The engines load via package extensions:
 using CairoMakie, MakieTeX
 
 with_theme(text_handler = MakieTeX.LaTeX()) do
-    fig = Figure(size = (500, 350))
+    fig = Figure()
     Axis(fig[1, 1];
         title = L"\int_0^\pi \sin(x)^2\, dx = \tfrac{\pi}{2}",
         xlabel = L"x", ylabel = L"\sin^2(x)",

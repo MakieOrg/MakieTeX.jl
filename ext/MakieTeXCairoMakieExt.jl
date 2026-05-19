@@ -22,7 +22,7 @@ function CairoMakie.draw_marker(
     m = max(w, h)
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
-        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), marker.handle.ptr, marker.page,
+        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), marker.handle.ptr, marker.page - 1,
     )
     Cairo.translate(ctx, pos[1], pos[2])
     CairoMakie.cairo_transform(ctx, mat)

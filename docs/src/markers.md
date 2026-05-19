@@ -8,8 +8,8 @@
 Constructors accept either a file path or a `Vector{UInt8}` of the file bytes:
 
 ```julia
-MakieTeX.PDF("path/to/asset.pdf"; page = 0)
-MakieTeX.PDF(read("path/to/asset.pdf"); page = 0)
+MakieTeX.PDF("path/to/asset.pdf"; page = 1)
+MakieTeX.PDF(read("path/to/asset.pdf"); page = 1)
 
 MakieTeX.SVG("path/to/asset.svg")
 MakieTeX.SVG(read("path/to/asset.svg"))
@@ -24,7 +24,7 @@ using CairoMakie, MakieTeX
 
 dots = MakieTeX.SVG(joinpath(@__DIR__, "assets/julia_dots.svg"))
 
-fig = Figure(size = (520, 360))
+fig = Figure()
 ax = Axis(fig[1, 1]; limits = (0, 11, 0, 1))
 scatter!(ax, 1:10, rand(10); marker = dots, markersize = 40)
 fig
@@ -37,26 +37,14 @@ For a single-path SVG you want to recolor, use Makie's built-in [`BezierPath`](h
 ```@example markers
 dots_pdf = MakieTeX.PDF(joinpath(@__DIR__, "assets/julia_dots.pdf"))
 
-fig = Figure(size = (520, 360))
+fig = Figure()
 ax = Axis(fig[1, 1]; limits = (0, 11, 0, 1))
 scatter!(ax, 1:10, rand(10); marker = dots_pdf, markersize = 40)
 fig
 ```
 
-Multi-page PDFs can pick a page via the `page` keyword (zero-based):
+Multi-page PDFs can pick a page via the `page` keyword (1-based):
 
 ```julia
-MakieTeX.PDF("multipage.pdf"; page = 2)   # third page
-```
-
-## Mixing markers
-
-Different markers per point work via vector input — same convention as any Makie scatter:
-
-```@example markers
-markers = [dots, dots_pdf, dots, dots_pdf, dots]
-fig = Figure(size = (520, 360))
-ax = Axis(fig[1, 1]; limits = (0, 6, 0, 1))
-scatter!(ax, 1:5, rand(5); marker = markers, markersize = 60)
-fig
+MakieTeX.PDF("multipage.pdf"; page = 3)
 ```

@@ -26,27 +26,28 @@ mutable struct GObjectHandle
 end
 
 """
-    PDF(path::AbstractString; page = 0)
-    PDF(bytes::AbstractVector{UInt8}; page = 0)
+    PDF(path::AbstractString; page = 1)
+    PDF(bytes::AbstractVector{UInt8}; page = 1)
 
 A PDF asset usable as a scatter `marker`. The bytes are parsed by Poppler
-at construction; `page` selects a zero-based page index. Renders
+at construction; `page` selects a 1-based page index. Renders
 vector-native on CairoMakie; GLMakie / WGLMakie rasterize at GPU upload
 via `Makie.rasterize_marker_for_gpu`.
 """
 struct PDF <: AbstractDocument
     bytes::Vector{UInt8}
-    page::Int
+    page::Int  # 1-based
     handle::GObjectHandle
     dims::Tuple{Float64, Float64}
 end
 
-PDF(path::AbstractString; page::Integer = 0) = PDF(read(path); page)
-function PDF(bytes::AbstractVector{UInt8}; page::Integer = 0)
+PDF(path::AbstractString; page::Integer = 1) = PDF(read(path); page)
+function PDF(bytes::AbstractVector{UInt8}; page::Integer = 1)
     bytes_vec = collect(bytes)
     ptr = load_pdf(bytes_vec)
     page_idx = Int(page)
-    dims = pdf_get_page_size(ptr, page_idx)
+    page_idx >= 1 || throw(ArgumentError("PDF page must be 1-based; got $page_idx"))
+    dims = pdf_get_page_size(ptr, page_idx - 1)  # Poppler uses 0-based internally
     return PDF(bytes_vec, page_idx, GObjectHandle(ptr), dims)
 end
 

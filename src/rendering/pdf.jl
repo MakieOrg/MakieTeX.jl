@@ -7,7 +7,7 @@ Rasterize the selected page to an ARGB32 image at `render_density` pixels
 per pt.
 """
 rasterize(pdf::PDF; render_density::Real = 1) =
-    page2img(pdf, pdf.page; render_density)
+    page2img(pdf.handle.ptr, pdf.page - 1, pdf.dims; render_density)
 
 """
     load_pdf(bytes::Vector{UInt8}) -> Ptr{Cvoid}
@@ -26,9 +26,7 @@ function load_pdf(pdf::Vector{UInt8})::Ptr{Cvoid}
 end
 
 # Texture rasterization, used by `rasterize_marker_for_gpu` on GPU backends.
-page2img(pdf::PDF, page::Int; render_density::Real = 1) =
-    page2img(pdf.handle.ptr, page, pdf.dims; render_density)
-
+# `page` here is 0-based (matching Poppler's C API).
 function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; render_density::Real = 1)
     page_ptr = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
@@ -58,4 +56,3 @@ function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; render_densi
     return permutedims(img)
 end
 
-firstpage2img(pdf::PDF; kwargs...) = page2img(pdf, 0; kwargs...)

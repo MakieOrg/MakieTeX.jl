@@ -16,7 +16,7 @@ Pass a `MakieTeX.LaTeX()` handler via `with_theme`, `set_theme!`, or as a per-pl
 using CairoMakie, MakieTeX, tectonic_jll
 
 with_theme(text_handler = MakieTeX.LaTeX()) do
-    fig = Figure(size = (600, 380), fontsize = 18)
+    fig = Figure()
     ax = Axis(fig[1, 1];
         title  = L"Damped oscillation $A(t) = e^{-\lambda t}\cos(\omega t)$",
         xlabel = L"time $t$ (s)",
@@ -32,11 +32,13 @@ end
 
 ## Full mode — match fonts across the whole figure
 
-By default, plain strings (axis label text, tick labels, …) render with FreeType, so they look subtly different from the LaTeX-rendered math. `full = true` routes **every** text element through LaTeX, including tick labels and legend entries — analogous to matplotlib's `rcParams["text.usetex"] = True`:
+By default, plain strings (axis label text, tick labels, …) render with FreeType in Makie's default font, while `L"…"` strings go through LaTeX in Computer Modern — so the two use different fonts. `full = true` routes **every** text element through LaTeX, including tick labels and legend entries, so the figure is in one font throughout — analogous to matplotlib's `rcParams["text.usetex"] = True`.
+
+The tradeoff is convenience vs speed: keeping plain strings on Makie's built-in text engine (and matching the math via, say, a LaTeX preamble that switches the font, or by setting Makie's `theme` font to a matching one) renders much faster, since LaTeX doesn't have to compile every tick label.
 
 ```@example latex
 with_theme(text_handler = MakieTeX.LaTeX(full = true)) do
-    fig = Figure(size = (600, 380), fontsize = 18)
+    fig = Figure()
     ax = Axis(fig[1, 1];
         title  = L"Damped oscillation $A(t) = e^{-\lambda t}\cos(\omega t)$",
         xlabel = "time (seconds)",
@@ -67,7 +69,7 @@ handler = MakieTeX.LaTeX(
 )
 
 with_theme(text_handler = handler) do
-    fig = Figure(size = (600, 380), fontsize = 18)
+    fig = Figure()
     ax = Axis(fig[1, 1];
         title  = L"Free-electron density of states $\dv{n}{E} = \frac{V}{2\pi^2}\left(\frac{2m}{\hbar^2}\right)^{3/2}\sqrt{E}$",
         xlabel = L"energy $E\,(\si{\eV})$",
@@ -80,6 +82,52 @@ end
 ```
 
 Macros (`\E` here) and unit shortcuts work in any `L"…"` string while the handler is active.
+
+## Complex content in layouts
+
+The handler routes through every Makie text element, including `Label` — which means any TikZ / pgfplots / `tikz-feynman` / `chemfig` picture is usable as a layout cell. Tree-level QED with the matching angular distribution:
+
+```@example latex
+handler = MakieTeX.LaTeX(
+    engine = `tectonic`,
+    preamble = raw"""
+        \usepackage{amsmath, amssymb, xcolor}
+        \usepackage{tikz}
+        \usepackage[compat=1.1.0]{tikz-feynman}
+    """,
+)
+
+with_theme(text_handler = handler) do
+    fig = Figure(size = (760, 360))
+    Label(fig[1, 1], L"""
+    \begin{tikzpicture}
+    \begin{feynman}
+      \vertex (i1) at (-2, 1) {\(e^-\)};
+      \vertex (i2) at (-2,-1) {\(e^+\)};
+      \vertex (a) at (-0.6, 0);
+      \vertex (b) at ( 0.6, 0);
+      \vertex (f1) at ( 2, 1) {\(\mu^-\)};
+      \vertex (f2) at ( 2,-1) {\(\mu^+\)};
+      \diagram* {
+        (i1) -- [fermion] (a) -- [fermion] (i2),
+        (a) -- [photon, edge label=\(\gamma\)] (b),
+        (f1) -- [anti fermion] (b) -- [anti fermion] (f2),
+      };
+    \end{feynman}
+    \end{tikzpicture}
+    """; fontsize = 16)
+    ax = Axis(fig[1, 2];
+        title = L"e^-e^+ \to \mu^-\mu^+ \text{ (tree level)}",
+        xlabel = L"\cos\theta",
+        ylabel = L"d\sigma/d\cos\theta",
+    )
+    θ = range(-1, 1; length = 200)
+    lines!(ax, θ, 1 .+ θ.^2; label = L"\propto 1 + \cos^2\theta")
+    axislegend(ax; position = :ct)
+    colsize!(fig.layout, 1, Relative(0.4))
+    fig
+end
+```
 
 ## Engine
 
