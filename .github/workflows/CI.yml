@@ -36,6 +36,13 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb
 
+      # No GPU on Windows / macOS runners; skip GLMakie there. runtests.jl
+      # gates `using GLMakie` so the GL reftest set is skipped to match.
+      - name: Drop GLMakie from test deps (non-Linux)
+        if: runner.os != 'Linux'
+        shell: bash
+        run: julia --project=test -e 'using Pkg; Pkg.rm("GLMakie")'
+
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
