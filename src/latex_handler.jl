@@ -10,14 +10,14 @@ const _DEFAULT_LATEX_PREAMBLE = raw"""
 const _DEFAULT_LATEX_CLASSOPTIONS = "preview, tightpage"
 
 """
-    LaTeX(; full, preamble, classoptions, engine, border_pt, crop_margin_pt)
+    LaTeX(; render_strings, preamble, classoptions, engine, border_pt, crop_margin_pt)
 
 A `text_handler` for Makie's `text` recipe that renders `LaTeXString` content
 with a real LaTeX engine. Pass to `set_theme!` / `with_theme` / a plot's
 `text_handler` attribute.
 
-When `full = false` (default), plain `String` inputs fall through to the
-default FreeType glyph layout. With `full = true`, plain strings are also
+When `render_strings = false` (default), plain `String` inputs fall through to the
+default FreeType glyph layout. With `render_strings = true`, plain strings are also
 routed through LaTeX with appropriate text-mode escaping — analogous to
 matplotlib's `rcParams["text.usetex"] = True`.
 
@@ -26,7 +26,7 @@ pipeline lives in `MakieTeXLaTeXExt`.
 
 # Fields
 
-* `full` — `true` routes plain `AbstractString` inputs through LaTeX too.
+* `render_strings` — `true` routes plain `AbstractString` inputs through LaTeX too.
 * `preamble` — LaTeX preamble. Default loads `amsmath, amsfonts, xcolor` and
   sets a transparent page background.
 * `classoptions` — `standalone` class options (without `border=`, which is
@@ -37,7 +37,7 @@ pipeline lives in `MakieTeXLaTeXExt`.
   clipped at the page boundary.
 """
 Base.@kwdef struct LaTeX <: AbstractPdfTextHandler
-    full::Bool = false
+    render_strings::Bool = false
     preamble::String = _DEFAULT_LATEX_PREAMBLE
     classoptions::String = _DEFAULT_LATEX_CLASSOPTIONS
     engine::Union{Nothing, Cmd} = nothing

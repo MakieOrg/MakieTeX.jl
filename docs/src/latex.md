@@ -30,14 +30,14 @@ end
 
 `with_theme(...) do … end` keeps the handler scoped to a single figure. `set_theme!(text_handler = …)` makes it the default for the rest of the session.
 
-## Full mode — match fonts across the whole figure
+## Render plain strings too — match fonts across the figure
 
-By default, plain strings (axis label text, tick labels, …) render with FreeType in Makie's default font, while `L"…"` strings go through LaTeX in Computer Modern — so the two use different fonts. `full = true` routes **every** text element through LaTeX, including tick labels and legend entries, so the figure is in one font throughout — analogous to matplotlib's `rcParams["text.usetex"] = True`.
+By default, plain strings (axis label text, tick labels, …) render with FreeType in Makie's default font, while `L"…"` strings go through LaTeX in Computer Modern — so the two use different fonts. `render_strings = true` routes **every** text element through LaTeX, including tick labels and legend entries, so the figure is in one font throughout — analogous to matplotlib's `rcParams["text.usetex"] = True`.
 
 The tradeoff is convenience vs speed: keeping plain strings on Makie's built-in text engine (and matching the math via, say, a LaTeX preamble that switches the font, or by setting Makie's `theme` font to a matching one) renders much faster, since LaTeX doesn't have to compile every tick label.
 
 ```@example latex
-with_theme(text_handler = MakieTeX.LaTeX(full = true)) do
+with_theme(text_handler = MakieTeX.LaTeX(render_strings = true)) do
     fig = Figure()
     ax = Axis(fig[1, 1];
         title  = L"Damped oscillation $A(t) = e^{-\lambda t}\cos(\omega t)$",
@@ -51,7 +51,7 @@ with_theme(text_handler = MakieTeX.LaTeX(full = true)) do
 end
 ```
 
-The tradeoff is compile time — every text element runs through LaTeX each time the figure is rendered, so a `full = true` figure can take noticeably longer to save than one where only the math goes through LaTeX.
+The tradeoff is compile time — every text element runs through LaTeX each time the figure is rendered, so a `render_strings = true` figure can take noticeably longer to save than one where only the math goes through LaTeX.
 
 ## Preambles — bring your own packages and macros
 
@@ -59,7 +59,7 @@ The `preamble` field is dropped into the LaTeX document before `\begin{document}
 
 ```@example latex
 handler = MakieTeX.LaTeX(
-    full = true,
+    render_strings = true,
     preamble = raw"""
         \usepackage{amsmath, amssymb}
         \usepackage{physics}
@@ -89,7 +89,7 @@ The handler routes through every Makie text element, including `Label` — which
 
 ```@example latex
 handler = MakieTeX.LaTeX(
-    full = true,
+    render_strings = true,
     engine = `tectonic`,
     preamble = raw"""
         \usepackage{amsmath, amssymb, xcolor}

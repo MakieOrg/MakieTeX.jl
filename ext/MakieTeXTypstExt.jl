@@ -64,9 +64,9 @@ Makie.compile_text(h::Typst, src::TypstString, color, fs, lh) =
     _is_blank(String(src)) ? nothing :
     _compile_typst_block(h, String(src), color, fs, lh)
 
-# `full = true` claims plain `AbstractString` inputs too.
+# `render_strings = true` claims plain `AbstractString` inputs too.
 Makie.compile_text(h::Typst, src::AbstractString, color, fs, lh) =
-    (!h.full || _is_blank(src)) ? nothing :
+    (!h.render_strings || _is_blank(src)) ? nothing :
     _compile_typst_block(h, _escape_for_typst(src), color, fs, lh)
 
 # Compile the document and run `typst query` to extract the baseline

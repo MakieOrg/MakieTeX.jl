@@ -1,6 +1,6 @@
 # Typst
 
-[`MakieTeX.Typst`](@ref) is a `text_handler` that routes `typst"…"` content through the [Typst](https://typst.app) compiler. Same shape as [LaTeX](@ref) — same `text_handler` slot, same `full` flag, same `preamble` field — but with Typst's much faster compile loop and modern math syntax.
+[`MakieTeX.Typst`](@ref) is a `text_handler` that routes `typst"…"` content through the [Typst](https://typst.app) compiler. Same shape as [LaTeX](@ref) — same `text_handler` slot, same `render_strings` flag, same `preamble` field — but with Typst's much faster compile loop and modern math syntax.
 
 ## Quick start
 
@@ -22,12 +22,12 @@ end
 
 Inline math uses single `$…$` with no surrounding whitespace; spaced `$ … $` is display math (block-level, taller).
 
-## Full mode — match fonts across the whole figure
+## Render plain strings too — match fonts across the figure
 
-`full = true` routes plain `String`s through Typst as well, so every label uses the same font as the math:
+`render_strings = true` routes plain `String`s through Typst as well, so every label uses the same font as the math:
 
 ```@example typst
-with_theme(text_handler = MakieTeX.Typst(full = true)) do
+with_theme(text_handler = MakieTeX.Typst(render_strings = true)) do
     fig = Figure()
     ax = Axis(fig[1, 1];
         title  = typst"Damped oscillation $A(t) = e^(-lambda t) cos(omega t)$",
@@ -41,7 +41,7 @@ with_theme(text_handler = MakieTeX.Typst(full = true)) do
 end
 ```
 
-Typst's compile loop is fast — full mode is generally cheap.
+Typst's compile loop is fast — `render_strings = true` is generally cheap.
 
 ## Preambles — set fonts, define show rules, import templates
 
@@ -49,7 +49,7 @@ The `preamble` field is dropped at the top of every compiled Typst document. Goo
 
 ```@example typst
 handler = MakieTeX.Typst(
-    full = true,
+    render_strings = true,
     preamble = """
         #set text(font: "New Computer Modern")
         #let kB = math.italic("k") + sub("B")
@@ -100,7 +100,7 @@ diagram = typst"""
 )
 """
 
-with_theme(text_handler = MakieTeX.Typst(full = true)) do
+with_theme(text_handler = MakieTeX.Typst(render_strings = true)) do
     fig = Figure(size = (760, 360))
     Label(fig[1, 1], diagram; fontsize = 16, tellheight = false)
     ax = Axis(fig[1, 2];

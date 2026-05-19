@@ -31,7 +31,7 @@ end
 # `tectonic` because lualatex's CFF parser chokes on TGHM's deprecated
 # `dotsection` op; `--keep-logs` is needed for baseline depth on the
 # extension side (already handled by the extension wrapper).
-tgh_latex(; full::Bool = false) = MakieTeX.LaTeX(; full,
+tgh_latex(; render_strings::Bool = false) = MakieTeX.LaTeX(; render_strings,
     engine = `tectonic`,
     preamble = """
         \\usepackage{xcolor}
@@ -39,7 +39,7 @@ tgh_latex(; full::Bool = false) = MakieTeX.LaTeX(; full,
         \\setmainfont{TeXGyreHerosMakie-Regular.otf}[Path=$(dirname(TGH_FILE))/]
     """)
 
-tgh_typst(; full::Bool = false) = MakieTeX.Typst(; full,
+tgh_typst(; render_strings::Bool = false) = MakieTeX.Typst(; render_strings,
     font = "TeX Gyre Heros Makie",
     font_paths = [tgh_typst_font_dir()],
 )
@@ -108,8 +108,8 @@ end
 function font_scaling()
     content = "Hgyp 0123"
     fs = 28
-    latex_handler = tgh_latex(; full = true)
-    typst_handler = tgh_typst(; full = true)
+    latex_handler = tgh_latex(; render_strings = true)
+    typst_handler = tgh_typst(; render_strings = true)
 
     fig = Makie.Figure(size = (500, 240))
     ax = Makie.Axis(fig[1, 1];
@@ -219,15 +219,15 @@ end
 function run_reftests(backend::Symbol)
     # Skip latex full-axis: every tick label would compile through LaTeX,
     # which is slow; bbox/alignment tests already cover latex bbox.
-    compare("axis_full_typst", axis_full(tgh_typst(; full = true)), backend)
+    compare("axis_full_typst", axis_full(tgh_typst(; render_strings = true)), backend)
     compare("axis_mixed_typst", axis_mixed_typst(), backend)
     compare("font_scaling", font_scaling(), backend)
     compare("bbox_labels_freetype", bbox_labels(nothing, ["Damped oscillation", "Hgyp ABC"]), backend)
-    compare("bbox_labels_latex", bbox_labels(tgh_latex(; full = true), ["Damped oscillation", L"\sqrt{a^2 + b^2}"]), backend)
-    compare("bbox_labels_typst", bbox_labels(tgh_typst(; full = true), ["Damped oscillation", typst"$ sqrt(a^2 + b^2) $"]), backend)
+    compare("bbox_labels_latex", bbox_labels(tgh_latex(; render_strings = true), ["Damped oscillation", L"\sqrt{a^2 + b^2}"]), backend)
+    compare("bbox_labels_typst", bbox_labels(tgh_typst(; render_strings = true), ["Damped oscillation", typst"$ sqrt(a^2 + b^2) $"]), backend)
     compare("alignment_freetype", alignment_grid(nothing, "Hgyp"), backend)
-    compare("alignment_latex", alignment_grid(tgh_latex(; full = true), "Hgyp"), backend)
-    compare("alignment_typst", alignment_grid(tgh_typst(; full = true), "Hgyp"), backend)
+    compare("alignment_latex", alignment_grid(tgh_latex(; render_strings = true), "Hgyp"), backend)
+    compare("alignment_typst", alignment_grid(tgh_typst(; render_strings = true), "Hgyp"), backend)
     compare("marker_svg", asset_markers(MakieTeX.SVG(sample_svg_bytes())), backend)
     compare("marker_pdf", asset_markers(MakieTeX.PDF(sample_pdf_bytes())), backend)
     return

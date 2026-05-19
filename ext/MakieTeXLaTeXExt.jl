@@ -56,11 +56,11 @@ Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =
     _is_blank(String(src)) ? nothing :
     _compile_latex_block(h, String(src), color, fontsize, lineheight)
 
-# `full = true` claims plain `AbstractString` inputs too. Blank input
+# `render_strings = true` claims plain `AbstractString` inputs too. Blank input
 # returns `nothing` so empty Axis subtitles don't allocate phantom
 # protrusion via a single-line LaTeX box.
 Makie.compile_text(h::LaTeX, src::AbstractString, color, fontsize, lineheight) =
-    (!h.full || _is_blank(src)) ? nothing :
+    (!h.render_strings || _is_blank(src)) ? nothing :
     _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
 
 # Run latexmk/tectonic in a tempdir and parse `temp.log` for the box depth
