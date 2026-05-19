@@ -20,7 +20,7 @@ makedocs(;
     ],
     sitename = "MakieTeX.jl",
     authors = "Anshul Singhvi, Julius Krumbiegel, and contributors",
-    warnonly = true,
+    warnonly = get(ENV, "CI", "false") != "true",
 )
 
 DocumenterVitepress.deploydocs(;
