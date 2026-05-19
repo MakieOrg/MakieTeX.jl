@@ -30,7 +30,7 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
 
       # Install xvfb on Linux; GL backend needs a display server.
       - name: Install xvfb (Linux only)
