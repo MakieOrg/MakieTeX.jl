@@ -21,6 +21,10 @@ makedocs(;
     sitename = "MakieTeX.jl",
     authors = "Anshul Singhvi, Julius Krumbiegel, and contributors",
     warnonly = get(ENV, "CI", "false") != "true",
+    # Only the public types are documented in api.md; everything else
+    # (PDF rendering helpers, librsvg ccalls, etc.) is internal and we
+    # don't want missing-docstring warnings for those.
+    checkdocs = :none,
 )
 
 DocumenterVitepress.deploydocs(;
