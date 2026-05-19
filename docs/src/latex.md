@@ -51,7 +51,7 @@ with_theme(text_handler = MakieTeX.LaTeX(full = true)) do
 end
 ```
 
-The tradeoff is compile time — every distinct string runs through LaTeX once and is cached.
+The tradeoff is compile time — every text element runs through LaTeX each time the figure is rendered, so a `full = true` figure can take noticeably longer to save than one where only the math goes through LaTeX.
 
 ## Preambles — bring your own packages and macros
 
