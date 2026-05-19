@@ -32,26 +32,16 @@ jobs:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v3
 
-      # Install xvfb on Linux; GL backend needs a display server.
       - name: Install xvfb (Linux only)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb
 
-      # Skip julia-buildpkg / julia-runtest: instantiating the test env
-      # directly is enough, and lets `[sources]` in test/Project.toml drive
-      # the Makie 0.25 revs without the parent manifest fighting us.
-      - name: Run tests
-        shell: bash
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
         env:
           DISPLAY: ':0'
-          JULIA_PKG_PRECOMPILE_AUTO: '0'
-        run: |
-          script='using Pkg; Pkg.instantiate(); include("test/runtests.jl")'
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            xvfb-run -s '-screen 0 1024x768x24' julia --project=test -e "$script"
-          else
-            julia --project=test -e "$script"
-          fi
+        with:
+          prefix: ${{ runner.os == 'Linux' && 'xvfb-run -s ''-screen 0 1024x768x24''' || '' }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
