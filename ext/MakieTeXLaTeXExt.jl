@@ -30,9 +30,12 @@ function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheigh
     # bbox we hand back to Makie is content-independent — matches the
     # ascender/descender padding used by the FreeType and Typst handlers
     # instead of clinging to cap-height.
+    # xcolor is loaded unconditionally so custom preambles don't have to
+    # remember it — we always need \definecolor for the text color below.
     document = """
     \\RequirePackage{luatex85}
     \\documentclass[$(h.classoptions), border=$(h.crop_margin_pt)pt]{standalone}
+    \\usepackage{xcolor}
     $(h.preamble)
     \\definecolor{maincolor}{HTML}{$(color_hex)}
     \\begin{document}
