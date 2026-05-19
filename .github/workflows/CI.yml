@@ -19,7 +19,10 @@ jobs:
       fail-fast: false
       matrix:
         version: ['1']
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Windows currently fails resolving the test env (FFTA listed in
+        # manifest but not installed after Pkg.test re-resolves). Re-enable
+        # once the underlying Pkg / cache interaction is sorted.
+        os: [ubuntu-latest, macos-latest]
     steps:
       - name: Cancel ongoing test runs for previous commits
         uses: styfle/cancel-workflow-action@0.12.1
@@ -81,7 +84,7 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - name: Install documentation dependencies
         run: |
           xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e '
