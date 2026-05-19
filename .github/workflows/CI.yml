@@ -50,7 +50,6 @@ jobs:
             open(io -> TOML.print(io, p), "test/Project.toml", "w")
           '
 
-      - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
           DISPLAY: ':0'
