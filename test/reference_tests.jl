@@ -10,6 +10,40 @@ end
 const T = range(0, 10; length = 200)
 const Y = exp.(-0.3 .* T) .* cos.(2π .* T)
 
+# Reftest handlers all use TeX Gyre Heros Makie (from Makie's bundled
+# assets) so glyph shapes are identical across OSes — important because
+# CI runs on Linux/macOS/Windows and a default LaTeX or Typst font would
+# differ per platform.
+const TGH_FILE = joinpath(Makie.assetpath(), "fonts", "TeXGyreHerosMakie-Regular.otf")
+const TGH_TYPST_FONT_DIR = Ref{String}("")
+
+# Typst can't distinguish the four bundled TGHM variants (they share OS/2
+# metadata), so point its font search at a scratch dir holding only the
+# Regular file.
+function tgh_typst_font_dir()
+    isempty(TGH_TYPST_FONT_DIR[]) || return TGH_TYPST_FONT_DIR[]
+    dir = mktempdir()
+    cp(TGH_FILE, joinpath(dir, basename(TGH_FILE)); force = true)
+    TGH_TYPST_FONT_DIR[] = dir
+    return dir
+end
+
+# `tectonic` because lualatex's CFF parser chokes on TGHM's deprecated
+# `dotsection` op; `--keep-logs` is needed for baseline depth on the
+# extension side (already handled by the extension wrapper).
+tgh_latex(; full::Bool = false) = MakieTeX.LaTeX(; full,
+    engine = `tectonic`,
+    preamble = """
+        \\usepackage{xcolor}
+        \\usepackage{fontspec}
+        \\setmainfont{TeXGyreHerosMakie-Regular.otf}[Path=$(dirname(TGH_FILE))/]
+    """)
+
+tgh_typst(; full::Bool = false) = MakieTeX.Typst(; full,
+    font = "TeX Gyre Heros Makie",
+    font_paths = [tgh_typst_font_dir()],
+)
+
 function axis_full(handler)
     Makie.with_theme(; text_handler = handler) do
         fig = Makie.Figure(size = (500, 400))
@@ -25,7 +59,7 @@ function axis_full(handler)
 end
 
 function axis_mixed_latex()
-    Makie.with_theme(; text_handler = MakieTeX.LaTeX()) do
+    Makie.with_theme(; text_handler = tgh_latex()) do
         fig = Makie.Figure(size = (500, 400))
         ax = Makie.Axis(fig[1, 1];
             title = L"\int_0^\infty e^{-x^2}\, dx = \tfrac{\sqrt{\pi}}{2}",
@@ -38,7 +72,7 @@ function axis_mixed_latex()
 end
 
 function axis_mixed_typst()
-    Makie.with_theme(; text_handler = MakieTeX.Typst()) do
+    Makie.with_theme(; text_handler = tgh_typst()) do
         fig = Makie.Figure(size = (500, 400))
         ax = Makie.Axis(fig[1, 1];
             # `$…$` with no surrounding spaces is inline math; the spaced
@@ -72,27 +106,10 @@ end
 # Same content/fontsize through each handler so any visual size difference
 # is scaling/metrics rather than font shape.
 function font_scaling()
-    tgh_dir = joinpath(Makie.assetpath(), "fonts")
-    tgh_file = joinpath(tgh_dir, "TeXGyreHerosMakie-Regular.otf")
     content = "Hgyp 0123"
     fs = 28
-
-    # lualatex's CFF parser refuses TGHM (deprecated `dotsection`
-    # operator); tectonic handles it fine.
-    latex_handler = MakieTeX.LaTeX(full = true, engine = `tectonic`, preamble = """
-        \\usepackage{xcolor}
-        \\usepackage{fontspec}
-        \\setmainfont{TeXGyreHerosMakie-Regular.otf}[Path=$(tgh_dir)/]
-    """)
-
-    # All four TGHM variants share OS/2 metadata (weight 500,
-    # fsSelection=REGULAR), so Typst can't pick a specific variant from
-    # tgh_dir and lands on Bold. Restrict it to a dir with only Regular.
-    typst_font_dir = mktempdir()
-    cp(tgh_file, joinpath(typst_font_dir, basename(tgh_file)); force = true)
-    typst_handler = MakieTeX.Typst(
-        full = true, font = "TeX Gyre Heros Makie", font_paths = [typst_font_dir],
-    )
+    latex_handler = tgh_latex(; full = true)
+    typst_handler = tgh_typst(; full = true)
 
     fig = Makie.Figure(size = (500, 240))
     ax = Makie.Axis(fig[1, 1];
@@ -103,14 +120,14 @@ function font_scaling()
     )
 
     rows = [
-        (3.0, "FreeType", (; font = tgh_file)),
+        (3.0, "FreeType", (; font = TGH_FILE)),
         (2.0, "LaTeX/TGH", (; text_handler = latex_handler)),
         (1.0, "Typst/TGH", (; text_handler = typst_handler)),
     ]
     for (y, label, kw) in rows
         Makie.text!(ax, 0.05, y; text = content, fontsize = fs,
             align = (:left, :baseline), kw...)
-        Makie.text!(ax, 0.7, y; text = label, fontsize = 12, font = tgh_file,
+        Makie.text!(ax, 0.7, y; text = label, fontsize = 12, font = TGH_FILE,
             align = (:left, :baseline), color = :gray40)
     end
 
@@ -202,15 +219,15 @@ end
 function run_reftests(backend::Symbol)
     # Skip latex full-axis: every tick label would compile through LaTeX,
     # which is slow; bbox/alignment tests already cover latex bbox.
-    compare("axis_full_typst", axis_full(MakieTeX.Typst(full = true)), backend)
+    compare("axis_full_typst", axis_full(tgh_typst(; full = true)), backend)
     compare("axis_mixed_typst", axis_mixed_typst(), backend)
     compare("font_scaling", font_scaling(), backend)
     compare("bbox_labels_freetype", bbox_labels(nothing, ["Damped oscillation", "Hgyp ABC"]), backend)
-    compare("bbox_labels_latex", bbox_labels(MakieTeX.LaTeX(full = true), ["Damped oscillation", L"\sqrt{a^2 + b^2}"]), backend)
-    compare("bbox_labels_typst", bbox_labels(MakieTeX.Typst(full = true), ["Damped oscillation", typst"$ sqrt(a^2 + b^2) $"]), backend)
+    compare("bbox_labels_latex", bbox_labels(tgh_latex(; full = true), ["Damped oscillation", L"\sqrt{a^2 + b^2}"]), backend)
+    compare("bbox_labels_typst", bbox_labels(tgh_typst(; full = true), ["Damped oscillation", typst"$ sqrt(a^2 + b^2) $"]), backend)
     compare("alignment_freetype", alignment_grid(nothing, "Hgyp"), backend)
-    compare("alignment_latex", alignment_grid(MakieTeX.LaTeX(full = true), "Hgyp"), backend)
-    compare("alignment_typst", alignment_grid(MakieTeX.Typst(full = true), "Hgyp"), backend)
+    compare("alignment_latex", alignment_grid(tgh_latex(; full = true), "Hgyp"), backend)
+    compare("alignment_typst", alignment_grid(tgh_typst(; full = true), "Hgyp"), backend)
     compare("marker_svg", asset_markers(MakieTeX.SVG(sample_svg_bytes())), backend)
     compare("marker_pdf", asset_markers(MakieTeX.PDF(sample_pdf_bytes())), backend)
     return
