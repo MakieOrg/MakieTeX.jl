@@ -1,58 +1,16 @@
-# API documentation
+# [API reference](@id api)
 
-## Constants
+## Text handlers
 
 ```@docs
-MakieTeX.RENDER_DENSITY
-MakieTeX.RENDER_EXTRASAFE
-MakieTeX.CURRENT_TEX_ENGINE
-MakieTeX._PDFCROP_DEFAULT_MARGINS
+MakieTeX.LaTeX
+MakieTeX.Typst
 ```
 
-## Interfaces
-
-### `AbstractDocument`
+## Vector markers
 
 ```@docs
+MakieTeX.PDF
+MakieTeX.SVG
 MakieTeX.AbstractDocument
-MakieTeX.getdoc
-MakieTeX.mimetype
-MakieTeX.Cached
 ```
-
-### `AbstractCachedDocument`
-
-```@docs
-MakieTeX.AbstractCachedDocument
-MakieTeX.rasterize
-MakieTeX.draw_to_cairo_surface
-MakieTeX.update_handle!
-```
-
-## Document types
-
-### Raw document types
-```@docs
-SVGDocument
-PDFDocument
-EPSDocument
-TEXDocument
-TypstDocument
-```
-### Cached document types
-```@docs
-CachedTEX
-CachedTypst
-CachedPDF
-CachedSVG
-CachedEPS
-```
-
-TODO: add documentation about the LaTeX (`compile_latex`), PDF and SVG handling utils here, in case they are of use to anyone.
-
-## All other methods and functions
-
-```@autodocs
-Modules = [MakieTeX]
-```
-
