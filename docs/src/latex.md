@@ -98,25 +98,27 @@ handler = MakieTeX.LaTeX(
     """,
 )
 
+diagram = L"""
+\begin{tikzpicture}
+\begin{feynman}
+  \vertex (i1) at (-2, 1) {\(e^-\)};
+  \vertex (i2) at (-2,-1) {\(e^+\)};
+  \vertex (a) at (-0.6, 0);
+  \vertex (b) at ( 0.6, 0);
+  \vertex (f1) at ( 2, 1) {\(\mu^-\)};
+  \vertex (f2) at ( 2,-1) {\(\mu^+\)};
+  \diagram* {
+    (i1) -- [fermion] (a) -- [fermion] (i2),
+    (a) -- [photon, edge label=\(\gamma\)] (b),
+    (f1) -- [anti fermion] (b) -- [anti fermion] (f2),
+  };
+\end{feynman}
+\end{tikzpicture}
+"""
+
 with_theme(text_handler = handler) do
     fig = Figure(size = (760, 360))
-    Label(fig[1, 1], L"""
-    \begin{tikzpicture}
-    \begin{feynman}
-      \vertex (i1) at (-2, 1) {\(e^-\)};
-      \vertex (i2) at (-2,-1) {\(e^+\)};
-      \vertex (a) at (-0.6, 0);
-      \vertex (b) at ( 0.6, 0);
-      \vertex (f1) at ( 2, 1) {\(\mu^-\)};
-      \vertex (f2) at ( 2,-1) {\(\mu^+\)};
-      \diagram* {
-        (i1) -- [fermion] (a) -- [fermion] (i2),
-        (a) -- [photon, edge label=\(\gamma\)] (b),
-        (f1) -- [anti fermion] (b) -- [anti fermion] (f2),
-      };
-    \end{feynman}
-    \end{tikzpicture}
-    """; fontsize = 16, tellheight = false)
+    Label(fig[1, 1], diagram; fontsize = 16, tellheight = false)
     ax = Axis(fig[1, 2];
         title = L"e^-e^+ \to \mu^-\mu^+ \text{ (tree level)}",
         xlabel = L"\cos\theta",

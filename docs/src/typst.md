@@ -82,25 +82,27 @@ MakieTeX.Typst(font = "Inter", font_paths = ["/path/to/your/fonts"])
 The handler flows through every Makie text element, including `Label`, so any Typst snippet is usable as a layout cell. Typst's `#import` can sit inline in the content block — no preamble plumbing needed. Same physics as on the [LaTeX](@ref) page, drawn with [`fletcher`](https://typst.app/universe/package/fletcher):
 
 ```@example typst
+diagram = typst"""
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
+#diagram(
+  spacing: 1.5cm,
+  node((0, 0), $e^-$),
+  node((0, 1), $e^+$),
+  node((1, 0.5), $$, shape: "circle", fill: black, radius: 1.2mm),
+  node((2, 0.5), $$, shape: "circle", fill: black, radius: 1.2mm),
+  node((3, 0), $mu^-$),
+  node((3, 1), $mu^+$),
+  edge((0, 0), (1, 0.5), "-|>"),
+  edge((1, 0.5), (0, 1), "-|>"),
+  edge((1, 0.5), (2, 0.5), "wave", label: $gamma$),
+  edge((2, 0.5), (3, 0), "-|>"),
+  edge((3, 1), (2, 0.5), "-|>"),
+)
+"""
+
 with_theme(text_handler = MakieTeX.Typst(full = true)) do
     fig = Figure(size = (760, 360))
-    Label(fig[1, 1], typst"""
-    #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
-    #diagram(
-      spacing: 1.5cm,
-      node((0, 0), $e^-$),
-      node((0, 1), $e^+$),
-      node((1, 0.5), $$, shape: "circle", fill: black, radius: 1.2mm),
-      node((2, 0.5), $$, shape: "circle", fill: black, radius: 1.2mm),
-      node((3, 0), $mu^-$),
-      node((3, 1), $mu^+$),
-      edge((0, 0), (1, 0.5), "-|>"),
-      edge((1, 0.5), (0, 1), "-|>"),
-      edge((1, 0.5), (2, 0.5), "wave", label: $gamma$),
-      edge((2, 0.5), (3, 0), "-|>"),
-      edge((3, 1), (2, 0.5), "-|>"),
-    )
-    """; fontsize = 16, tellheight = false)
+    Label(fig[1, 1], diagram; fontsize = 16, tellheight = false)
     ax = Axis(fig[1, 2];
         title = typst"$e^-e^+ -> mu^-mu^+$ (tree level)",
         xlabel = typst"$cos theta$",
