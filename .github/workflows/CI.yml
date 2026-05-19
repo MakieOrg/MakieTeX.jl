@@ -41,9 +41,14 @@ jobs:
       - name: Drop GLMakie from test deps (non-Linux)
         if: runner.os != 'Linux'
         shell: bash
-        env:
-          JULIA_PKG_PRECOMPILE_AUTO: '0'
-        run: julia --project=test -e 'using Pkg; Pkg.rm("GLMakie"); Pkg.update()'
+        run: |
+          julia -e '
+            using TOML
+            p = TOML.parsefile("test/Project.toml")
+            delete!(p["deps"], "GLMakie")
+            haskey(p, "sources") && delete!(p["sources"], "GLMakie")
+            open(io -> TOML.print(io, p), "test/Project.toml", "w")
+          '
 
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
