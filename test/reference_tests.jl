@@ -151,7 +151,7 @@ end
 const SAMPLE_SVG = """<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
   <circle cx="20" cy="20" r="18" fill="#ff8800" stroke="#003366" stroke-width="3"/>
-  <text x="20" y="26" font-family="sans-serif" font-size="16" fill="white" text-anchor="middle">S</text>
+  <text x="20" y="25" font-family="sans-serif" font-size="11" font-weight="bold" fill="white" text-anchor="middle">SVG</text>
 </svg>"""
 
 # Square page with a circle inscribed — the rendered marker has known 1:1
