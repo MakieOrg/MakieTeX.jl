@@ -1,7 +1,7 @@
 module MakieTeXCairoMakieExt
 
 using CairoMakie, MakieTeX
-using MakieTeX: PDF, SVG, AbstractDocument, ensure_loaded!, render_svg_to_cairo
+using MakieTeX: PDF, SVG, AbstractDocument, render_svg_to_cairo
 using Makie
 using Poppler_jll
 using Cairo
@@ -14,11 +14,10 @@ function CairoMakie.draw_marker(
         ctx, marker::PDF, pos,
         strokecolor, strokewidth, mat,
     )
-    ensure_loaded!(marker)
-    w, h = marker.dims[]
+    w, h = marker.dims
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
-        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), marker.handle[], marker.page,
+        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), marker.handle.ptr, marker.page,
     )
     Cairo.translate(ctx, pos[1], pos[2])
     CairoMakie.cairo_transform(ctx, mat)
@@ -35,8 +34,7 @@ function CairoMakie.draw_marker(
         ctx, marker::SVG, pos,
         strokecolor, strokewidth, mat,
     )
-    ensure_loaded!(marker)
-    w, h = marker.dims[]
+    w, h = marker.dims
     Cairo.translate(ctx, pos[1], pos[2])
     CairoMakie.cairo_transform(ctx, mat)
     Cairo.scale(ctx, 1.0 / w, 1.0 / h)

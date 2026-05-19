@@ -49,8 +49,7 @@ function Makie.place_text!(
     # The PDF is already at the correct fontsize; markersize is the literal
     # PDF dimensions. `crop_margin_pt` was padded around the ink at crop time,
     # so the natural ink box is `dim_pt - 2 * crop_margin_pt`.
-    pdf_dims = dims(pdf)
-    dim_pt = Makie.Vec2f(Float32(pdf_dims[1]), Float32(pdf_dims[2]))
+    dim_pt = Makie.Vec2f(Float32(pdf.dims[1]), Float32(pdf.dims[2]))
     ink_size = dim_pt .- 2 * h.crop_margin_pt
 
     # Apply the marker rotation to the alignment offset so the visible ink

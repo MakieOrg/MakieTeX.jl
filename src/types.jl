@@ -1,37 +1,53 @@
 """
     abstract type AbstractDocument
 
-Supertype for vector asset markers (`PDF`, `SVG`). Carries the document
-bytes plus lazily-populated library handles and dimensions. Used directly
-as a scatter `marker`; CairoMakie renders it vector-natively, GPU backends
-rasterize to ARGB32 at upload time.
+Supertype for vector asset markers (`PDF`, `SVG`). Holds the document
+bytes, a reference-counted library handle (Poppler / librsvg), and the
+asset's intrinsic size. Used directly as a scatter `marker`; CairoMakie
+renders it vector-natively, GPU backends rasterize to ARGB32 at upload.
 """
 abstract type AbstractDocument end
+
+# Mutable carrier so a finalizer can unref the underlying GObject.
+# Poppler documents and librsvg handles are both GObjects, so they share
+# `g_object_unref` from libgobject for cleanup.
+mutable struct GObjectHandle
+    ptr::Ptr{Cvoid}
+    function GObjectHandle(ptr::Ptr{Cvoid})
+        h = new(ptr)
+        finalizer(h) do x
+            if x.ptr != C_NULL
+                ccall((:g_object_unref, Glib_jll.libgobject), Cvoid, (Ptr{Cvoid},), x.ptr)
+                x.ptr = C_NULL
+            end
+        end
+        return h
+    end
+end
 
 """
     PDF(path::AbstractString; page = 0)
     PDF(bytes::AbstractVector{UInt8}; page = 0)
 
-A PDF asset usable as a scatter `marker`. Renders vector-native on
-CairoMakie (no raster intermediate); GLMakie / WGLMakie rasterize at GPU
-upload via `Makie.rasterize_marker_for_gpu`.
-
-`page` is zero-based; defaults to the first page.
+A PDF asset usable as a scatter `marker`. The bytes are parsed by Poppler
+at construction; `page` selects a zero-based page index. Renders
+vector-native on CairoMakie; GLMakie / WGLMakie rasterize at GPU upload
+via `Makie.rasterize_marker_for_gpu`.
 """
 struct PDF <: AbstractDocument
     bytes::Vector{UInt8}
     page::Int
-    handle::Ref{Ptr{Cvoid}}
-    dims::Ref{Tuple{Float64, Float64}}
+    handle::GObjectHandle
+    dims::Tuple{Float64, Float64}
 end
 
 PDF(path::AbstractString; page::Integer = 0) = PDF(read(path); page)
 function PDF(bytes::AbstractVector{UInt8}; page::Integer = 0)
-    return PDF(
-        collect(bytes), Int(page),
-        Ref{Ptr{Cvoid}}(C_NULL),
-        Ref{Tuple{Float64, Float64}}((0.0, 0.0)),
-    )
+    bytes_vec = collect(bytes)
+    ptr = load_pdf(bytes_vec)
+    page_idx = Int(page)
+    dims = pdf_get_page_size(ptr, page_idx)
+    return PDF(bytes_vec, page_idx, GObjectHandle(ptr), dims)
 end
 
 """
@@ -46,29 +62,19 @@ instead.
 """
 struct SVG <: AbstractDocument
     bytes::Vector{UInt8}
-    handle::Ref{Ptr{Cvoid}}
-    dims::Ref{Tuple{Float64, Float64}}
+    handle::GObjectHandle
+    dims::Tuple{Float64, Float64}
 end
 
 SVG(path::AbstractString) = SVG(read(path))
 function SVG(bytes::AbstractVector{UInt8})
-    return SVG(
-        collect(bytes),
-        Ref{Ptr{Cvoid}}(C_NULL),
-        Ref{Tuple{Float64, Float64}}((0.0, 0.0)),
-    )
+    bytes_vec = collect(bytes)
+    ptr = load_svg(bytes_vec)
+    dims = svg_get_size(ptr)
+    return SVG(bytes_vec, GObjectHandle(ptr), dims)
 end
 
-# Populate the lazy handle on first use. Library handles can outlive
-# their Julia owner; on a stale-handle error a backend can re-call this.
-function ensure_loaded!(doc::AbstractDocument) end
-
-function dims(doc::AbstractDocument)::Tuple{Float64, Float64}
-    ensure_loaded!(doc)
-    return doc.dims[]
-end
-
-Base.size(doc::AbstractDocument) = dims(doc)
+Base.size(doc::AbstractDocument) = doc.dims
 
 # Marker hooks. AbstractDocument passes straight through Makie's marker
 # pipeline — CairoMakie dispatches `draw_marker` on the concrete type, GPU

@@ -1,37 +1,13 @@
 # PDF rendering via Poppler + Cairo.
 
-# Lazy handle for `PDF`. Poppler's handle is a refcounted GObject; we hold
-# a raw pointer plus dims and only parse on first use. A C_NULL handle on
-# entry means "not loaded yet".
-function ensure_loaded!(pdf::PDF)
-    if pdf.handle[] == C_NULL
-        ptr = load_pdf(pdf.bytes)
-        pdf.handle[] = ptr
-        pdf.dims[] = pdf_get_page_size(ptr, pdf.page)
-    end
-    return pdf
-end
-
-function get_poppler_page(pdf::PDF)::Ptr{Cvoid}
-    ensure_loaded!(pdf)
-    page = ccall(
-        (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
-        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), pdf.handle[], pdf.page,
-    )
-    page == C_NULL && error("Poppler could not read page $(pdf.page) of PDF.")
-    return page
-end
-
 """
     rasterize(pdf::PDF; render_density = 1)
 
 Rasterize the selected page to an ARGB32 image at `render_density` pixels
 per pt.
 """
-function rasterize(pdf::PDF; render_density::Real = 1)
-    ensure_loaded!(pdf)
-    return page2img(pdf, pdf.page; render_density)
-end
+rasterize(pdf::PDF; render_density::Real = 1) =
+    page2img(pdf, pdf.page; render_density)
 
 """
     load_pdf(bytes::Vector{UInt8}) -> Ptr{Cvoid}
@@ -50,10 +26,8 @@ function load_pdf(pdf::Vector{UInt8})::Ptr{Cvoid}
 end
 
 # Texture rasterization, used by `rasterize_marker_for_gpu` on GPU backends.
-function page2img(pdf::PDF, page::Int; render_density::Real = 1)
-    ensure_loaded!(pdf)
-    return page2img(pdf.handle[], page, pdf.dims[]; render_density)
-end
+page2img(pdf::PDF, page::Int; render_density::Real = 1) =
+    page2img(pdf.handle.ptr, page, pdf.dims; render_density)
 
 function page2img(document::Ptr{Cvoid}, page::Int, tex_dims::Tuple; render_density::Real = 1)
     page_ptr = ccall(
