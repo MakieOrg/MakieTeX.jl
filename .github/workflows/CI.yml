@@ -52,6 +52,14 @@ jobs:
         with:
           prefix: ${{ runner.os == 'Linux' && 'xvfb-run -s ''-screen 0 1024x768x24''' || '' }}
 
+      # Keep only the images for tests that actually failed (those with a
+      # matching *_diff.png), drop every other PNG so the artifact stays
+      # small.
+      - name: Filter to failed reference images
+        if: failure()
+        shell: bash
+        run: julia test/filter_failed_reference_images.jl
+
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
