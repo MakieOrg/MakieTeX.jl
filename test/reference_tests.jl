@@ -148,32 +148,42 @@ function alignment_grid(handler, content)
     end
 end
 
-const SAMPLE_SVG = """<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-  <circle cx="20" cy="20" r="18" fill="#ff8800" stroke="#003366" stroke-width="3"/>
-  <text x="20" y="25" font-family="sans-serif" font-size="11" font-weight="bold" fill="white" text-anchor="middle">SVG</text>
-</svg>"""
+# Square page with a circle + label, generated via Typst so glyphs are
+# baked into the output (as PDF text + cmap or SVG <symbol>/<use> paths
+# with no font lookup at render time). Using TeX Gyre Heros Makie from
+# Makie's bundled assets keeps fonts identical across OSes — important
+# for CI reftests. The TGHM variants share OS/2 metadata so Typst can't
+# pick a specific weight from `tgh_dir`; restrict it to a scratch dir
+# with only the Regular file. `fill: none` on the page keeps the corners
+# transparent against non-white backgrounds.
+const _SAMPLE_DOC_TYPST = """
+#set page(width: 40pt, height: 40pt, margin: 0pt, fill: none)
+#set text(font: "TeX Gyre Heros Makie", weight: "bold", fill: white)
+#place(center + horizon, circle(radius: 18pt, stroke: 3pt + rgb("#003366"), fill: rgb("#ff8800")))
+#place(center + horizon, text(size: %SIZE%pt)[%LABEL%])
+"""
 
-# Square page with a circle inscribed — the rendered marker has known 1:1
-# aspect ratio, so any squish shows up immediately. `fill: none` keeps the
-# page outside the circle transparent so the rectangular page boundary
-# doesn't show against non-white plot backgrounds.
-function sample_pdf_bytes()
-    doc = """
-    #set page(width: 40pt, height: 40pt, margin: 0pt, fill: none)
-    #place(center + horizon, circle(radius: 18pt, stroke: 3pt + rgb("#003366"), fill: rgb("#ff8800")))
-    #place(center + horizon, text(size: 14pt, fill: white, weight: "bold")[PDF])
-    """
+function _compile_sample(format::AbstractString, size::Real, label::AbstractString)
+    tgh_dir = joinpath(Makie.assetpath(), "fonts")
+    font_dir = mktempdir()
+    cp(joinpath(tgh_dir, "TeXGyreHerosMakie-Regular.otf"),
+        joinpath(font_dir, basename("TeXGyreHerosMakie-Regular.otf")); force = true)
+    doc = replace(_SAMPLE_DOC_TYPST, "%SIZE%" => string(size), "%LABEL%" => label)
+    out_name = "doc." * format
     return mktempdir() do dir
         cd(dir) do
             write("doc.typ", doc)
             redirect_stdio(stdout = devnull, stderr = devnull) do
-                run(typst`compile doc.typ doc.pdf`)
+                run(addenv(TypstCommand(["compile", "--format", format, "doc.typ", out_name]),
+                    "TYPST_FONT_PATHS" => font_dir))
             end
-            read("doc.pdf")
+            read(out_name)
         end
     end
 end
+
+sample_pdf_bytes() = _compile_sample("pdf", 14, "PDF")
+sample_svg_bytes() = _compile_sample("svg", 11, "SVG")
 
 function asset_markers(marker)
     fig = Makie.Figure(size = (320, 220))
@@ -201,7 +211,7 @@ function run_reftests(backend::Symbol)
     compare("alignment_freetype", alignment_grid(nothing, "Hgyp"), backend)
     compare("alignment_latex", alignment_grid(MakieTeX.LaTeX(full = true), "Hgyp"), backend)
     compare("alignment_typst", alignment_grid(MakieTeX.Typst(full = true), "Hgyp"), backend)
-    compare("marker_svg", asset_markers(MakieTeX.SVG(Vector{UInt8}(SAMPLE_SVG))), backend)
+    compare("marker_svg", asset_markers(MakieTeX.SVG(sample_svg_bytes())), backend)
     compare("marker_pdf", asset_markers(MakieTeX.PDF(sample_pdf_bytes())), backend)
     return
 end
