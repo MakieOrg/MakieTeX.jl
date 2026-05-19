@@ -155,10 +155,12 @@ const SAMPLE_SVG = """<?xml version="1.0" encoding="UTF-8"?>
 </svg>"""
 
 # Square page with a circle inscribed — the rendered marker has known 1:1
-# aspect ratio, so any squish shows up immediately.
+# aspect ratio, so any squish shows up immediately. `fill: none` keeps the
+# page outside the circle transparent so the rectangular page boundary
+# doesn't show against non-white plot backgrounds.
 function sample_pdf_bytes()
     doc = """
-    #set page(width: 40pt, height: 40pt, margin: 0pt, fill: white)
+    #set page(width: 40pt, height: 40pt, margin: 0pt, fill: none)
     #place(center + horizon, circle(radius: 18pt, stroke: 3pt + rgb("#003366"), fill: rgb("#ff8800")))
     #place(center + horizon, text(size: 14pt, fill: white, weight: "bold")[PDF])
     """
