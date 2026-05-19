@@ -43,9 +43,7 @@ jobs:
         shell: bash
         env:
           JULIA_PKG_PRECOMPILE_AUTO: '0'
-        run: |
-          rm -f test/Manifest.toml
-          julia --project=test -e 'using Pkg; Pkg.rm("GLMakie"); Pkg.instantiate()'
+        run: julia --project=test -e 'using Pkg; Pkg.rm("GLMakie"); Pkg.update()'
 
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
