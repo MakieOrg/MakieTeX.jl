@@ -109,7 +109,6 @@ with_theme(text_handler = MakieTeX.Typst()) do
     θ = range(-1, 1; length = 200)
     lines!(ax, θ, 1 .+ θ.^2; label = typst"$prop 1 + cos^2 theta$")
     axislegend(ax; position = :ct)
-    colsize!(fig.layout, 1, Relative(0.4))
     fig
 end
 ```
