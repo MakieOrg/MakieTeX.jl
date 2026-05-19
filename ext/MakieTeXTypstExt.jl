@@ -4,7 +4,7 @@ module MakieTeXTypstExt
 # Triggered by `Typstry`, which brings `Typst_jll` in transitively.
 
 using MakieTeX
-using MakieTeX: Typst, CachedPDF, PDFDocument,
+using MakieTeX: Typst, PDF,
     _escape_for_typst, _is_blank
 using MakieTeX.Colors
 using Makie
@@ -57,7 +57,7 @@ function _compile_typst_block(h::Typst, body::String, color, fontsize, lineheigh
     """
 
     pdf, baseline_pt = _compile_typst_capture_baseline(document, h)
-    return (CachedPDF(PDFDocument(pdf)), baseline_pt)
+    return (PDF(pdf), baseline_pt)
 end
 
 Makie.compile_text(h::Typst, src::TypstString, color, fs, lh) =

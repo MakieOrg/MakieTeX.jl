@@ -148,6 +148,19 @@ function alignment_grid(handler, content)
     end
 end
 
+const SAMPLE_SVG = """<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <circle cx="20" cy="20" r="18" fill="#ff8800" stroke="#003366" stroke-width="3"/>
+  <text x="20" y="26" font-family="sans-serif" font-size="16" fill="white" text-anchor="middle">S</text>
+</svg>"""
+
+function asset_markers(marker)
+    fig = Makie.Figure(size = (320, 220))
+    ax = Makie.Axis(fig[1, 1]; limits = (0, 6, 0, 1))
+    Makie.scatter!(ax, 1:5, [0.5, 0.7, 0.3, 0.6, 0.4]; marker, markersize = 50)
+    fig
+end
+
 function compare(name::String, fig, backend::Symbol)
     bemod = backend === :CairoMakie ? CairoMakie : GLMakie
     subdir = lowercase(string(backend))
@@ -167,5 +180,10 @@ function run_reftests(backend::Symbol)
     compare("alignment_freetype", alignment_grid(nothing, "Hgyp"), backend)
     compare("alignment_latex", alignment_grid(MakieTeX.LaTeX(full = true), "Hgyp"), backend)
     compare("alignment_typst", alignment_grid(MakieTeX.Typst(full = true), "Hgyp"), backend)
+    compare("marker_svg", asset_markers(MakieTeX.SVG(Vector{UInt8}(SAMPLE_SVG))), backend)
+    # Embed a small typst-rendered PDF; covers the PDF marker path without
+    # tying the test to an on-disk asset.
+    pdf_marker, _ = Makie.compile_text(MakieTeX.Typst(full = true), "PDF!", :black, 24.0f0, 1.0f0)
+    compare("marker_pdf", asset_markers(pdf_marker), backend)
     return
 end

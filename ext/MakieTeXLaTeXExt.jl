@@ -9,7 +9,7 @@ module MakieTeXLaTeXExt
 # MakieTeX core. This extension only adds the engine-using methods.
 
 using MakieTeX
-using MakieTeX: LaTeX, CachedPDF, PDFDocument,
+using MakieTeX: LaTeX, PDF,
     CURRENT_TEX_ENGINE, _escape_for_text_mode, _hires_crop_pdf, _is_blank
 using MakieTeX.Colors
 using Makie
@@ -45,8 +45,8 @@ function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheigh
     \\end{document}
     """
     engine = h.engine === nothing ? CURRENT_TEX_ENGINE[] : h.engine
-    pdf, baseline_pt = _compile_latex_capture_baseline(document, engine, h.crop_margin_pt)
-    return (CachedPDF(PDFDocument(pdf)), baseline_pt)
+    pdf_bytes, baseline_pt = _compile_latex_capture_baseline(document, engine, h.crop_margin_pt)
+    return (PDF(pdf_bytes), baseline_pt)
 end
 
 Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =

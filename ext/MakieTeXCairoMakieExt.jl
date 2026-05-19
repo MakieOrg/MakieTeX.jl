@@ -1,31 +1,24 @@
 module MakieTeXCairoMakieExt
 
 using CairoMakie, MakieTeX
+using MakieTeX: PDF, SVG, AbstractDocument, ensure_loaded!, render_svg_to_cairo
 using Makie
 using Poppler_jll
 using Cairo
 
-function CairoMakie.cairo_scatter_marker(marker::MakieTeX.AbstractDocument)
-    return Cached(marker)
-end
+CairoMakie.cairo_scatter_marker(marker::AbstractDocument) = marker
+CairoMakie.cairo_scatter_marker(v::AbstractArray{<:AbstractDocument}) = v
+CairoMakie.cairo_scatter_marker(v::NTuple{N, <:AbstractDocument}) where {N} = v
 
-function CairoMakie.cairo_scatter_marker(marker::MakieTeX.AbstractCachedDocument)
-    return marker
-end
-
-CairoMakie.cairo_scatter_marker(v::AbstractArray{<:MakieTeX.AbstractDocument}) = CairoMakie.cairo_scatter_marker.(v)
-CairoMakie.cairo_scatter_marker(v::NTuple{N, <:MakieTeX.AbstractDocument}) where {N} = CairoMakie.cairo_scatter_marker.(v)
-
-# Vector-render a cached PDF marker via Poppler — no raster intermediate.
 function CairoMakie.draw_marker(
-        ctx, marker::MakieTeX.CachedPDF, pos,
-        strokecolor, strokewidth, mat
+        ctx, marker::PDF, pos,
+        strokecolor, strokewidth, mat,
     )
-    w, h = marker.dims
-    document = MakieTeX.update_handle!(marker)
+    ensure_loaded!(marker)
+    w, h = marker.dims[]
     page = ccall(
         (:poppler_document_get_page, Poppler_jll.libpoppler_glib),
-        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), document, marker.doc.page
+        Ptr{Cvoid}, (Ptr{Cvoid}, Cint), marker.handle[], marker.page,
     )
     Cairo.translate(ctx, pos[1], pos[2])
     CairoMakie.cairo_transform(ctx, mat)
@@ -33,8 +26,22 @@ function CairoMakie.draw_marker(
     Cairo.translate(ctx, -w / 2, -h / 2)
     ccall(
         (:poppler_page_render, Poppler_jll.libpoppler_glib),
-        Cvoid, (Ptr{Cvoid}, Ptr{Cvoid}), page, ctx.ptr
+        Cvoid, (Ptr{Cvoid}, Ptr{Cvoid}), page, ctx.ptr,
     )
+    return
+end
+
+function CairoMakie.draw_marker(
+        ctx, marker::SVG, pos,
+        strokecolor, strokewidth, mat,
+    )
+    ensure_loaded!(marker)
+    w, h = marker.dims[]
+    Cairo.translate(ctx, pos[1], pos[2])
+    CairoMakie.cairo_transform(ctx, mat)
+    Cairo.scale(ctx, 1.0 / w, 1.0 / h)
+    Cairo.translate(ctx, -w / 2, -h / 2)
+    render_svg_to_cairo(ctx, marker)
     return
 end
 

@@ -1,6 +1,6 @@
 # Engine-agnostic core for PDF-marker text handlers. Concrete handlers
 # (defined in extensions) subtype `AbstractPdfTextHandler` and override
-# `Makie.compile_text` to return `(CachedPDF, baseline_pt)`. The shared
+# `Makie.compile_text` to return `(PDF, baseline_pt)`. The shared
 # `place_text!` here turns that payload into a Makie scatter spec plus a
 # bbox aligned to the requested anchor.
 
@@ -8,7 +8,7 @@
     AbstractPdfTextHandler
 
 Shared supertype for text handlers whose `compile_text` produces a
-`(CachedPDF, baseline_pt)` tuple. `place_text!` is implemented once on this
+`(PDF, baseline_pt)` tuple. `place_text!` is implemented once on this
 supertype; concrete handlers only need to override `compile_text`.
 
 Concrete handlers live in extensions: [`LaTeX`](@ref) (via
@@ -41,7 +41,7 @@ function Makie.place_text!(
         fontsize, font, align, rotation, justification, lineheight,
         word_wrap_width, offset, fonts, color, strokecolor, strokewidth,
     )
-    cached, baseline_pt = compiled
+    pdf, baseline_pt = compiled
     al = Makie.sv_getindex(align, i)
     rot = convert(Makie.Quaternionf, Makie.sv_getindex(rotation, i))
     off = Makie.Vec3f(Makie.sv_getindex(offset, i))
@@ -49,11 +49,19 @@ function Makie.place_text!(
     # The PDF is already at the correct fontsize; markersize is the literal
     # PDF dimensions. `crop_margin_pt` was padded around the ink at crop time,
     # so the natural ink box is `dim_pt - 2 * crop_margin_pt`.
-    dim_pt = Makie.Vec2f(Float32(cached.dims[1]), Float32(cached.dims[2]))
+    pdf_dims = dims(pdf)
+    dim_pt = Makie.Vec2f(Float32(pdf_dims[1]), Float32(pdf_dims[2]))
     ink_size = dim_pt .- 2 * h.crop_margin_pt
 
+    # Apply the marker rotation to the alignment offset so the visible ink
+    # (rotated around the marker center) lands at the same anchor as a
+    # non-rotated marker would. Without this, a 90° y-axis label computed
+    # with valign=:bottom would place the marker straddling the position
+    # x-axis instead of extending leftward away from the axis frame.
     align_off = _pdf_align_offset(al, ink_size, baseline_pt)
-    marker_offset = Makie.Vec3f(align_off[1], align_off[2], 0) + off
+    align_off3 = Makie.Vec3f(align_off[1], align_off[2], 0)
+    rotated_align = rot * align_off3
+    marker_offset = rotated_align + off
 
     curr = length(outputs.glyphindices)
     push!(outputs.text_blocks, (curr + 1):curr)
@@ -69,7 +77,7 @@ function Makie.place_text!(
     push!(
         outputs.text_specs, Makie.PlotSpec(
             :Scatter, [Makie.Point3f(0, 0, 0)];
-            marker = [cached],
+            marker = [pdf],
             markersize = [dim_pt],
             marker_offset = [marker_offset],
             rotation = [rot],
@@ -81,9 +89,21 @@ function Makie.place_text!(
     # tick label padding, etc.) doesn't include the `crop_margin_pt` pad —
     # that pad exists only to keep the rasterized marker's anti-aliased
     # edges intact, not as visual space around the text.
+    #
+    # The scatter marker is rotated around its own center (= marker_offset),
+    # not around the text position. So we rotate the bbox at the origin
+    # first, then translate by marker_offset, instead of building the bbox
+    # at marker_offset and rotating around (0, 0) — that would carry the
+    # offset through the rotation and skew the layout protrusion (e.g.
+    # rotated y-axis labels colliding with tick labels).
     half = 0.5f0 .* Makie.Vec3f(ink_size..., 0)
-    bb = Makie.Rect3d(Makie.to_ndim(Makie.Point3d, marker_offset, 0) .- half, Makie.Vec3d(ink_size..., 0))
-    push!(outputs.text_spec_bboxes, Makie.rotate_bbox(bb, rot))
+    bb_at_origin = Makie.Rect3d(Makie.Point3d(-half), Makie.Vec3d(ink_size..., 0))
+    bb_rotated = Makie.rotate_bbox(bb_at_origin, rot)
+    bb_final = Makie.Rect3d(
+        Makie.origin(bb_rotated) .+ Makie.to_ndim(Makie.Point3d, marker_offset, 0),
+        Makie.widths(bb_rotated),
+    )
+    push!(outputs.text_spec_bboxes, bb_final)
     return
 end
 
@@ -120,22 +140,23 @@ function _hires_crop_pdf(path::String, margin::Real)
     return read(out_path)
 end
 
-# GPU backends (GL/WGLMakie) call this to turn a cached document into a
+# GPU backends (GL/WGLMakie) call this to turn a document into a
 # texture-uploadable image. CairoMakie has its own vector dispatch and
 # doesn't reach this path.
-_makietex_density_for_size(s) = max(2, ceil(Int, maximum(s) / 8))
+#
+# Ideal behavior would re-rasterize at the current screen's `px_per_unit`
+# on every render so the texture pixel grid matches the framebuffer
+# exactly (no over/undersampling). That needs Makie-side plumbing — the
+# compute graph for marker upload currently doesn't see `px_per_unit`,
+# which lives on the screen and only fires per render. Until that hook
+# exists, this Ref is a manual stand-in: set it to the `px_per_unit` of
+# your typical save target. Default 2× matches `save(...; px_per_unit = 2)`
+# (the recommended default for raster export) without resampling, and
+# only slightly oversamples 1× interactive display.
+const TEXTURE_RENDER_DENSITY = Ref(2)
 
-function Makie.rasterize_marker_for_gpu(doc::AbstractCachedDocument, scale)
-    s = scale isa AbstractVector ? first(scale) : scale
-    return page2img(doc, doc.doc isa Nothing ? 0 : doc.doc.page;
-        render_density = _makietex_density_for_size(s))
-end
+Makie.rasterize_marker_for_gpu(doc::AbstractDocument, scale) =
+    rasterize(doc; render_density = TEXTURE_RENDER_DENSITY[])
 
-function Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractCachedDocument}, scale)
-    sizes = scale isa AbstractVector ? scale : fill(scale, length(docs))
-    return [
-        page2img(d, d.doc isa Nothing ? 0 : d.doc.page;
-            render_density = _makietex_density_for_size(sz))
-            for (d, sz) in zip(docs, sizes)
-    ]
-end
+Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractDocument}, scale) =
+    [rasterize(d; render_density = TEXTURE_RENDER_DENSITY[]) for d in docs]
