@@ -82,7 +82,7 @@ MakieTeX.Typst(font = "Inter", font_paths = ["/path/to/your/fonts"])
 The handler flows through every Makie text element, including `Label`, so any Typst snippet is usable as a layout cell. Typst's `#import` can sit inline in the content block — no preamble plumbing needed. Same physics as on the [LaTeX](@ref) page, drawn with [`fletcher`](https://typst.app/universe/package/fletcher):
 
 ```@example typst
-with_theme(text_handler = MakieTeX.Typst()) do
+with_theme(text_handler = MakieTeX.Typst(full = true)) do
     fig = Figure(size = (760, 360))
     Label(fig[1, 1], typst"""
     #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge

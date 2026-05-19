@@ -89,6 +89,7 @@ The handler routes through every Makie text element, including `Label` — which
 
 ```@example latex
 handler = MakieTeX.LaTeX(
+    full = true,
     engine = `tectonic`,
     preamble = raw"""
         \usepackage{amsmath, amssymb, xcolor}
