@@ -100,7 +100,7 @@ with_theme(text_handler = MakieTeX.Typst()) do
       edge((2, 0.5), (3, 0), "-|>"),
       edge((3, 1), (2, 0.5), "-|>"),
     )
-    """; fontsize = 16)
+    """; fontsize = 16, tellheight = false)
     ax = Axis(fig[1, 2];
         title = typst"$e^-e^+ -> mu^-mu^+$ (tree level)",
         xlabel = typst"$cos theta$",

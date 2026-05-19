@@ -115,7 +115,7 @@ with_theme(text_handler = handler) do
       };
     \end{feynman}
     \end{tikzpicture}
-    """; fontsize = 16)
+    """; fontsize = 16, tellheight = false)
     ax = Axis(fig[1, 2];
         title = L"e^-e^+ \to \mu^-\mu^+ \text{ (tree level)}",
         xlabel = L"\cos\theta",
