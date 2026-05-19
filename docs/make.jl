@@ -23,7 +23,7 @@ makedocs(;
     warnonly = true,
 )
 
-deploydocs(;
+DocumenterVitepress.deploydocs(;
     repo = "github.com/MakieOrg/MakieTeX.jl",
     target = "build",
     push_preview = true,
