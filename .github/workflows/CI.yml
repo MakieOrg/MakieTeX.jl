@@ -41,6 +41,8 @@ jobs:
       - name: Drop GLMakie from test deps (non-Linux)
         if: runner.os != 'Linux'
         shell: bash
+        env:
+          JULIA_PKG_PRECOMPILE_AUTO: '0'
         run: julia --project=test -e 'using Pkg; Pkg.rm("GLMakie")'
 
       - uses: julia-actions/julia-buildpkg@v1
