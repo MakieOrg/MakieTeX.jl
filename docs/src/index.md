@@ -56,13 +56,14 @@ The engines load via package extensions:
 ```@example index
 using CairoMakie, MakieTeX
 
-with_theme(text_handler = MakieTeX.LaTeX()) do
-    fig = Figure()
-    Axis(fig[1, 1];
-        title = L"\int_0^\pi \sin(x)^2\, dx = \tfrac{\pi}{2}",
-        xlabel = L"x", ylabel = L"\sin^2(x)",
-    )
-    lines!(0:0.01:π, x -> sin(x)^2)
-    fig
-end
+set_theme!(text_handler = MakieTeX.LaTeX(render_strings = true))
+
+fig = Figure()
+Axis(fig[1, 1];
+    title = L"\int_0^\pi \sin(x)^2\, dx = \tfrac{\pi}{2}",
+    xlabel = L"x", ylabel = L"\sin^2(x)",
+)
+lines!(0:0.01:π, x -> sin(x)^2)
+set_theme!() # hide
+fig
 ```
