@@ -7,16 +7,11 @@ using Typstry
 using PixelMatch
 using tectonic_jll  # activates MakieTeXLaTeXExt
 
-# GLMakie needs a GPU; Windows / macOS CI runners don't have one. The CI
-# workflow Pkg.rm's GLMakie on those OSes so the import below errors and
-# we skip the GL reftests. Linux CI runs with xvfb so GL is fine there.
-const HAS_GLMAKIE = try
-    @eval using GLMakie
-    true
-catch err
-    @warn "GLMakie unavailable; skipping :GLMakie reference tests" exception = err
-    false
-end
+# GLMakie needs a GPU; Windows / macOS GitHub-hosted runners don't have one,
+# so skip the GL reftests there. Linux CI has xvfb. Locally everyone has a
+# GPU. The CI workflow Pkg.rm's GLMakie on Windows / macOS to match.
+const HAS_GLMAKIE = !(get(ENV, "CI", "false") == "true" && (Sys.isapple() || Sys.iswindows()))
+HAS_GLMAKIE && @eval using GLMakie
 
 include("reference_tests.jl")
 
