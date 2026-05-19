@@ -73,11 +73,14 @@ function Makie.place_text!(
 
     # Positions are block-relative; the text recipe shifts each spec by the
     # projected block position and patches `space`/`markerspace` to match.
+    # `markersize` is the long dimension; aspect is handled per-backend
+    # (rescale_marker on GL, draw_marker on Cairo), so this expands back
+    # out to a Vec2(w, h) box.
     push!(
         outputs.text_specs, Makie.PlotSpec(
             :Scatter, [Makie.Point3f(0, 0, 0)];
             marker = [pdf],
-            markersize = [dim_pt],
+            markersize = [Float32(maximum(dim_pt))],
             marker_offset = [marker_offset],
             rotation = [rot],
         )

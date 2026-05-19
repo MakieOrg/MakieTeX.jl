@@ -82,3 +82,19 @@ Base.size(doc::AbstractDocument) = doc.dims
 # upload time.
 Makie.to_spritemarker(x::AbstractDocument) = x
 Makie.marker_to_sdf_shape(::AbstractDocument) = Makie.RECTANGLE
+
+# Aspect-preserving rescale, same pattern Makie uses for `Char` /
+# `BezierPath` markers: scalar `markersize` is interpreted as "fit the
+# longer dimension into this size", and the shorter dimension scales
+# proportionally. Without this, a non-square asset would be squished
+# into a square quad.
+_doc_scale_factor(doc::AbstractDocument) = Makie.Vec2f(doc.dims ./ max(doc.dims[1], doc.dims[2]))
+
+Makie.rescale_marker(atlas, doc::AbstractDocument, font, markersize) =
+    markersize .* _doc_scale_factor(doc)
+
+Makie.rescale_marker(atlas, docs::AbstractVector{<:AbstractDocument}, font, markersize) =
+    Makie._bcast(markersize) .* _doc_scale_factor.(docs)
+
+Makie.offset_marker(atlas, marker::Union{D, AbstractVector{<:D}}, font, markersize) where {D <: AbstractDocument} =
+    Makie.rescale_marker(atlas, marker, font, Makie.offset_marker(markersize))

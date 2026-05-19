@@ -154,6 +154,25 @@ const SAMPLE_SVG = """<?xml version="1.0" encoding="UTF-8"?>
   <text x="20" y="26" font-family="sans-serif" font-size="16" fill="white" text-anchor="middle">S</text>
 </svg>"""
 
+# Square page with a circle inscribed — the rendered marker has known 1:1
+# aspect ratio, so any squish shows up immediately.
+function sample_pdf_bytes()
+    doc = """
+    #set page(width: 40pt, height: 40pt, margin: 0pt, fill: white)
+    #place(center + horizon, circle(radius: 18pt, stroke: 3pt + rgb("#003366"), fill: rgb("#ff8800")))
+    #place(center + horizon, text(size: 14pt, fill: white, weight: "bold")[PDF])
+    """
+    return mktempdir() do dir
+        cd(dir) do
+            write("doc.typ", doc)
+            redirect_stdio(stdout = devnull, stderr = devnull) do
+                run(typst`compile doc.typ doc.pdf`)
+            end
+            read("doc.pdf")
+        end
+    end
+end
+
 function asset_markers(marker)
     fig = Makie.Figure(size = (320, 220))
     ax = Makie.Axis(fig[1, 1]; limits = (0, 6, 0, 1))
@@ -181,9 +200,6 @@ function run_reftests(backend::Symbol)
     compare("alignment_latex", alignment_grid(MakieTeX.LaTeX(full = true), "Hgyp"), backend)
     compare("alignment_typst", alignment_grid(MakieTeX.Typst(full = true), "Hgyp"), backend)
     compare("marker_svg", asset_markers(MakieTeX.SVG(Vector{UInt8}(SAMPLE_SVG))), backend)
-    # Embed a small typst-rendered PDF; covers the PDF marker path without
-    # tying the test to an on-disk asset.
-    pdf_marker, _ = Makie.compile_text(MakieTeX.Typst(full = true), "PDF!", :black, 24.0f0, 1.0f0)
-    compare("marker_pdf", asset_markers(pdf_marker), backend)
+    compare("marker_pdf", asset_markers(MakieTeX.PDF(sample_pdf_bytes())), backend)
     return
 end
