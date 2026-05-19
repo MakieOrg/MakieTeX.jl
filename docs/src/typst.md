@@ -79,18 +79,13 @@ MakieTeX.Typst(font = "Inter", font_paths = ["/path/to/your/fonts"])
 
 ## Complex content in layouts
 
-The handler flows through every Makie text element, including `Label` — and the `preamble` field is the natural place for `#import "@preview/..."` lines, so any Typst package from [Typst Universe](https://typst.app/universe/) works. Same physics as on the [LaTeX](@ref) page, drawn with [`fletcher`](https://typst.app/universe/package/fletcher):
+The handler flows through every Makie text element, including `Label`, so any Typst snippet is usable as a layout cell. Typst's `#import` can sit inline in the content block — no preamble plumbing needed. Same physics as on the [LaTeX](@ref) page, drawn with [`fletcher`](https://typst.app/universe/package/fletcher):
 
 ```@example typst
-handler = MakieTeX.Typst(
-    preamble = """
-        #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
-    """,
-)
-
-with_theme(text_handler = handler) do
+with_theme(text_handler = MakieTeX.Typst()) do
     fig = Figure(size = (760, 360))
     Label(fig[1, 1], typst"""
+    #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
     #diagram(
       spacing: 1.5cm,
       node((0, 0), $e^-$),
