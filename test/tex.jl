@@ -44,8 +44,8 @@ using Test, Downloads
 
             filename = "mandala"
 
-            save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
-            save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
+            Makie.save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
+            Makie.save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
 
         end
 

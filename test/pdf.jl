@@ -11,7 +11,7 @@ demo_pie = begin
 end
 
 pie_pdf = mktempdir() do dir
-    save(joinpath(dir, "pie.pdf"), demo_pie)
+    Makie.save(joinpath(dir, "pie.pdf"), demo_pie)
     read(joinpath(dir, "pie.pdf"), String)
 end
 
