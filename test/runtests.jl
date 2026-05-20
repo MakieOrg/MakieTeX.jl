@@ -7,6 +7,7 @@ using Test
 
 example_path = joinpath(@__DIR__, "test_images")
 mkpath(example_path)
+mkpath(joinpath(example_path, "texample"))
 
 function save_test(filename, fig; kwargs...)
 

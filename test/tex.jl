@@ -13,8 +13,6 @@ using Test, Downloads
 
     can_access_example && @testset "texample.net" begin
 
-        mkpath(joinpath(example_path, "texample"))
-
         names = [
             "city",
             "planets",
