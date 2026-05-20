@@ -32,16 +32,33 @@ fig
 
 For a single-path SVG you want to recolor, use Makie's built-in [`BezierPath`](https://docs.makie.org/stable/reference/plots/scatter#BezierPath-markers) SVG path instead — that goes through Makie's normal `color` / `strokecolor` plumbing.
 
-A vector of `MakieTeX.SVG`s works the same way as any other per-point marker — each scatter point can use a different asset:
+A vector of `MakieTeX.SVG`s works the same way as any other per-point marker — each scatter point can use a different asset. Combined with `marker_offset` (in pixels), this is enough to drop a logo onto the tip of every bar in a horizontal barplot:
 
 ```@example markers
 python = MakieTeX.SVG(joinpath(@__DIR__, "assets/python.svg"))
 matlab = MakieTeX.SVG(joinpath(@__DIR__, "assets/matlab.svg"))
 
-fig = Figure()
-ax = Axis(fig[1, 1]; limits = (0, 7, 0, 1))
-markers = [dots, python, matlab, dots, python, matlab]
-scatter!(ax, 1:6, [0.5, 0.7, 0.4, 0.6, 0.3, 0.8]; marker = markers, markersize = 50)
+languages = ["Julia", "Python", "MATLAB"]
+ages      = [14, 35, 42]            # years since first release, 2026
+logos     = [dots, python, matlab]
+
+fig = Figure(size = (640, 240))
+ax = Axis(fig[1, 1];
+    title  = "Age of programming languages in 2026",
+    xlabel = "years since first release",
+    yticks = (1:length(languages), languages),
+    limits = (0, 52, 0.4, length(languages) + 0.6),
+    xgridvisible = false, ygridvisible = false,
+    yticksvisible = false,
+)
+hidespines!(ax, :t, :r)
+
+barplot!(ax, 1:length(ages), ages;
+    direction = :x, color = (:steelblue, 0.4), strokewidth = 0,
+    bar_labels = ["$(a) years" for a in ages], label_offset = 8)
+
+scatter!(ax, ages, 1:length(ages); marker = logos, markersize = 28,
+    marker_offset = Vec2f(-20, 0))
 fig
 ```
 
