@@ -10,8 +10,8 @@ This recipe plots rendered `TeX` to your Figure or Scene.
 
 There are three types of input you can provide:
 - Any `String`, which is rendered to LaTeX cognizant of the figure's overall theme,
-- A [`TeXDocument`](@ref) object, which is rendered to LaTeX directly, and can be customized by the user,
-- A [`CachedTeX`](@ref) object, which is a pre-rendered LaTeX document.
+- A [`TEXDocument`](@ref) object, which is rendered to LaTeX directly, and can be customized by the user,
+- A [`CachedTEX`](@ref) object, which is a pre-rendered LaTeX document.
 
 `tex` may be a single one of these objects, or an array of them.
 """
