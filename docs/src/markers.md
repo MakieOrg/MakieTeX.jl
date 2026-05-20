@@ -32,6 +32,19 @@ fig
 
 For a single-path SVG you want to recolor, use Makie's built-in [`BezierPath`](https://docs.makie.org/stable/reference/plots/scatter#BezierPath-markers) SVG path instead — that goes through Makie's normal `color` / `strokecolor` plumbing.
 
+A vector of `MakieTeX.SVG`s works the same way as any other per-point marker — each scatter point can use a different asset:
+
+```@example markers
+python = MakieTeX.SVG(joinpath(@__DIR__, "assets/python.svg"))
+matlab = MakieTeX.SVG(joinpath(@__DIR__, "assets/matlab.svg"))
+
+fig = Figure()
+ax = Axis(fig[1, 1]; limits = (0, 7, 0, 1))
+markers = [dots, python, matlab, dots, python, matlab]
+scatter!(ax, 1:6, [0.5, 0.7, 0.4, 0.6, 0.3, 0.8]; marker = markers, markersize = 50)
+fig
+```
+
 ## PDF
 
 ```@example markers

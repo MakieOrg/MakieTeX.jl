@@ -27,7 +27,9 @@ end
 """
     svg_get_size(handle::Ptr{Cvoid}) -> Tuple{Float64, Float64}
 
-Return the SVG's intrinsic size in pixels (1 px == 1 pt at 72 dpi).
+Return the SVG's intrinsic size in pixels (1 px == 1 pt at 72 dpi). Falls
+back to the viewBox when explicit width/height are absent, so SVGs with
+only `viewBox="0 0 W H"` still report a usable size.
 """
 function svg_get_size(handle::Ptr{Cvoid})::Tuple{Float64, Float64}
     width = Ref{Cdouble}(0.0)
@@ -37,7 +39,25 @@ function svg_get_size(handle::Ptr{Cvoid})::Tuple{Float64, Float64}
         Cint, (Ptr{Cvoid}, Ref{Cdouble}, Ref{Cdouble}),
         handle, width, height,
     )
-    return (Float64(width[]), Float64(height[]))
+    (width[] > 0 && height[] > 0) && return (Float64(width[]), Float64(height[]))
+
+    has_w = Ref{Cint}(0); has_h = Ref{Cint}(0); has_vb = Ref{Cint}(0)
+    # `RsvgLength { length::Cdouble, unit::Cint }` and
+    # `RsvgRectangle { x, y, width, height :: Cdouble }`.
+    rl_w = Ref{Tuple{Cdouble, Cint}}((0.0, 0))
+    rl_h = Ref{Tuple{Cdouble, Cint}}((0.0, 0))
+    rl_vb = Ref{NTuple{4, Cdouble}}((0.0, 0.0, 0.0, 0.0))
+    ccall(
+        (:rsvg_handle_get_intrinsic_dimensions, Librsvg_jll.librsvg),
+        Cvoid, (Ptr{Cvoid}, Ref{Cint}, Ptr{Cvoid}, Ref{Cint}, Ptr{Cvoid}, Ref{Cint}, Ptr{Cvoid}),
+        handle,
+        has_w, Base.unsafe_convert(Ptr{Cvoid}, rl_w),
+        has_h, Base.unsafe_convert(Ptr{Cvoid}, rl_h),
+        has_vb, Base.unsafe_convert(Ptr{Cvoid}, rl_vb),
+    )
+    has_vb[] != 0 || error("SVG has neither width/height nor viewBox; cannot determine size.")
+    _, _, w, h = rl_vb[]
+    return (Float64(w), Float64(h))
 end
 
 """
