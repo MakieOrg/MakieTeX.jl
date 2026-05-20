@@ -14,7 +14,7 @@ hero:
       text: Typst
       link: /typst
     - theme: alt
-      text: Vector markers
+      text: PDF & SVG
       link: /markers
     - theme: alt
       text: GitHub

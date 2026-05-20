@@ -15,7 +15,7 @@ makedocs(;
         "Home" => "index.md",
         "LaTeX" => "latex.md",
         "Typst" => "typst.md",
-        "Vector markers" => "markers.md",
+        "PDF & SVG" => "markers.md",
         "API reference" => "api.md",
     ],
     sitename = "MakieTeX.jl",

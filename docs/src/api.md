@@ -7,7 +7,7 @@ MakieTeX.LaTeX
 MakieTeX.Typst
 ```
 
-## Vector markers
+## PDF & SVG
 
 ```@docs
 MakieTeX.PDF

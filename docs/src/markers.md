@@ -1,4 +1,4 @@
-# Vector markers
+# PDF & SVG
 
 [`MakieTeX.PDF`](@ref) and [`MakieTeX.SVG`](@ref) wrap a vector asset for use as a scatter `marker`. The asset's own styling (fills, strokes, gradients) is preserved as-is — there's no Makie-controlled color override.
 
