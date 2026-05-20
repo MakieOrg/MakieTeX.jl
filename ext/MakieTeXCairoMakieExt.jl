@@ -21,10 +21,10 @@ CairoMakie.cairo_scatter_marker(v::AbstractArray{<: MakieTeX.AbstractDocument}) 
 CairoMakie.cairo_scatter_marker(v::NTuple{N, <: MakieTeX.AbstractDocument}) where N = CairoMakie.cairo_scatter_marker.(v)
 
 # # Teximg
-
-# Override `is_cairomakie_atomic_plot` to allow `TeXImg` to remain a unit,
-# instead of auto-decomposing into its component scatter plot.
-CairoMakie.is_cairomakie_atomic_plot(plot::TeXImg) = true
+#
+# We rely on CairoMakie auto-decomposing TeXImg into its inner scatter plot,
+# whose markers (CachedTEX/CachedTypst/CachedPDF/CachedSVG) are then drawn by
+# the `cairo_scatter_marker` / `draw_marker` methods below.
 
 # # Scatter markers
 
