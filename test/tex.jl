@@ -7,8 +7,8 @@ using Test, Downloads
         Downloads.download("https://texample.net/media/tikz/examples/TEX/rotated-triangle.tex")
         true
     catch e
-        false
         @warn "Cannot access texample.net; skipping tests that require it."
+        false
     end
 
     can_access_example && @testset "texample.net" begin

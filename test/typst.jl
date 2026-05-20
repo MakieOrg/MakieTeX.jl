@@ -19,8 +19,8 @@ url(name) = "https://raw.githubusercontent.com/typst/packages/main/packages/prev
         Downloads.download(_url)
         true
     catch e
-        false
         @warn "Cannot access $_url; skipping tests that require it."
+        false
     end
 
     can_access_example && @testset "cetz" begin
