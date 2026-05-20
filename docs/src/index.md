@@ -15,7 +15,7 @@ hero:
       link: /typst
     - theme: alt
       text: PDF & SVG
-      link: /markers
+      link: /pdf_svg
     - theme: alt
       text: GitHub
       link: https://github.com/MakieOrg/MakieTeX.jl
@@ -29,7 +29,7 @@ features:
     link: /typst
   - title: PDF & SVG markers
     details: Drop a vector asset onto a scatter plot. CairoMakie renders vector-native; GLMakie / WGLMakie rasterize at GPU upload.
-    link: /markers
+    link: /pdf_svg
 ---
 ```
 
