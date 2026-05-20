@@ -122,8 +122,6 @@ barplot!(ax, 1:length(ages), ages;
     bar_labels = ["$(a) years" for a in ages],
     label_offset = 8)
 
-# marker_offset is in pixels — anchors each logo's right edge at the
-# bar's tip so it sits fully inside the bar.
 scatter!(ax, ages, 1:length(ages); marker = logos, markersize = 28,
     marker_offset = Vec2f(-20, 0))
 fig

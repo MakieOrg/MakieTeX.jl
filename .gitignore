@@ -2,6 +2,7 @@
 *.jl.cov
 *.jl.mem
 test/Manifest.toml
+_readme/Manifest.toml
 # Reftest recordings and diffs; only `*_ref.png` is committed.
 test/reference_images/**/*_rec.png
 test/reference_images/**/*_diff.png

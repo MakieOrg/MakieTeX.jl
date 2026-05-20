@@ -16,11 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Pinned to match _readme/Manifest.toml's julia_version — Quarto's
-      # notebook runner refuses to use a manifest from a different patch.
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1.12.5'
+          version: '1'
       - uses: julia-actions/cache@v3
       - uses: quarto-dev/quarto-actions/setup@v2
 
