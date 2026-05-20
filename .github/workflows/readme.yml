@@ -1,0 +1,49 @@
+name: Check README
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Render README
+        run: julia _readme/make.jl
+
+      # Text-only diff against the committed README.md — fails the step if
+      # the .qmd no longer reproduces the checked-in markdown.
+      - name: Diff README.md text
+        if: always()
+        run: git diff --exit-code -- README.md
+
+      # PixelMatch each rendered PNG against the HEAD version. Strict
+      # equality — `n_diff > 0` fails. On mismatch, writes `_ref.png` and
+      # `_diff.png` next to the offending file so the artifact upload
+      # captures them for inspection.
+      - name: PixelMatch rendered PNGs
+        if: always()
+        run: julia _readme/check.jl
+
+      - name: Upload rendered README on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-readme
+          path: |
+            README.md
+            README_files/
