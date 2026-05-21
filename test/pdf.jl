@@ -15,7 +15,7 @@ pie_pdf = mktempdir() do dir
     read(joinpath(dir, "pie.pdf"), String)
 end
 
-@test_nowarn display(scatter(rand(10); marker = PDFDocument(pie_pdf), markersize = 60); backend = CairoMakie)
-@test_nowarn display(teximg(PDFDocument(pie_pdf)); backend = CairoMakie)
+@test_nowarn Makie.colorbuffer(scatter(rand(10); marker = PDFDocument(pie_pdf), markersize = 60); backend = CairoMakie)
+@test_nowarn Makie.colorbuffer(teximg(PDFDocument(pie_pdf)); backend = CairoMakie)
 # @test_nowarn display(scatter(rand(10); marker = PDFDocument(pie_pdf)); backend = GLMakie)
 
