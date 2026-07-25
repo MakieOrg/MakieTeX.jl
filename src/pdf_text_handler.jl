@@ -1,20 +1,33 @@
 # Engine-agnostic core for PDF-marker text handlers. Concrete handlers
 # (defined in extensions) subtype `AbstractPdfTextHandler` and override
-# `Makie.compile_text` to return `(PDF, baseline_pt)`. The shared
-# `place_text!` here turns that payload into a Makie scatter spec plus a
-# bbox aligned to the requested anchor.
+# `Makie.compile_text` to return a `CompiledPdfText`. The shared
+# `place_text!` here (dispatched on that payload) turns it into a Makie
+# scatter spec plus a bbox aligned to the requested anchor.
 
 """
     AbstractPdfTextHandler
 
 Shared supertype for text handlers whose `compile_text` produces a
-`(PDF, baseline_pt)` tuple. `place_text!` is implemented once on this
-supertype; concrete handlers only need to override `compile_text`.
+[`CompiledPdfText`](@ref). Placement is shared via `place_text!` dispatching on
+that payload, so concrete handlers only override `compile_text`.
 
 Concrete handlers live in extensions: [`LaTeX`](@ref) (via
 `MakieTeXLaTeXExt`) and [`Typst`](@ref) (via `MakieTeXTypstExt`).
 """
 abstract type AbstractPdfTextHandler end
+
+"""
+    CompiledPdfText(doc, baseline_pt, crop_margin_pt)
+
+Payload returned by a PDF-marker handler's `compile_text`: the rendered document,
+the baseline depth (markerspace pt below the ink bottom, for `valign = :baseline`),
+and the crop margin padded around the ink. `place_text!` dispatches on this.
+"""
+struct CompiledPdfText{D <: AbstractDocument}
+    doc::D
+    baseline_pt::Float32
+    crop_margin_pt::Float32
+end
 
 # Convert an `(halign, valign)` pair into a markerspace offset that maps
 # scatter's center anchor onto the alignment edge. `:baseline` valign is
@@ -36,40 +49,29 @@ function _pdf_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::
     return Makie.Vec2f(ox, oy)
 end
 
-function Makie.place_text!(
-        h::AbstractPdfTextHandler, outputs::NamedTuple, i, N, compiled,
-        fontsize, font, align, rotation, justification, lineheight,
-        word_wrap_width, offset, fonts, color, strokecolor, strokewidth,
-    )
-    pdf, baseline_pt = compiled
-    al = Makie.sv_getindex(align, i)
-    rot = convert(Makie.Quaternionf, Makie.sv_getindex(rotation, i))
-    off = Makie.Vec3f(Makie.sv_getindex(offset, i))
+function Makie.place_text!(outputs, c::CompiledPdfText, align, rotation, offset, color, strokecolor, strokewidth)
+    doc = c.doc
+    rot = convert(Makie.Quaternionf, rotation)
+    off = Makie.Vec3f(offset)
 
     # The PDF is already at the correct fontsize; markersize is the literal
     # PDF dimensions. `crop_margin_pt` was padded around the ink at crop time,
     # so the natural ink box is `dim_pt - 2 * crop_margin_pt`.
-    dim_pt = Makie.Vec2f(Float32(pdf.dims[1]), Float32(pdf.dims[2]))
-    ink_size = dim_pt .- 2 * h.crop_margin_pt
+    dim_pt = Makie.Vec2f(Float32(doc.dims[1]), Float32(doc.dims[2]))
+    ink_size = dim_pt .- 2 * c.crop_margin_pt
 
     # Apply the marker rotation to the alignment offset so the visible ink
     # (rotated around the marker center) lands at the same anchor as a
     # non-rotated marker would. Without this, a 90° y-axis label computed
     # with valign=:bottom would place the marker straddling the position
     # x-axis instead of extending leftward away from the axis frame.
-    align_off = _pdf_align_offset(al, ink_size, baseline_pt)
+    align_off = _pdf_align_offset(align, ink_size, c.baseline_pt)
     align_off3 = Makie.Vec3f(align_off[1], align_off[2], 0)
     rotated_align = rot * align_off3
     marker_offset = rotated_align + off
 
     curr = length(outputs.glyphindices)
     push!(outputs.text_blocks, (curr + 1):curr)
-    push!(
-        outputs.glyphcollections, Makie.GlyphCollection(
-            UInt64[], Makie.NativeFont[], Makie.Point3f[], Makie.GlyphExtent[],
-            Makie.Vec2f[], Makie.Quaternionf[], Makie.RGBAf[], Makie.RGBAf[], Float32[]
-        )
-    )
 
     # Positions are block-relative; the text recipe shifts each spec by the
     # projected block position and patches `space`/`markerspace` to match.
@@ -79,13 +81,13 @@ function Makie.place_text!(
     push!(
         outputs.text_specs, Makie.PlotSpec(
             :Scatter, [Makie.Point3f(0, 0, 0)];
-            marker = [pdf],
+            marker = [doc],
             markersize = [Float32(maximum(dim_pt))],
             marker_offset = [marker_offset],
             rotation = [rot],
         )
     )
-    push!(outputs.text_spec_block_indices, i)
+    push!(outputs.text_spec_block_indices, length(outputs.text_blocks))
 
     # Report `ink_size` as the bbox so block-level layout (axis title gaps,
     # tick label padding, etc.) doesn't include the `crop_margin_pt` pad —

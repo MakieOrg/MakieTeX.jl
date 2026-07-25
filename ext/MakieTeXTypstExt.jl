@@ -4,7 +4,7 @@ module MakieTeXTypstExt
 # Triggered by `Typstry`, which brings `Typst_jll` in transitively.
 
 using MakieTeX
-using MakieTeX: Typst, PDF,
+using MakieTeX: Typst, PDF, CompiledPdfText,
     _escape_for_typst, _is_blank
 using MakieTeX.Colors
 using Makie
@@ -57,15 +57,15 @@ function _compile_typst_block(h::Typst, body::String, color, fontsize, lineheigh
     """
 
     pdf, baseline_pt = _compile_typst_capture_baseline(document, h)
-    return (PDF(pdf), baseline_pt)
+    return CompiledPdfText(PDF(pdf), baseline_pt, h.crop_margin_pt)
 end
 
-Makie.compile_text(h::Typst, src::TypstString, color, fs, lh) =
+Makie.compile_text(h::Typst, src::TypstString, font, fonts, fs, lh, justification, word_wrap_width, color, strokecolor, strokewidth) =
     _is_blank(String(src)) ? nothing :
     _compile_typst_block(h, String(src), color, fs, lh)
 
 # `render_strings = true` claims plain `AbstractString` inputs too.
-Makie.compile_text(h::Typst, src::AbstractString, color, fs, lh) =
+Makie.compile_text(h::Typst, src::AbstractString, font, fonts, fs, lh, justification, word_wrap_width, color, strokecolor, strokewidth) =
     (!h.render_strings || _is_blank(src)) ? nothing :
     _compile_typst_block(h, _escape_for_typst(src), color, fs, lh)
 

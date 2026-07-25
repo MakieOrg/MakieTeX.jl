@@ -9,7 +9,7 @@ module MakieTeXLaTeXExt
 # MakieTeX core. This extension only adds the engine-using methods.
 
 using MakieTeX
-using MakieTeX: LaTeX, PDF,
+using MakieTeX: LaTeX, PDF, CompiledPdfText,
     CURRENT_TEX_ENGINE, _escape_for_text_mode, _hires_crop_pdf, _is_blank
 using MakieTeX.Colors
 using Makie
@@ -49,17 +49,17 @@ function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheigh
     """
     engine = h.engine === nothing ? CURRENT_TEX_ENGINE[] : h.engine
     pdf_bytes, baseline_pt = _compile_latex_capture_baseline(document, engine, h.crop_margin_pt)
-    return (PDF(pdf_bytes), baseline_pt)
+    return CompiledPdfText(PDF(pdf_bytes), baseline_pt, h.crop_margin_pt)
 end
 
-Makie.compile_text(h::LaTeX, src::LaTeXString, color, fontsize, lineheight) =
+Makie.compile_text(h::LaTeX, src::LaTeXString, font, fonts, fontsize, lineheight, justification, word_wrap_width, color, strokecolor, strokewidth) =
     _is_blank(String(src)) ? nothing :
     _compile_latex_block(h, String(src), color, fontsize, lineheight)
 
 # `render_strings = true` claims plain `AbstractString` inputs too. Blank input
 # returns `nothing` so empty Axis subtitles don't allocate phantom
 # protrusion via a single-line LaTeX box.
-Makie.compile_text(h::LaTeX, src::AbstractString, color, fontsize, lineheight) =
+Makie.compile_text(h::LaTeX, src::AbstractString, font, fonts, fontsize, lineheight, justification, word_wrap_width, color, strokecolor, strokewidth) =
     (!h.render_strings || _is_blank(src)) ? nothing :
     _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
 
