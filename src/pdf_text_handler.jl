@@ -49,7 +49,7 @@ function _pdf_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::
     return Makie.Vec2f(ox, oy)
 end
 
-function Makie.place_text!(outputs, c::CompiledPdfText, align, rotation, offset, color, strokecolor, strokewidth)
+function Makie.place_text!(buffer, c::CompiledPdfText, align, rotation, offset, color, strokecolor, strokewidth)
     doc = c.doc
     rot = convert(Makie.Quaternionf, rotation)
     off = Makie.Vec3f(offset)
@@ -70,24 +70,7 @@ function Makie.place_text!(outputs, c::CompiledPdfText, align, rotation, offset,
     rotated_align = rot * align_off3
     marker_offset = rotated_align + off
 
-    curr = length(outputs.glyphindices)
-    push!(outputs.text_blocks, (curr + 1):curr)
-
-    # Positions are block-relative; the text recipe shifts each spec by the
-    # projected block position and patches `space`/`markerspace` to match.
-    # `markersize` is the long dimension; aspect is handled per-backend
-    # (rescale_marker on GL, draw_marker on Cairo), so this expands back
-    # out to a Vec2(w, h) box.
-    push!(
-        outputs.text_specs, Makie.PlotSpec(
-            :Scatter, [Makie.Point3f(0, 0, 0)];
-            marker = [doc],
-            markersize = [Float32(maximum(dim_pt))],
-            marker_offset = [marker_offset],
-            rotation = [rot],
-        )
-    )
-    push!(outputs.text_spec_block_indices, length(outputs.text_blocks))
+    Makie.push_empty_block!(buffer)
 
     # Report `ink_size` as the bbox so block-level layout (axis title gaps,
     # tick label padding, etc.) doesn't include the `crop_margin_pt` pad —
@@ -107,7 +90,20 @@ function Makie.place_text!(outputs, c::CompiledPdfText, align, rotation, offset,
         Makie.origin(bb_rotated) .+ Makie.to_ndim(Makie.Point3d, marker_offset, 0),
         Makie.widths(bb_rotated),
     )
-    push!(outputs.text_spec_bboxes, bb_final)
+
+    # Positions are block-relative; the text recipe shifts each spec by the
+    # projected block position and patches `space`/`markerspace` to match.
+    # `markersize` is the long dimension; aspect is handled per-backend
+    # (rescale_marker on GL, draw_marker on Cairo), so this expands back
+    # out to a Vec2(w, h) box.
+    spec = Makie.PlotSpec(
+        :Scatter, [Makie.Point3f(0, 0, 0)];
+        marker = [doc],
+        markersize = [Float32(maximum(dim_pt))],
+        marker_offset = [marker_offset],
+        rotation = [rot],
+    )
+    Makie.push_text_spec!(buffer, spec, bb_final)
     return
 end
 
