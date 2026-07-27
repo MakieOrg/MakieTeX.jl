@@ -60,12 +60,12 @@ function _compile_typst_block(h::Typst, body::String, color, fontsize, lineheigh
     return CompiledPdfText(PDF(pdf), baseline_pt, h.crop_margin_pt)
 end
 
-Makie.compile_text(h::Typst, src::TypstString, font, fonts, fs, lh, justification, word_wrap_width, color, strokecolor, strokewidth) =
+MakieTeX.compile_pdf_text(h::Typst, src::TypstString, fs, lh, color) =
     _is_blank(String(src)) ? nothing :
     _compile_typst_block(h, String(src), color, fs, lh)
 
 # `render_strings = true` claims plain `AbstractString` inputs too.
-Makie.compile_text(h::Typst, src::AbstractString, font, fonts, fs, lh, justification, word_wrap_width, color, strokecolor, strokewidth) =
+MakieTeX.compile_pdf_text(h::Typst, src::AbstractString, fs, lh, color) =
     (!h.render_strings || _is_blank(src)) ? nothing :
     _compile_typst_block(h, _escape_for_typst(src), color, fs, lh)
 

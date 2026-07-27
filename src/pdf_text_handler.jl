@@ -1,15 +1,15 @@
 # Engine-agnostic core for PDF-marker text handlers. Concrete handlers
-# (defined in extensions) subtype `AbstractPdfTextHandler` and override
-# `Makie.compile_text` to return a `CompiledPdfText`. The shared
-# `place_text!` here (dispatched on that payload) turns it into a Makie
-# scatter spec plus the layout frame Makie aligns and rotates it in.
+# (defined in extensions) subtype `AbstractPdfTextHandler` and add
+# `compile_pdf_text` methods returning a `CompiledPdfText`. The single
+# `Makie.emit_text!` method here turns that into a Makie scatter spec plus the
+# layout frame Makie aligns and rotates it in, shared across engines.
 
 """
     AbstractPdfTextHandler
 
-Shared supertype for text handlers whose `compile_text` produces a
-[`CompiledPdfText`](@ref). Placement is shared via `place_text!` dispatching on
-that payload, so concrete handlers only override `compile_text`.
+Shared supertype for text handlers whose `compile_pdf_text` produces a
+[`CompiledPdfText`](@ref). The `Makie.emit_text!` method is shared, so concrete
+handlers only add `compile_pdf_text` methods for the input types they accept.
 
 Concrete handlers live in extensions: [`LaTeX`](@ref) (via
 `MakieTeXLaTeXExt`) and [`Typst`](@ref) (via `MakieTeXTypstExt`).
@@ -19,9 +19,9 @@ abstract type AbstractPdfTextHandler end
 """
     CompiledPdfText(doc, baseline_pt, crop_margin_pt)
 
-Payload returned by a PDF-marker handler's `compile_text`: the rendered document,
-the baseline depth (markerspace pt below the ink bottom, for `valign = :baseline`),
-and the crop margin padded around the ink. `place_text!` dispatches on this.
+Payload returned by a PDF-marker handler's `compile_pdf_text`: the rendered
+document, the baseline depth (markerspace pt below the ink bottom, for
+`valign = :baseline`), and the crop margin padded around the ink.
 """
 struct CompiledPdfText{D <: AbstractDocument}
     doc::D
@@ -29,7 +29,26 @@ struct CompiledPdfText{D <: AbstractDocument}
     crop_margin_pt::Float32
 end
 
-function Makie.place_text!(buffer, c::CompiledPdfText, color, strokecolor, strokewidth)
+"""
+    compile_pdf_text(handler, src, fontsize, lineheight, color) -> Union{CompiledPdfText, Nothing}
+
+Engine step of a PDF-marker handler. Extensions add methods dispatching on the
+handler and the input type it accepts, and return `nothing` to fall through to
+Makie's own text layout.
+"""
+compile_pdf_text(handler, src, fontsize, lineheight, color) = nothing
+
+function Makie.emit_text!(
+        buffer, h::AbstractPdfTextHandler, src, font, fonts, fontsize,
+        lineheight, justification, word_wrap_width, color, strokecolor, strokewidth
+    )
+    compiled = compile_pdf_text(h, src, fontsize, lineheight, color)
+    compiled === nothing && return false
+    push_pdf_text!(buffer, compiled)
+    return true
+end
+
+function push_pdf_text!(buffer, c::CompiledPdfText)
     doc = c.doc
 
     # The PDF is already at the correct fontsize; markersize is the literal

@@ -55,6 +55,6 @@ end
 
 # Blank text (empty or whitespace-only) shouldn't drive layout protrusions —
 # the strut would otherwise emit a full asc+desc bbox even with nothing to
-# render. compile_text returns `nothing` for blank input, falling through to
+# render. compile_pdf_text returns `nothing` for blank input, falling through to
 # FreeType which yields a 0-size bbox as expected.
 _is_blank(s::AbstractString) = isempty(s) || all(isspace, s)
