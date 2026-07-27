@@ -2,7 +2,7 @@
 # (defined in extensions) subtype `AbstractPdfTextHandler` and override
 # `Makie.compile_text` to return a `CompiledPdfText`. The shared
 # `place_text!` here (dispatched on that payload) turns it into a Makie
-# scatter spec plus a bbox aligned to the requested anchor.
+# scatter spec plus the layout frame Makie aligns and rotates it in.
 
 """
     AbstractPdfTextHandler
@@ -29,30 +29,8 @@ struct CompiledPdfText{D <: AbstractDocument}
     crop_margin_pt::Float32
 end
 
-# Convert an `(halign, valign)` pair into a markerspace offset that maps
-# scatter's center anchor onto the alignment edge. `:baseline` valign is
-# supported via `baseline_from_bottom` (descender depth in markerspace).
-function _pdf_align_offset(align::Tuple, wh::Makie.Vec2f, baseline_from_bottom::Real = 0.0f0)
-    halign, valign = align
-    fhalign = halign === :left ? 0.0f0 :
-        halign === :center ? 0.5f0 :
-        halign === :right ? 1.0f0 : Float32(halign)
-    ox = (0.5f0 - fhalign) * wh[1]
-    oy = if valign === :baseline
-        0.5f0 * wh[2] - Float32(baseline_from_bottom)
-    else
-        fvalign = valign === :bottom ? 0.0f0 :
-            valign === :center ? 0.5f0 :
-            valign === :top ? 1.0f0 : Float32(valign)
-        (0.5f0 - fvalign) * wh[2]
-    end
-    return Makie.Vec2f(ox, oy)
-end
-
-function Makie.place_text!(buffer, c::CompiledPdfText, align, rotation, offset, color, strokecolor, strokewidth)
+function Makie.place_text!(buffer, c::CompiledPdfText, color, strokecolor, strokewidth)
     doc = c.doc
-    rot = convert(Makie.Quaternionf, rotation)
-    off = Makie.Vec3f(offset)
 
     # The PDF is already at the correct fontsize; markersize is the literal
     # PDF dimensions. `crop_margin_pt` was padded around the ink at crop time,
@@ -60,50 +38,26 @@ function Makie.place_text!(buffer, c::CompiledPdfText, align, rotation, offset, 
     dim_pt = Makie.Vec2f(Float32(doc.dims[1]), Float32(doc.dims[2]))
     ink_size = dim_pt .- 2 * c.crop_margin_pt
 
-    # Apply the marker rotation to the alignment offset so the visible ink
-    # (rotated around the marker center) lands at the same anchor as a
-    # non-rotated marker would. Without this, a 90° y-axis label computed
-    # with valign=:bottom would place the marker straddling the position
-    # x-axis instead of extending leftward away from the axis frame.
-    align_off = _pdf_align_offset(align, ink_size, c.baseline_pt)
-    align_off3 = Makie.Vec3f(align_off[1], align_off[2], 0)
-    rotated_align = rot * align_off3
-    marker_offset = rotated_align + off
+    # Layout frame: the ink sits with its left/bottom corner on the origin and
+    # its baseline `baseline_pt` above the bottom. Reporting `ink_size` rather
+    # than `dim_pt` keeps `crop_margin_pt` out of block-level layout (axis title
+    # gaps, tick label padding); that pad exists only to keep the rasterized
+    # marker's anti-aliased edges intact, not as visual space around the text.
+    bbox = Makie.Rect2f(0, 0, ink_size[1], ink_size[2])
+    Makie.push_empty_block!(buffer; bbox = bbox, baseline = c.baseline_pt)
 
-    Makie.push_empty_block!(buffer)
-
-    # Report `ink_size` as the bbox so block-level layout (axis title gaps,
-    # tick label padding, etc.) doesn't include the `crop_margin_pt` pad —
-    # that pad exists only to keep the rasterized marker's anti-aliased
-    # edges intact, not as visual space around the text.
-    #
-    # The scatter marker is rotated around its own center (= marker_offset),
-    # not around the text position. So we rotate the bbox at the origin
-    # first, then translate by marker_offset, instead of building the bbox
-    # at marker_offset and rotating around (0, 0) — that would carry the
-    # offset through the rotation and skew the layout protrusion (e.g.
-    # rotated y-axis labels colliding with tick labels).
-    half = 0.5f0 .* Makie.Vec3f(ink_size..., 0)
-    bb_at_origin = Makie.Rect3d(Makie.Point3d(-half), Makie.Vec3d(ink_size..., 0))
-    bb_rotated = Makie.rotate_bbox(bb_at_origin, rot)
-    bb_final = Makie.Rect3d(
-        Makie.origin(bb_rotated) .+ Makie.to_ndim(Makie.Point3d, marker_offset, 0),
-        Makie.widths(bb_rotated),
-    )
-
-    # Positions are block-relative; the text recipe shifts each spec by the
-    # projected block position and patches `space`/`markerspace` to match.
-    # `markersize` is the long dimension; aspect is handled per-backend
-    # (rescale_marker on GL, draw_marker on Cairo), so this expands back
-    # out to a Vec2(w, h) box.
+    # A scatter marker is drawn centered on its position, so the layout position
+    # is the middle of the ink box. `markersize` is the long dimension; aspect is
+    # handled per-backend (rescale_marker on GL, draw_marker on Cairo), so this
+    # expands back out to a Vec2(w, h) box. The identity `rotation` is what
+    # placement composes the text rotation into, turning the ink with the text.
     spec = Makie.PlotSpec(
-        :Scatter, [Makie.Point3f(0, 0, 0)];
+        :Scatter, [Makie.Point3f(0.5f0 * ink_size[1], 0.5f0 * ink_size[2], 0)];
         marker = [doc],
         markersize = [Float32(maximum(dim_pt))],
-        marker_offset = [marker_offset],
-        rotation = [rot],
+        rotation = [Makie.Quaternionf(0, 0, 0, 1)],
     )
-    Makie.push_text_spec!(buffer, spec, bb_final)
+    Makie.push_text_spec!(buffer, spec, Makie.Rect3d(Makie.Point3d(0), Makie.Vec3d(ink_size..., 0)))
     return
 end
 
