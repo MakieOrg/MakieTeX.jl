@@ -42,9 +42,9 @@ function Makie.emit_text!(buffer, h::AbstractPdfTextHandler, src, attributes)
     # the PDF engines set one size for the whole block, so a Vec2 fontsize keeps
     # only its x component here
     compiled = compile_pdf_text(h, src, attributes.fontsize[1], attributes.lineheight, attributes.color)
-    compiled === nothing && return false
-    push_pdf_text!(buffer, compiled)
-    return true
+    # blank input, or an engine that doesn't claim this type: let Makie lay it out
+    compiled === nothing && return Makie.default_text_layout!(buffer, src, attributes)
+    return push_pdf_text!(buffer, compiled)
 end
 
 function push_pdf_text!(buffer, c::CompiledPdfText)
