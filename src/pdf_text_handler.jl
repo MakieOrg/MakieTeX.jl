@@ -38,11 +38,20 @@ Makie's own text layout.
 """
 compile_pdf_text(handler, src, fontsize, lineheight, color) = nothing
 
+# Blank text has nothing to render, and must not drive layout protrusion: an empty
+# LaTeX box would still carry the strut's ascender and descender, and handing it to
+# Makie instead would lay out the whitespace as glyphs.
+_is_blank_text(src::AbstractString) = _is_blank(String(src))
+_is_blank_text(src) = false
+
 function Makie.emit_text!(buffer, h::AbstractPdfTextHandler, src, attributes)
+    _is_blank_text(src) &&
+        return Makie.push_empty_block!(buffer; bbox = Makie.Rect2f(0, 0, 0, 0), baseline = 0.0f0)
+
     # the PDF engines set one size for the whole block, so a Vec2 fontsize keeps
     # only its x component here
     compiled = compile_pdf_text(h, src, attributes.fontsize[1], attributes.lineheight, attributes.color)
-    # blank input, or an engine that doesn't claim this type: let Makie lay it out
+    # this engine doesn't claim the input at all, e.g. `render_strings = false`
     compiled === nothing && return Makie.default_text_layout!(buffer, src, attributes)
     return push_pdf_text!(buffer, compiled)
 end

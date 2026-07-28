@@ -61,13 +61,11 @@ function _compile_typst_block(h::Typst, body::String, color, fontsize, lineheigh
 end
 
 MakieTeX.compile_pdf_text(h::Typst, src::TypstString, fs, lh, color) =
-    _is_blank(String(src)) ? nothing :
     _compile_typst_block(h, String(src), color, fs, lh)
 
 # `render_strings = true` claims plain `AbstractString` inputs too.
 MakieTeX.compile_pdf_text(h::Typst, src::AbstractString, fs, lh, color) =
-    (!h.render_strings || _is_blank(src)) ? nothing :
-    _compile_typst_block(h, _escape_for_typst(src), color, fs, lh)
+    h.render_strings ? _compile_typst_block(h, _escape_for_typst(src), color, fs, lh) : nothing
 
 # Compile the document and run `typst query` to extract the baseline
 # metadata. The handler's `font_paths` are prepended to the user's

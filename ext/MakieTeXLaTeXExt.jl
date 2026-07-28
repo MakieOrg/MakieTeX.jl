@@ -53,15 +53,13 @@ function _compile_latex_block(h::LaTeX, body::String, color, fontsize, lineheigh
 end
 
 MakieTeX.compile_pdf_text(h::LaTeX, src::LaTeXString, fontsize, lineheight, color) =
-    _is_blank(String(src)) ? nothing :
     _compile_latex_block(h, String(src), color, fontsize, lineheight)
 
 # `render_strings = true` claims plain `AbstractString` inputs too. Blank input
 # returns `nothing` so empty Axis subtitles don't allocate phantom
 # protrusion via a single-line LaTeX box.
 MakieTeX.compile_pdf_text(h::LaTeX, src::AbstractString, fontsize, lineheight, color) =
-    (!h.render_strings || _is_blank(src)) ? nothing :
-    _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight)
+    h.render_strings ? _compile_latex_block(h, _escape_for_text_mode(src), color, fontsize, lineheight) : nothing
 
 # Run latexmk/tectonic in a tempdir and parse `temp.log` for the box depth
 # before tearing the dir down.
