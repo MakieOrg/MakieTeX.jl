@@ -55,5 +55,5 @@ end
 
 # Blank text (empty or whitespace-only) shouldn't drive layout protrusions — the
 # strut would otherwise emit a full asc+desc bbox even with nothing to render.
-# `emit_text` returns an empty block for these; see `_is_blank_text`.
+# `layout_text` returns an empty block for these; see `_is_blank_text`.
 _is_blank(s::AbstractString) = isempty(s) || all(isspace, s)

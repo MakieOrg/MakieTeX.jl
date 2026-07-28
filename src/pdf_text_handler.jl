@@ -1,14 +1,14 @@
 # Engine-agnostic core for PDF-marker text handlers. Concrete handlers
 # (defined in extensions) subtype `AbstractPdfTextHandler` and add
 # `compile_pdf_text` methods returning a `CompiledPdfText`. The single
-# `Makie.emit_text` method here turns that into a Makie scatter spec plus the
+# `Makie.layout_text` method here turns that into a Makie scatter spec plus the
 # layout frame Makie aligns and rotates it in, shared across engines.
 
 """
     AbstractPdfTextHandler
 
 Shared supertype for text handlers whose `compile_pdf_text` produces a
-[`CompiledPdfText`](@ref). The `Makie.emit_text` method is shared, so concrete
+[`CompiledPdfText`](@ref). The `Makie.layout_text` method is shared, so concrete
 handlers only add `compile_pdf_text` methods for the input types they accept.
 
 Concrete handlers live in extensions: [`LaTeX`](@ref) (via
@@ -44,7 +44,7 @@ compile_pdf_text(handler, src, fontsize, lineheight, color) = nothing
 _is_blank_text(src::AbstractString) = _is_blank(String(src))
 _is_blank_text(src) = false
 
-function Makie.emit_text(h::AbstractPdfTextHandler, src, attributes)
+function Makie.layout_text(h::AbstractPdfTextHandler, src, attributes)
     _is_blank_text(src) &&
         return Makie.TextLayout(; bbox = Makie.Rect2f(0, 0, 0, 0), baseline = 0.0f0)
 
@@ -52,7 +52,7 @@ function Makie.emit_text(h::AbstractPdfTextHandler, src, attributes)
     # only its x component here
     compiled = compile_pdf_text(h, src, attributes.fontsize[1], attributes.lineheight, attributes.color)
     # this engine doesn't claim the input at all, e.g. `render_strings = false`
-    compiled === nothing && return Makie.emit_text(nothing, src, attributes)
+    compiled === nothing && return Makie.layout_text(nothing, src, attributes)
     return pdf_text_layout(compiled)
 end
 
