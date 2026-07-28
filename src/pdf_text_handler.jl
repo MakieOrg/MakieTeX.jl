@@ -1,14 +1,14 @@
 # Engine-agnostic core for PDF-marker text handlers. Concrete handlers
 # (defined in extensions) subtype `AbstractPdfTextHandler` and add
 # `compile_pdf_text` methods returning a `CompiledPdfText`. The single
-# `Makie.emit_text!` method here turns that into a Makie scatter spec plus the
+# `Makie.emit_text` method here turns that into a Makie scatter spec plus the
 # layout frame Makie aligns and rotates it in, shared across engines.
 
 """
     AbstractPdfTextHandler
 
 Shared supertype for text handlers whose `compile_pdf_text` produces a
-[`CompiledPdfText`](@ref). The `Makie.emit_text!` method is shared, so concrete
+[`CompiledPdfText`](@ref). The `Makie.emit_text` method is shared, so concrete
 handlers only add `compile_pdf_text` methods for the input types they accept.
 
 Concrete handlers live in extensions: [`LaTeX`](@ref) (via
@@ -44,19 +44,19 @@ compile_pdf_text(handler, src, fontsize, lineheight, color) = nothing
 _is_blank_text(src::AbstractString) = _is_blank(String(src))
 _is_blank_text(src) = false
 
-function Makie.emit_text!(buffer, h::AbstractPdfTextHandler, src, attributes)
+function Makie.emit_text(h::AbstractPdfTextHandler, src, attributes)
     _is_blank_text(src) &&
-        return Makie.push_empty_block!(buffer; bbox = Makie.Rect2f(0, 0, 0, 0), baseline = 0.0f0)
+        return Makie.TextLayout(; bbox = Makie.Rect2f(0, 0, 0, 0), baseline = 0.0f0)
 
     # the PDF engines set one size for the whole block, so a Vec2 fontsize keeps
     # only its x component here
     compiled = compile_pdf_text(h, src, attributes.fontsize[1], attributes.lineheight, attributes.color)
     # this engine doesn't claim the input at all, e.g. `render_strings = false`
-    compiled === nothing && return Makie.emit_text!(buffer, nothing, src, attributes)
-    return push_pdf_text!(buffer, compiled)
+    compiled === nothing && return Makie.emit_text(nothing, src, attributes)
+    return pdf_text_layout(compiled)
 end
 
-function push_pdf_text!(buffer, c::CompiledPdfText)
+function pdf_text_layout(c::CompiledPdfText)
     doc = c.doc
 
     # The PDF is already at the correct fontsize; markersize is the literal
@@ -71,8 +71,6 @@ function push_pdf_text!(buffer, c::CompiledPdfText)
     # gaps, tick label padding); that pad exists only to keep the rasterized
     # marker's anti-aliased edges intact, not as visual space around the text.
     bbox = Makie.Rect2f(0, 0, ink_size[1], ink_size[2])
-    Makie.push_empty_block!(buffer; bbox = bbox, baseline = c.baseline_pt)
-
     # A scatter marker is drawn centered on its position, so the layout position
     # is the middle of the ink box. `markersize` is the long dimension; aspect is
     # handled per-backend (rescale_marker on GL, draw_marker on Cairo), so this
@@ -84,8 +82,13 @@ function push_pdf_text!(buffer, c::CompiledPdfText)
         markersize = [Float32(maximum(dim_pt))],
         rotation = [Makie.Quaternionf(0, 0, 0, 1)],
     )
-    Makie.push_text_spec!(buffer, spec, Makie.Rect3d(Makie.Point3d(0), Makie.Vec3d(ink_size..., 0)))
-    return
+    spec_bbox = Makie.Rect3d(Makie.Point3d(0), Makie.Vec3d(ink_size..., 0))
+    return Makie.TextLayout(
+        ; bbox,
+        baseline = c.baseline_pt,
+        specs = Makie.PlotSpec[spec],
+        spec_bboxes = Makie.Rect3d[spec_bbox],
+    )
 end
 
 # Sub-pt-precise crop via Ghostscript's `%%HiResBoundingBox`. The integer
