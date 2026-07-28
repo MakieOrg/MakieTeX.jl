@@ -52,7 +52,7 @@ function Makie.emit_text!(buffer, h::AbstractPdfTextHandler, src, attributes)
     # only its x component here
     compiled = compile_pdf_text(h, src, attributes.fontsize[1], attributes.lineheight, attributes.color)
     # this engine doesn't claim the input at all, e.g. `render_strings = false`
-    compiled === nothing && return Makie.default_text_layout!(buffer, src, attributes)
+    compiled === nothing && return Makie.emit_text!(buffer, nothing, src, attributes)
     return push_pdf_text!(buffer, compiled)
 end
 
