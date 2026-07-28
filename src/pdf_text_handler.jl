@@ -38,11 +38,10 @@ Makie's own text layout.
 """
 compile_pdf_text(handler, src, fontsize, lineheight, color) = nothing
 
-function Makie.emit_text!(
-        buffer, h::AbstractPdfTextHandler, src, font, fonts, fontsize,
-        lineheight, justification, word_wrap_width, color, strokecolor, strokewidth
-    )
-    compiled = compile_pdf_text(h, src, fontsize, lineheight, color)
+function Makie.emit_text!(buffer, h::AbstractPdfTextHandler, src, attributes)
+    # the PDF engines set one size for the whole block, so a Vec2 fontsize keeps
+    # only its x component here
+    compiled = compile_pdf_text(h, src, attributes.fontsize[1], attributes.lineheight, attributes.color)
     compiled === nothing && return false
     push_pdf_text!(buffer, compiled)
     return true
