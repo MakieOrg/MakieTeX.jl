@@ -67,23 +67,20 @@ function _compile_latex_capture_baseline(document::String, engine::Cmd, crop_mar
     return mktempdir() do dir
         cd(dir) do
             write("temp.tex", document)
-            out = Pipe(); err = Pipe()
-            try
-                cmd = if engine == `tectonic`
-                    # `--keep-logs` is needed so `temp.log` (which carries our
-                    # `\typeout{MAKIETEX_BASELINE_DEPTH=…}` marker) survives the
-                    # run; without it tectonic discards the log and the depth
-                    # parses as 0, collapsing baseline alignment onto the ink
-                    # bottom (visible as descenders sitting on the anchor).
-                    `$(tectonic_jll.tectonic()) --keep-logs temp.tex`
-                else
-                    `latexmk -file-line-error --shell-escape -cd -$(engine) -interaction=nonstopmode temp.tex`
-                end
-                run(pipeline(ignorestatus(cmd), stdout = out, stderr = err))
-            finally
-                close(out.in); close(err.in)
+            cmd = if engine == `tectonic`
+                # `--keep-logs` is needed so `temp.log` (which carries our
+                # `\typeout{MAKIETEX_BASELINE_DEPTH=…}` marker) survives the
+                # run; without it tectonic discards the log and the depth
+                # parses as 0, collapsing baseline alignment onto the ink
+                # bottom (visible as descenders sitting on the anchor).
+                `$(tectonic_jll.tectonic()) --keep-logs temp.tex`
+            else
+                `latexmk -file-line-error --shell-escape -cd -$(engine) -interaction=nonstopmode temp.tex`
             end
+            engine_output = IOBuffer()
+            run(pipeline(ignorestatus(cmd), stdout = engine_output, stderr = engine_output))
             log_text = isfile("temp.log") ? read("temp.log", String) : ""
+            MakieTeX.check_engine_pdf("temp.pdf", engine, String(take!(engine_output)), log_text)
             m = match(r"MAKIETEX_BASELINE_DEPTH=([-0-9.]+)pt", log_text)
             baseline_pt = m === nothing ? 0.0f0 : max(0.0f0, parse(Float32, m.captures[1]))
             # Use the natural standalone page (border = crop_margin_pt) so

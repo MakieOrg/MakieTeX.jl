@@ -80,9 +80,23 @@ function _compile_typst_capture_baseline(document::String, h::Typst)
             apply_env(cmd) = isempty(paths) ? cmd :
                 addenv(cmd, "TYPST_FONT_PATHS" => join(paths, sep))
 
-            redirect_stdio(stdout = devnull, stderr = devnull) do
-                run(apply_env(typst`compile temp.typ`))
+            # Capture through a file rather than a pipeline: a `TypstCommand` is not a
+            # `Base.AbstractCmd`, and going through `Cmd` would drop Typstry's own run
+            # handling.
+            failure = nothing
+            compile_output = mktemp() do path, io
+                try
+                    redirect_stdio(stdout = io, stderr = io) do
+                        run(apply_env(typst`compile temp.typ`))
+                    end
+                catch e
+                    failure = e
+                end
+                flush(io)
+                return read(path, String)
             end
+            MakieTeX.check_engine_pdf("temp.pdf", "typst", compile_output)
+            failure === nothing || rethrow(failure)
 
             qpipe = Pipe()
             redirect_stdio(stdout = qpipe) do

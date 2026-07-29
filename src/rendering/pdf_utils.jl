@@ -7,6 +7,24 @@ but functions from here are used in the PDF and TeX rendering pipelines.
 
 
 """
+    check_engine_pdf(path, engine, output, log = "")
+
+Errors unless `path` exists, reporting what `engine` printed. The engines compile in a
+temporary directory, so a failed run leaves nothing to read and the caller would otherwise
+see only a `SystemError` about a path that is already gone.
+"""
+function check_engine_pdf(path::AbstractString, engine, output::AbstractString, log::AbstractString = "")
+    isfile(path) && return
+    # TeX buries the reason in a long log; its error lines start with `!` or `l.<line>`.
+    complaints = filter(l -> startswith(l, "!") || startswith(l, "l."), split(log, '\n'))
+    details = join(filter(!isempty, [strip(output), join(complaints, "\n")]), "\n\n")
+    return error(
+        "`$engine` produced no PDF. " *
+            (isempty(details) ? "It printed nothing." : "It said:\n\n$details")
+    )
+end
+
+"""
     pdf_num_pages(filename::String)::Int
 
 Returns the number of pages in a PDF file located at `filename`, using the Poppler executable.
