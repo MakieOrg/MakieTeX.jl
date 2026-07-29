@@ -7,3 +7,4 @@ _readme/Manifest.toml
 test/reference_images/**/*_rec.png
 test/reference_images/**/*_diff.png
 test/pixelmatch-report*.html
+_readme/pixelmatch-report.html

@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  # The PixelMatch report link is posted as a commit status.
+  statuses: write
+
 jobs:
   readme:
     runs-on: ubuntu-latest
@@ -36,8 +41,33 @@ jobs:
       # `_diff.png` next to the offending file so the artifact upload
       # captures them for inspection.
       - name: PixelMatch rendered PNGs
+        id: check
         if: always()
         run: julia _readme/check.jl
+
+      - name: Upload PixelMatch report
+        id: upload-report
+        if: failure() && steps.check.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          path: _readme/pixelmatch-report.html
+          archive: false
+          if-no-files-found: ignore
+
+      - name: Post failing status linking to the report
+        if: failure() && steps.check.outcome == 'failure' && steps.upload-report.outputs.artifact-url != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request?.head?.sha ?? context.sha,
+              state: 'failure',
+              context: 'PixelMatch report (readme)',
+              target_url: '${{ steps.upload-report.outputs.artifact-url }}',
+              description: 'README image mismatches, click Details for the HTML report',
+            })
 
       - name: Upload rendered README on failure
         if: failure()

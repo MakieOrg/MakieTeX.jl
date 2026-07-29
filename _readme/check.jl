@@ -49,12 +49,17 @@ function check_pngs()
 
         if old_img === nothing
             @warn "No HEAD version of PNG; treating as new" rel
+            PixelMatch._record_failure(; name = rel, status = :missing_ref, rec_path = abs, rec_size = size(new_img))
             push!(failed, rel)
             continue
         end
         if size(new_img) != size(old_img)
             @warn "PNG size changed" rel size(new_img) size(old_img)
             PNGFiles.save(base * "_ref.png", old_img)
+            PixelMatch._record_failure(;
+                name = rel, status = :size_mismatch, ref_path = base * "_ref.png", rec_path = abs,
+                ref_size = size(old_img), rec_size = size(new_img)
+            )
             push!(failed, rel)
             continue
         end
@@ -64,6 +69,11 @@ function check_pngs()
             @warn "PixelMatch mismatch" rel n_diff
             PNGFiles.save(base * "_ref.png", old_img)
             PNGFiles.save(base * "_diff.png", diff_img)
+            PixelMatch._record_failure(;
+                name = rel, status = :mismatch, num_pixels_diff = n_diff,
+                ref_path = base * "_ref.png", rec_path = abs, diff_path = base * "_diff.png",
+                ref_size = size(old_img), rec_size = size(new_img)
+            )
             push!(failed, rel)
         end
     end
@@ -79,6 +89,7 @@ function check_pngs()
         is_rendered_png(rel) || continue
         if !isfile(joinpath(REPO, rel))
             @warn "PNG removed from rendered output" rel
+            PixelMatch._record_failure(; name = rel, status = :missing_rec)
             push!(failed, rel)
         end
     end
@@ -86,7 +97,9 @@ function check_pngs()
     return total, failed
 end
 
-total, failed = check_pngs()
+PixelMatch.@pixelmatch_report out_file = joinpath(@__DIR__, "pixelmatch-report.html") begin
+    global total, failed = check_pngs()
+end
 
 if isempty(failed)
     println("README PNG check: $(total) image(s) match HEAD exactly.")
