@@ -57,10 +57,44 @@ jobs:
           '
 
       - uses: julia-actions/julia-runtest@v1
+        id: runtests
         env:
           DISPLAY: ':0'
         with:
           prefix: ${{ runner.os == 'Linux' && 'xvfb-run -s ''-screen 0 1024x768x24''' || '' }}
+
+      # `archive: false` serves the report as a viewable file rather than a zip,
+      # but it takes the artifact name from the file name, so name it per runner.
+      - name: Name the PixelMatch report per runner
+        if: failure() && steps.runtests.outcome == 'failure'
+        shell: bash
+        run: |
+          f=test/pixelmatch-report.html
+          [ -f "$f" ] && mv "$f" "test/pixelmatch-report-${{ matrix.os }}.html" || true
+
+      - name: Upload PixelMatch report
+        id: upload-report
+        if: failure() && steps.runtests.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          path: test/pixelmatch-report-${{ matrix.os }}.html
+          archive: false
+          if-no-files-found: ignore
+
+      - name: Post failing status linking to the report
+        if: failure() && steps.runtests.outcome == 'failure' && steps.upload-report.outputs.artifact-url != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request?.head?.sha ?? context.sha,
+              state: 'failure',
+              context: `PixelMatch report (${{ matrix.os }})`,
+              target_url: '${{ steps.upload-report.outputs.artifact-url }}',
+              description: 'Reference image failures, click Details for the HTML report',
+            })
 
       # Keep only the images for tests that actually failed (those with a
       # matching *_diff.png), drop every other PNG so the artifact stays

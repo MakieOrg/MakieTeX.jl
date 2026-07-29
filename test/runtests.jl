@@ -18,13 +18,15 @@ end
 
 include("reference_tests.jl")
 
-@testset "MakieTeX reference tests" begin
-    @testset "CairoMakie" begin
-        run_reftests(:CairoMakie)
-    end
-    if !SKIP_GLMAKIE
-        @testset "GLMakie" begin
-            run_reftests(:GLMakie)
+PixelMatch.@pixelmatch_report out_file = joinpath(@__DIR__, "pixelmatch-report.html") begin
+    @testset "MakieTeX reference tests" begin
+        @testset "CairoMakie" begin
+            run_reftests(:CairoMakie)
+        end
+        if !SKIP_GLMAKIE
+            @testset "GLMakie" begin
+                run_reftests(:GLMakie)
+            end
         end
     end
 end
