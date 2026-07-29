@@ -12,9 +12,9 @@ tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
 # Until Makie 0.25 lands in the registry.
 [sources]
 MakieTeX = {path = ".."}
-Makie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/breaking-0.25-work", subdir = "Makie"}
-CairoMakie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/breaking-0.25-work", subdir = "CairoMakie"}
-ComputePipeline = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/breaking-0.25-work", subdir = "ComputePipeline"}
+Makie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "Makie"}
+CairoMakie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "CairoMakie"}
+ComputePipeline = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "ComputePipeline"}
 
 [compat]
 julia = "1.12"
