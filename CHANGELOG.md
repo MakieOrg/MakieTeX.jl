@@ -7,4 +7,4 @@
   - **Breaking**: `LaTeXString` / `TypstString` now need an explicit `text_handler = MakieTeX.LaTeX()` / `MakieTeX.Typst()` (`set_theme!`, `with_theme`, or per-plot) to route through the engine; `MathTeXEngine` is the default again.
   - **Breaking**: PDF and SVG vector markers are now `MakieTeX.PDF(path | bytes; page = 1)` and `MakieTeX.SVG(path | bytes)`. PDF `page` is 1-based. The old `Cached*` markers are gone.
   - **Breaking**: SVG markers no longer recolor via Makie's `color` — use Makie's built-in `BezierPath` SVG marker if you need that.
-  - **Breaking**: dropped `RENDER_DENSITY`, `CURRENT_TEX_ENGINE`, and `RENDER_EXTRASAFE`. GPU texture density is now `MakieTeX.TEXTURE_RENDER_DENSITY[]`.
+  - **Breaking**: dropped `RENDER_DENSITY`, `CURRENT_TEX_ENGINE`, and `RENDER_EXTRASAFE`. GPU textures rasterize at the screen's `px_per_unit`; `MakieTeX.TEXTURE_RENDER_DENSITY[]` is an additional multiplier (default 1).

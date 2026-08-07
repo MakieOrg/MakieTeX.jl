@@ -74,13 +74,13 @@ function pdf_text_layout(c::CompiledPdfText)
     # A scatter marker is drawn centered on its position, so the layout position
     # is the middle of the ink box. `markersize` is the long dimension; aspect is
     # handled per-backend (rescale_marker on GL, draw_marker on Cairo), so this
-    # expands back out to a Vec2(w, h) box. The identity `rotation` is what
-    # placement composes the text rotation into, turning the ink with the text.
+    # expands back out to a Vec2(w, h) box. The text rotation reaches the marker
+    # through the spec plot's model matrix (`transform_marker`), so no rotation
+    # needs to be set here.
     spec = Makie.PlotSpec(
         :Scatter, [Makie.Point3f(0.5f0 * ink_size[1], 0.5f0 * ink_size[2], 0)];
         marker = [doc],
         markersize = [Float32(maximum(dim_pt))],
-        rotation = [Makie.Quaternionf(0, 0, 0, 1)],
     )
     spec_bbox = Makie.Rect3d(Makie.Point3d(0), Makie.Vec3d(ink_size..., 0))
     return Makie.TextLayout(
@@ -128,19 +128,16 @@ end
 # texture-uploadable image. CairoMakie has its own vector dispatch and
 # doesn't reach this path.
 #
-# Ideal behavior would re-rasterize at the current screen's `px_per_unit`
-# on every render so the texture pixel grid matches the framebuffer
-# exactly (no over/undersampling). That needs Makie-side plumbing — the
-# compute graph for marker upload currently doesn't see `px_per_unit`,
-# which lives on the screen and only fires per render. Until that hook
-# exists, this Ref is a manual stand-in: set it to the `px_per_unit` of
-# your typical save target. Default 2× matches `save(...; px_per_unit = 2)`
-# (the recommended default for raster export) without resampling, and
-# only slightly oversamples 1× interactive display.
-const TEXTURE_RENDER_DENSITY = Ref(2)
+# GLMakie passes the screen's `px_per_unit` and re-rasterizes when it changes
+# (including for a high-resolution `save`), so the texture pixel grid matches
+# the framebuffer. Where the resolution is unknown (`px_per_unit = 1`,
+# currently WGLMakie), `TEXTURE_RENDER_DENSITY` is a manual multiplier for
+# users who mostly view on hidpi displays; it also applies on top of a known
+# `px_per_unit`. Default 1: exact sampling, no oversampling blur.
+const TEXTURE_RENDER_DENSITY = Ref(1)
 
-Makie.rasterize_marker_for_gpu(doc::AbstractDocument, scale) =
-    rasterize(doc; render_density = TEXTURE_RENDER_DENSITY[])
+Makie.rasterize_marker_for_gpu(doc::AbstractDocument, scale, px_per_unit) =
+    rasterize(doc; render_density = px_per_unit * TEXTURE_RENDER_DENSITY[])
 
-Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractDocument}, scale) =
-    [rasterize(d; render_density = TEXTURE_RENDER_DENSITY[]) for d in docs]
+Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractDocument}, scale, px_per_unit) =
+    [rasterize(d; render_density = px_per_unit * TEXTURE_RENDER_DENSITY[]) for d in docs]
