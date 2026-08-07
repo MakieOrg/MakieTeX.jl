@@ -130,15 +130,19 @@ end
 #
 # GLMakie passes the screen's `px_per_unit` and re-rasterizes when it changes
 # (including for a high-resolution `save`), so the texture keeps up with the
-# framebuffer resolution. `TEXTURE_RENDER_DENSITY` multiplies on top of that:
+# framebuffer resolution. `TEXTURE_RENDER_DENSITY` is the minimum density:
 # marker quads generally sit at fractional pixel offsets, where a 1:1 texture
-# blurs under linear filtering, so a bit of supersampling keeps glyph edges
-# crisp. It is also the only resolution control where `px_per_unit` is unknown
-# (always 1, currently WGLMakie).
+# blurs under linear filtering, so low-resolution targets get supersampled to
+# keep glyph edges crisp; the effect shrinks with growing `px_per_unit`, so
+# high-resolution targets sample exactly. The minimum is also the only
+# resolution control where `px_per_unit` is unknown (always 1, currently
+# WGLMakie).
 const TEXTURE_RENDER_DENSITY = Ref(2)
 
+_render_density(px_per_unit) = max(px_per_unit, TEXTURE_RENDER_DENSITY[])
+
 Makie.rasterize_marker_for_gpu(doc::AbstractDocument, scale, px_per_unit) =
-    rasterize(doc; render_density = px_per_unit * TEXTURE_RENDER_DENSITY[])
+    rasterize(doc; render_density = _render_density(px_per_unit))
 
 Makie.rasterize_marker_for_gpu(docs::AbstractVector{<:AbstractDocument}, scale, px_per_unit) =
-    [rasterize(d; render_density = px_per_unit * TEXTURE_RENDER_DENSITY[]) for d in docs]
+    [rasterize(d; render_density = _render_density(px_per_unit)) for d in docs]
