@@ -129,12 +129,13 @@ end
 # doesn't reach this path.
 #
 # GLMakie passes the screen's `px_per_unit` and re-rasterizes when it changes
-# (including for a high-resolution `save`), so the texture pixel grid matches
-# the framebuffer. Where the resolution is unknown (`px_per_unit = 1`,
-# currently WGLMakie), `TEXTURE_RENDER_DENSITY` is a manual multiplier for
-# users who mostly view on hidpi displays; it also applies on top of a known
-# `px_per_unit`. Default 1: exact sampling, no oversampling blur.
-const TEXTURE_RENDER_DENSITY = Ref(1)
+# (including for a high-resolution `save`), so the texture keeps up with the
+# framebuffer resolution. `TEXTURE_RENDER_DENSITY` multiplies on top of that:
+# marker quads generally sit at fractional pixel offsets, where a 1:1 texture
+# blurs under linear filtering, so a bit of supersampling keeps glyph edges
+# crisp. It is also the only resolution control where `px_per_unit` is unknown
+# (always 1, currently WGLMakie).
+const TEXTURE_RENDER_DENSITY = Ref(2)
 
 Makie.rasterize_marker_for_gpu(doc::AbstractDocument, scale, px_per_unit) =
     rasterize(doc; render_density = px_per_unit * TEXTURE_RENDER_DENSITY[])
