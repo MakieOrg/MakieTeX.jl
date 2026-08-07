@@ -1,68 +1,70 @@
 ```@raw html
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
-  name: "MakieTeX"
+  name: "MakieTeX.jl"
   text: ""
-  tagline: Plotting vector images in Makie
+  tagline: Real LaTeX and Typst in Makie
   actions:
     - theme: brand
-      text: Introduction
-      link: /index
+      text: LaTeX
+      link: /latex
     - theme: alt
-      text: View on Github
+      text: Typst
+      link: /typst
+    - theme: alt
+      text: PDF & SVG
+      link: /pdf_svg
+    - theme: alt
+      text: GitHub
       link: https://github.com/MakieOrg/MakieTeX.jl
-    - theme: alt
-      text: Available formats
-      link: /formats
 
 features:
-  - icon: <img width="64" height="64" src="https://rawcdn.githack.com/JuliaLang/julia-logo-graphics/f3a09eb033b653970c5b8412e7755e3c7d78db9e/images/juliadots.iconset/icon_512x512.png" alt="Julia code"/>
-    title: TeX, PDF, SVG
-    details: Renders vector formats like TeX, PDF and SVG with no external dependencies
-    link: /formats
+  - title: Real LaTeX engine
+    details: Route `LaTeXString` content through tectonic / pdflatex / lualatex instead of MathTeXEngine's glyph approximation — use any LaTeX package, real math typography.
+    link: /latex
+  - title: Typst compiler
+    details: Same idea for `typst"…"` strings. Fast, modern, looks great out of the box.
+    link: /typst
+  - title: PDF & SVG markers
+    details: Drop a vector asset onto a scatter plot. CairoMakie renders vector-native; GLMakie / WGLMakie rasterize at GPU upload.
+    link: /pdf_svg
 ---
-
-
-<p style="margin-bottom:2cm"></p>
-
-<div class="vp-doc" style="width:80%; margin:auto">
-
 ```
 
 # MakieTeX.jl
 
-MakieTeX is a package that allows users to plot vector images - PDF, SVG, and TeX (which compiles to PDF) directly in Makie.  It exposes two approaches: the `teximg` recipe which plots any LaTeX-like object, and the `CachedDocument` API which allows users to plot documents directly as `scatter` markers.
+MakieTeX plugs into [Makie](https://docs.makie.org/)'s `text` recipe via a `text_handler` attribute. Drop in a real engine (LaTeX or Typst) for individual text elements — titles, axis labels, annotations — or route every string through the engine so fonts match across the whole figure.
 
-To see a list of all exported functions, types, and macros, see the [API](@ref api) page.
+It also adds [`MakieTeX.PDF`](@ref) and [`MakieTeX.SVG`](@ref) types for using vector assets as scatter markers.
 
-```@example LTeX
-using MakieTeX, CairoMakie
+## Install
 
-teximg(raw"""
-\begin{align*}
-\frac{1}{2} \times \frac{1}{2} = \frac{1}{4}
-\end{align*}
-""")
+```julia
+import Pkg
+Pkg.add("MakieTeX")
 ```
 
+The engines load via package extensions:
 
-## Principle of operation
+- **LaTeX** — `import tectonic_jll` (bundled, easiest) or have `latexmk` on `PATH` (uses your local TeX install / packages).
+- **Typst** — `import Typstry` (bundles the Typst compiler).
 
-### Rendering
+## Minimal example
 
-Rendering can occur either to a bitmap (for GL backends) or to a Cairo surface (for CairoMakie).  Both of these have APIs ([`rasterize`](@ref) and [`draw_to_cairo_surface`](@ref)).
+```@example index
+using CairoMakie, MakieTeX
 
-Each rendering format has its own complexities, so the rendering pipelines are usually separate.  SVG uses librsvg while PDF and EPS use Poppler directly. TeX uses the available local TeX renderer (if not, `tectonic` is bundled with MakieTeX) and Typst uses Typst_jll.jl to render to a PDF, which then each follow the Poppler pipeline.
+set_theme!(text_handler = MakieTeX.LaTeX(render_strings = true))
 
-### Makie
-
-When rendering to Makie, MakieTeX rasterizes the document to a bitmap by default via the Makie attribute conversion pipeline (specifically `Makie.to_spritemarker`), and then Makie treats it like a general image scatter marker.
-
-**HOWEVER**, when rendering with CairoMakie, there is a function hook to get the correct marker for *Cairo* specifically, ignoring the default Makie conversion pipeline.  This is `CairoMakie.cairo_scatter_marker`, and we overload it in `MakieTeX.MakieTeXCairoMakieExt` to get the correct marker.  This also allows us to apply styling to SVG elements, but again **ONLY IN CAIROMAKIE**!  This is a bit of an incompatibility and a breaking of the implicit promise from Makie that rendering should be the same across backends, but the tradeoff is (to me, at least) worth it.
-
-```@raw html
-</div>
+fig = Figure()
+Axis(fig[1, 1];
+    title = L"\int_0^\pi \sin(x)^2\, dx = \tfrac{\pi}{2}",
+    xlabel = "x",
+    ylabel = L"\sin^2(x)",
+)
+lines!(0:0.01:π, x -> sin(x)^2)
+set_theme!() # hide
+fig
 ```

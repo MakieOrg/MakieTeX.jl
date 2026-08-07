@@ -1,20 +1,27 @@
 [deps]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ComputePipeline = "95dc2771-c249-4cd0-9c9f-1f3b4330693c"
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+Librsvg_jll = "925c91fb-5dd6-59dd-8e8c-345e74382d89"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MakieTeX = "6d554a22-29e7-47bd-aee5-0c5f06619414"
+PNGFiles = "f57f5aa1-a3ce-4bc8-8ab9-96f992907883"
+PixelMatch = "433bd86c-62cb-491d-a348-72c5c8365002"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
 
-# Until Makie 0.25 lands in the registry.
+# Pulls Makie / CairoMakie / GLMakie / ComputePipeline directly from the
+# branch the MakieTeX rework targets. Drop these once the branch lands.
 [sources]
 MakieTeX = {path = ".."}
 Makie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "Makie"}
 CairoMakie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "CairoMakie"}
+GLMakie = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "GLMakie"}
 ComputePipeline = {url = "https://github.com/MakieOrg/Makie.jl.git", rev = "jk/glyph-buffer-refactor", subdir = "ComputePipeline"}
 
 [compat]
+PixelMatch = "1.5"
 julia = "1.12"

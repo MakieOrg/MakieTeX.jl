@@ -1,45 +1,54 @@
-# MakieTeX.jl
+---
+title: MakieTeX.jl
+engine: julia
+format: gfm
+fig-format: png
+fig-dpi: 200
+execute:
+  daemon: false
+  echo: true
+---
 
-
+```{=html}
 <div align="center">
   <img alt="MakieTeX.jl logo"
     src="https://user-images.githubusercontent.com/32143268/165514916-4337e55a-18ec-4831-ab0f-11ebcb679600.svg"
     height="60">
 </div>
+```
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://MakieOrg.github.io/MakieTeX.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://MakieOrg.github.io/MakieTeX.jl/dev/)
-[![Build
-Status](https://github.com/MakieOrg/MakieTeX.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/MakieOrg/MakieTeX.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Build Status](https://github.com/MakieOrg/MakieTeX.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/MakieOrg/MakieTeX.jl/actions/workflows/CI.yml?query=branch%3Amaster)
 
-MakieTeX plugs into [Makie](https://docs.makie.org/)’s `text` recipe via
-a `text_handler` attribute. Drop in a real engine — LaTeX or Typst — for
-individual text elements (titles, axis labels, annotations), or route
-every string through the engine so fonts match across the figure. It
-also provides `MakieTeX.PDF` and `MakieTeX.SVG` types for using vector
-assets as scatter markers.
+MakieTeX plugs into [Makie](https://docs.makie.org/)'s `text` recipe via a `text_handler` attribute. Drop in a real engine — LaTeX or Typst — for individual text elements (titles, axis labels, annotations), or route every string through the engine so fonts match across the figure. It also provides `MakieTeX.PDF` and `MakieTeX.SVG` types for using vector assets as scatter markers.
+
+```{julia}
+#| output: false
+#| echo: false
+using CairoMakie, MakieTeX, tectonic_jll
+const FONT = joinpath(Makie.assetpath(), "fonts", "TeXGyreHerosMakie-Regular.otf")
+set_theme!(fonts = (regular = FONT, bold = FONT, italic = FONT, bold_italic = FONT))
+const ASSETS = joinpath(@__DIR__, "..", "docs", "src", "assets")
+```
 
 ## Install
 
-``` julia
+```julia
 import Pkg
 Pkg.add("MakieTeX")
 ```
 
 Enable an engine via package extension:
 
-- **LaTeX** — `import tectonic_jll` (bundled, no local TeX install
-  needed) or have `latexmk` on `PATH`.
+- **LaTeX** — `import tectonic_jll` (bundled, no local TeX install needed) or have `latexmk` on `PATH`.
 - **Typst** — `import Typstry` (bundles the Typst compiler).
 
 ## Real LaTeX in titles, axis labels, and layout cells
 
-Pass a `MakieTeX.LaTeX()` handler via `set_theme!`,
-`with_theme(...) do ... end`, or as a per-plot `text_handler` keyword.
-Any `L"…"` content then routes through the LaTeX engine — including
-documents using `tikz-feynman` and other complex packages:
+Pass a `MakieTeX.LaTeX()` handler via `set_theme!`, `with_theme(...) do ... end`, or as a per-plot `text_handler` keyword. Any `L"…"` content then routes through the LaTeX engine — including documents using `tikz-feynman` and other complex packages:
 
-``` julia
+```{julia}
 handler = MakieTeX.LaTeX(
     render_strings = true,
     engine = `tectonic`,
@@ -83,21 +92,13 @@ with_theme(text_handler = handler) do
 end
 ```
 
-<img src="README_files/figure-commonmark/cell-3-output-1.png"
-width="760" height="340" />
-
-`render_strings = true` routes plain `String`s through LaTeX too, so
-tick labels and the legend match the math. Set it to `false` to keep
-plain strings on Makie’s default FreeType path (much faster, but the two
-fonts won’t match unless you align them yourself).
+`render_strings = true` routes plain `String`s through LaTeX too, so tick labels and the legend match the math. Set it to `false` to keep plain strings on Makie's default FreeType path (much faster, but the two fonts won't match unless you align them yourself).
 
 ## Vector assets as scatter markers
 
-`MakieTeX.PDF` and `MakieTeX.SVG` wrap a vector file for use as a
-scatter `marker`. CairoMakie renders them vector-natively (Poppler /
-librsvg); GLMakie / WGLMakie rasterize them at GPU-upload time:
+`MakieTeX.PDF` and `MakieTeX.SVG` wrap a vector file for use as a scatter `marker`. CairoMakie renders them vector-natively (Poppler / librsvg); GLMakie / WGLMakie rasterize them at GPU-upload time:
 
-``` julia
+```{julia}
 julia_logo  = MakieTeX.SVG(joinpath(ASSETS, "julia_dots.svg"))
 python_logo = MakieTeX.SVG(joinpath(ASSETS, "python.svg"))
 matlab_logo = MakieTeX.SVG(joinpath(ASSETS, "matlab.svg"))
@@ -127,14 +128,8 @@ scatter!(ax, ages, 1:length(ages); marker = logos, markersize = 28,
 fig
 ```
 
-<img src="README_files/figure-commonmark/cell-4-output-1.png"
-width="640" height="240" />
-
-A scalar `markersize` sets the longer dimension and the shorter one
-scales to preserve the asset’s aspect ratio — same convention as `Char`
-and `BezierPath` markers.
+A scalar `markersize` sets the longer dimension and the shorter one scales to preserve the asset's aspect ratio — same convention as `Char` and `BezierPath` markers.
 
 ## Learn more
 
-See the [documentation](https://MakieOrg.github.io/MakieTeX.jl/stable/)
-for the Typst handler, custom preambles, per-plot use, and the full API.
+See the [documentation](https://MakieOrg.github.io/MakieTeX.jl/stable/) for the Typst handler, custom preambles, per-plot use, and the full API.

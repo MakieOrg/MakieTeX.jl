@@ -11,6 +11,9 @@ on:
 permissions:
   actions: write
   contents: read
+  # Documenter posts the PR preview / dev docs link as a commit status.
+  statuses: write
+  pull-requests: write
 jobs:
   test:
     name: Tests, Julia ${{ matrix.version }} - ${{ matrix.os }}
@@ -18,40 +21,94 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - '1'
-        os:
-          - ubuntu-latest
-          - windows
-          - macos
-        arch:
-          - x64
+        version: ['1']
+        # Windows currently fails resolving the test env (FFTA listed in
+        # manifest but not installed after Pkg.test re-resolves). Re-enable
+        # once the underlying Pkg / cache interaction is sorted.
+        os: [ubuntu-latest, macos-latest]
     steps:
-      # Cancel ongoing CI test runs if pushing to branch again before the previous tests
-      # have finished
       - name: Cancel ongoing test runs for previous commits
         uses: styfle/cancel-workflow-action@0.12.1
         with:
           access_token: ${{ github.token }}
 
-      # Do tests
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
-      - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/cache@v3
+
+      - name: Install xvfb (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      # No GPU on Windows / macOS runners; skip GLMakie there. runtests.jl
+      # gates `using GLMakie` so the GL reftest set is skipped to match.
+      - name: Drop GLMakie from test deps (non-Linux)
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          julia -e '
+            using TOML
+            p = TOML.parsefile("test/Project.toml")
+            delete!(p["deps"], "GLMakie")
+            haskey(p, "sources") && delete!(p["sources"], "GLMakie")
+            open(io -> TOML.print(io, p), "test/Project.toml", "w")
+          '
+
       - uses: julia-actions/julia-runtest@v1
-        env: 
+        id: runtests
+        env:
           DISPLAY: ':0'
-        with: 
-          prefix: xvfb-run -s '-screen 0 1024x768x24'
-      - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: test_images
-          path: test_images/
+          prefix: ${{ runner.os == 'Linux' && 'xvfb-run -s ''-screen 0 1024x768x24''' || '' }}
+
+      # `archive: false` serves the report as a viewable file rather than a zip,
+      # but it takes the artifact name from the file name, so name it per runner.
+      - name: Name the PixelMatch report per runner
+        if: failure() && steps.runtests.outcome == 'failure'
+        shell: bash
+        run: |
+          f=test/pixelmatch-report.html
+          [ -f "$f" ] && mv "$f" "test/pixelmatch-report-${{ matrix.os }}.html" || true
+
+      - name: Upload PixelMatch report
+        id: upload-report
+        if: failure() && steps.runtests.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          path: test/pixelmatch-report-${{ matrix.os }}.html
+          archive: false
+          if-no-files-found: ignore
+
+      - name: Post failing status linking to the report
+        if: failure() && steps.runtests.outcome == 'failure' && steps.upload-report.outputs.artifact-url != ''
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request?.head?.sha ?? context.sha,
+              state: 'failure',
+              context: `PixelMatch report (${{ matrix.os }})`,
+              target_url: '${{ steps.upload-report.outputs.artifact-url }}',
+              description: 'Reference image failures, click Details for the HTML report',
+            })
+
+      # Keep only the images for tests that actually failed (those with a
+      # matching *_diff.png), drop every other PNG so the artifact stays
+      # small.
+      - name: Filter to failed reference images
+        if: failure()
+        shell: bash
+        run: julia test/filter_failed_reference_images.jl
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: reference_images-${{ matrix.os }}
+          path: test/reference_images/
   docs:
     name: Build and deploy documentation
     runs-on: ubuntu-latest
@@ -59,12 +116,10 @@ jobs:
       - name: Install binary dependencies
         run: sudo apt-get update && sudo apt-get install -y xorg-dev mesa-utils xvfb libgl1 freeglut3-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
       - uses: actions/checkout@v4
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v4
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - name: Install documentation dependencies
         run: |
           xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e '
