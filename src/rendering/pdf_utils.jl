@@ -5,6 +5,18 @@ This file contains a common core for working with PDFs.  It does not contain any
 but functions from here are used in the PDF and TeX rendering pipelines.
 =#
 
+"""
+    ghostscript_gs(command_string::String)
+
+Run a Ghostscript command string.  If the `gs` command is available in the shell, it will be used.  Otherwise, the Ghostscript executable from the `Ghostscript_jll` package will be used.
+"""
+function ghostscript_gs(command_string::Cmd)
+    if GHOSTSCRIPT_AVAILABLE
+        return `gs $command_string`
+    else
+        return `$(Ghostscript_jll.gs()) $command_string`
+    end
+end
 
 """
     pdf_num_pages(filename::String)::Int
@@ -89,11 +101,9 @@ function split_pdf(pdf::Union{Vector{UInt8}, String})
             redirect_stderr(devnull) do
                 redirect_stdout(devnull) do
                     for i in 1:num_pages
-                        Ghostscript_jll.gs() do gs
-                            run(`$gs -q -dBATCH -dNOPAUSE -dFirstPage=$i -dLastPage=$i -sOutputFile=temp_$(lpad(i, 4, '0')).pdf -sDEVICE=pdfwrite temp.pdf`)
-                            push!(pdfs, read("temp_$(lpad(i, 4, '0')).pdf"))
-                            rm("temp_$(lpad(i, 4, '0')).pdf")
-                        end
+                        run(ghostscript_gs(`-q -dBATCH -dNOPAUSE -dFirstPage=$i -dLastPage=$i -sOutputFile=temp_$(lpad(i, 4, '0')).pdf -sDEVICE=pdfwrite temp.pdf`))
+                        push!(pdfs, read("temp_$(lpad(i, 4, '0')).pdf"))
+                        rm("temp_$(lpad(i, 4, '0')).pdf")
                     end
                 end
             end
@@ -114,7 +124,7 @@ function get_pdf_bbox(path::String)
     !isfile(path) && error("File $(path) does not exist!")
     out = Pipe()
     err = Pipe()
-    succ = success(pipeline(`$(Ghostscript_jll.gs()) -q -dBATCH -dNOPAUSE -sDEVICE=bbox $path`, stdout=out, stderr=err))
+    succ = success(pipeline(ghostscript_gs(`-q -dBATCH -dNOPAUSE -sDEVICE=bbox $path`), stdout=out, stderr=err))
 
     close(out.in)
     close(err.in)
@@ -164,9 +174,7 @@ function crop_pdf(path::String; margin = _PDFCROP_DEFAULT_MARGINS[])
     try
         redirect_stderr(err) do
             redirect_stdout(out) do
-                Ghostscript_jll.gs() do gs_exe
-                    run(`$gs_exe -o temp_cropped.pdf -sDEVICE=pdfwrite -c "[/CropBox [$crop_cmd]" -c "/PAGES pdfmark" -f $path`)
-                end
+                run(ghostscript_gs(`-o temp_cropped.pdf -sDEVICE=pdfwrite -c "[/CropBox [$crop_cmd]" -c "/PAGES pdfmark" -f $path`))
             end
         end
     catch e

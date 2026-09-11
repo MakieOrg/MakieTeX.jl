@@ -16,7 +16,7 @@ using DocStringExtensions
 using Poppler_jll, Ghostscript_jll, Glib_jll, tectonic_jll
 using Rsvg, Cairo
 
-# Define some constants for configuration
+# Define some constant references for configuration
 "Render with Poppler pipeline (true) or Cairo pipeline (false)"
 const RENDER_EXTRASAFE = Ref(false)
 "The current `TeX` engine which MakieTeX uses."
@@ -25,6 +25,15 @@ const CURRENT_TEX_ENGINE = Ref{Cmd}(`lualatex`)
 const _PDFCROP_DEFAULT_MARGINS = Ref{Vector{UInt8}}([0,0,0,0])
 "Default density when rendering images"
 const RENDER_DENSITY = Ref(3)
+
+# Runtime checks
+"Boolean that determines whether the command `gs` (Ghostscript) is available in the shell or not."
+const GHOSTSCRIPT_AVAILABLE = if isnothing(Sys.which("gs"))
+    @warn "Failed to find 'gs' in shell path. Defaulting to use Ghostscript_jll. If this fails, please include Ghostscript command `gs` in current shell." 
+    false 
+else 
+    true 
+end
 
 @deprecate TEXT_RENDER_DENSITY RENDER_DENSITY
 
