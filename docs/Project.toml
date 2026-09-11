@@ -11,3 +11,6 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SwarmMakie = "0b1c068e-6a84-4e66-8136-5c95cafa83ed"
 YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+
+[sources]
+MakieTeX = { path = ".." }

@@ -53,7 +53,7 @@ teximg(raw"""
 
 ### Rendering
 
-Rendering can occur either to a bitmap (for GL backends) or to a Cairo surface (for CairoMakie).  Both of these have APIs ([`rasterize`](@ref) and [`draw_to_cairo_surface`](@ref)).
+Rendering can occur either to a bitmap (for GL backends) or to a Cairo surface (for CairoMakie).  Both of these have APIs ([`MakieTeX.rasterize`](@ref) and [`MakieTeX.draw_to_cairo_surface`](@ref)).
 
 Each rendering format has its own complexities, so the rendering pipelines are usually separate.  SVG uses librsvg while PDF and EPS use Poppler directly. TeX uses the available local TeX renderer (if not, `tectonic` is bundled with MakieTeX) and Typst uses Typst_jll.jl to render to a PDF, which then each follow the Poppler pipeline.
 

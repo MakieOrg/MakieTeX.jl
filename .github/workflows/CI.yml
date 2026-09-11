@@ -22,8 +22,8 @@ jobs:
           - '1'
         os:
           - ubuntu-latest
-          - windows
-          - macos
+          - windows-latest
+          - macos-latest
         arch:
           - x64
     steps:
@@ -43,10 +43,10 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
-        env: 
+        env:
           DISPLAY: ':0'
-        with: 
-          prefix: xvfb-run -s '-screen 0 1024x768x24'
+        with:
+          prefix: ${{ runner.os == 'Linux' && 'xvfb-run -s ''-screen 0 1024x768x24''' || '' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -69,8 +69,6 @@ jobs:
         run: |
           xvfb-run -s '-screen 0 1024x768x24' julia --project=docs -e '
             using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
-            # Pkg.add([PackageSpec(name = "DocumenterVitepress", rev = "master"), PackageSpec(name = "Makie", rev = "master"), PackageSpec(name = "MakieCore", rev = "master"), PackageSpec(name = "CairoMakie", rev = "master")])
             Pkg.instantiate()'
         env:
           DISPLAY: ':0'

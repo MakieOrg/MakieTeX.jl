@@ -1,4 +1,4 @@
-# API documentation
+# [API documentation](@id api)
 
 ## Constants
 
@@ -35,7 +35,7 @@ MakieTeX.update_handle!
 ```@docs
 SVGDocument
 PDFDocument
-EPSDocument
+MakieTeX.EPSDocument
 TEXDocument
 TypstDocument
 ```
@@ -45,7 +45,6 @@ CachedTEX
 CachedTypst
 CachedPDF
 CachedSVG
-CachedEPS
 ```
 
 TODO: add documentation about the LaTeX (`compile_latex`), PDF and SVG handling utils here, in case they are of use to anyone.

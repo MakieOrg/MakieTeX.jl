@@ -1,11 +1,3 @@
-name = "MakieTeX"
-uuid = "6d554a22-29e7-47bd-aee5-0c5f06619414"
-authors = ["Anshul Singhvi <anshulsinghvi@gmail.com>, and contributors"]
-version = "0.4.3"
-
-[workspace]
-projects = ["docs", "test"]
-
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
@@ -19,23 +11,12 @@ Poppler_jll = "9c32591e-4766-534b-9725-b71a8799265b"
 Rsvg = "c4c386cf-5103-5370-be45-f3a111cca3b8"
 Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
-
-[weakdeps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+MakieTeX = "6d554a22-29e7-47bd-aee5-0c5f06619414"
 
-[extensions]
-MakieTeXCairoMakieExt = "CairoMakie"
-
-[compat]
-Cairo = "1.0.5"
-Colors = "0.9, 0.10, 0.11, 0.12, 0.13"
-DocStringExtensions = "0.8, 0.9"
-Ghostscript_jll = "9"
-Glib_jll = "2"
-LaTeXStrings = "1"
-Makie = "0.21, 0.22, 0.23, 0.24"
-Poppler_jll = "21.9, 22, 23, 24, 25"
-Rsvg = "1"
-julia = "1.9"
-Typstry = "0.3"
-tectonic_jll = "0"
+[sources]
+MakieTeX = { path = ".." }

@@ -7,13 +7,11 @@ using Test, Downloads
         Downloads.download("https://texample.net/media/tikz/examples/TEX/rotated-triangle.tex")
         true
     catch e
-        false
         @warn "Cannot access texample.net; skipping tests that require it."
+        false
     end
 
     can_access_example && @testset "texample.net" begin
-
-        mkpath(joinpath(example_path, "texample"))
 
         names = [
             "city",
@@ -46,8 +44,8 @@ using Test, Downloads
 
             filename = "mandala"
 
-            save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
-            save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
+            Makie.save(joinpath(example_path, "texample", "$filename.png"), fig; px_per_unit=3)
+            Makie.save(joinpath(example_path, "texample", "$filename.pdf"), fig; px_per_unit=1)
 
         end
 

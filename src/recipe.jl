@@ -10,27 +10,25 @@ This recipe plots rendered `TeX` to your Figure or Scene.
 
 There are three types of input you can provide:
 - Any `String`, which is rendered to LaTeX cognizant of the figure's overall theme,
-- A [`TeXDocument`](@ref) object, which is rendered to LaTeX directly, and can be customized by the user,
-- A [`CachedTeX`](@ref) object, which is a pre-rendered LaTeX document.
+- A [`TEXDocument`](@ref) object, which is rendered to LaTeX directly, and can be customized by the user,
+- A [`CachedTEX`](@ref) object, which is a pre-rendered LaTeX document.
 
 `tex` may be a single one of these objects, or an array of them.
-
-## Attributes
-$(Makie.ATTRIBUTES)
 """
-@recipe(TeXImg, tex) do scene
-    merge(
-        default_theme(scene),
-        Attributes(
-            render_density = 2,
-            align = (:center, :center),
-            scale = 1.0,
-            position = [Point2{Float32}(0)],
-            rotation = [0f0],
-            space = :data,
-            markerspace = :pixel
-        )
-    )
+@recipe TeXImg (tex,) begin
+    "Density at which the rendered document is rasterised (1 means 1 px == 1 pt)."
+    render_density = 2
+    "Alignment of the rendered document relative to its `position`, as a `(halign, valign)` tuple of `:left`/`:center`/`:right` and `:top`/`:center`/`:bottom`."
+    align = (:center, :center)
+    "Uniform scaling factor applied to the rendered document."
+    scale = 1.0
+    "Position(s) at which to draw the document(s)."
+    position = [Point2{Float32}(0)]
+    "Counter-clockwise rotation in radians."
+    rotation = [0f0]
+    "Space in which `markersize` is interpreted. See `Makie.spaces()`."
+    markerspace = :pixel
+    Makie.mixin_generic_plot_attributes()...
 end
 
 # First, handle the case of one or more abstract strings passed in!
@@ -90,55 +88,55 @@ end
 _bc_if_array(f, x) = f(x)
 _bc_if_array(f, x::AbstractArray) = f.(x)
 
-# scatter: marker size, rotations to determine everything
+_normalise_positions(pos::Makie.VecTypes{N, <:Number}) where {N} = [pos]
+_normalise_positions(pos) = collect(pos)
+
+# Convert the recipe's `tex` argument into a `Vector{<:AbstractCachedDocument}`,
+# regardless of whether the user supplied a String, a (Cached)Document, or
+# an array of either.
+function _plottable_images(tex)
+    if tex isa AbstractString || tex isa AbstractArray{<:AbstractString}
+        return to_array(_bc_if_array(CachedTEX, tex))
+    else
+        return to_array(_bc_if_array(Cached, tex))
+    end
+end
+
 function Makie.plot!(plot::TeXImg)
-    # We always want to draw this at a 1:1 ratio, so increasing scale or
-    # changing dpi should rerender
-    plottable_images = lift(plot[1], plot.render_density, plot.scale) do cachedtex, render_density, scale
-        if cachedtex isa AbstractString || cachedtex isa AbstractArray{<: AbstractString}
-            to_array(_bc_if_array(CachedTEX, cachedtex))
-        else
-            to_array(_bc_if_array(Cached, cachedtex))
-        end
+    # Derive everything via `map!` so it lives inside the plot's compute graph.
+    # This is what makes updates flow through to the inner scatter on Makie 0.24
+    # -- a stray Observable + onany bridge does not, because the graph is lazy
+    # and only fires when downstream Computed nodes are invalidated.
+
+    map!(plot, [:tex], :_plottable_images) do tex
+        _plottable_images(tex)
     end
 
-    scatter_images    = Observable(plottable_images[])
-    scatter_positions = Observable{Vector{Point2f}}()
-    scatter_sizes     = Observable{Vector{Vec2f}}()
-    scatter_offsets   = Observable{Vector{Vec2f}}()
-    scatter_rotations = Observable{Any}()
-
-    # Rect to draw in
-    # This is mostly aligning
-    onany(plot, plottable_images, plot.position, plot.rotation, plot.align, plot.scale) do images, pos, rotations, align, scale
-        if length(images) != length(pos) && !(pos isa Makie.VecTypes)
-            # skip this update and let the next one propagate
-            @debug "TeXImg: Length of images ($(length(images))) != length of positions ($(length(pos))).  Skipping this update."
-            return
+    map!(plot, [:_plottable_images, :position], :_scatter_positions) do images, pos
+        positions = _normalise_positions(pos)
+        if length(images) != length(positions)
+            # Length mismatch: broadcast a single position so we render something
+            # plausible without crashing.
+            return fill(first(positions), length(images))
         end
-
-        scatter_images.val    = images
-        scatter_positions.val = pos isa Makie.VecTypes{N, <: Number} where N ? [pos] : collect(pos)
-        scatter_sizes.val     = (Vec2f.(size.(images))) .* scale
-        scatter_offsets.val   = offset_from_align.((align,), scatter_sizes.val)
-        scatter_rotations.val = rotations
-
-        notify(scatter_images)
-        notify(scatter_positions)
-        notify(scatter_sizes)
-        notify(scatter_offsets)
-        notify(scatter_rotations)
+        return positions
     end
 
-    notify(plot.position) # trigger the first update
+    map!(plot, [:_plottable_images, :scale], :_scatter_sizes) do images, scale
+        return (Vec2f.(size.(images))) .* scale
+    end
+
+    map!(plot, [:_scatter_sizes, :align], :_scatter_offsets) do sizes, align
+        return offset_from_align.((align,), sizes)
+    end
 
     scatter!(
         plot,
-        scatter_positions;
-        marker = scatter_images,
-        markersize = scatter_sizes,
-        marker_offset = scatter_offsets,
-        rotation = scatter_rotations,
+        plot._scatter_positions;
+        marker = plot._plottable_images,
+        markersize = plot._scatter_sizes,
+        marker_offset = plot._scatter_offsets,
+        rotation = plot.rotation,
         space = plot.space,
         markerspace = plot.markerspace,
     )
